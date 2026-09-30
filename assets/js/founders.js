@@ -1,9 +1,8 @@
 /**
  * Perfis detalhados do time, abertos ao clicar em cada card na página Sobre.
- * Só o perfil do Natanael está preenchido por enquanto — os demais mostram um
- * estado "em breve" até que cada integrante mande o que quer publicar no seu.
- * Pra ativar a foto de alguém, basta colocar o arquivo em assets/img/team/<id>.png
- * — sem a foto, o círculo cai de volta pras iniciais automaticamente.
+ * Quem não tiver `bio` cai no estado "perfil em breve" (renderPlaceholder).
+ * A foto vem de assets/img/team/<id>.png — sem o arquivo, o círculo cai de
+ * volta pras iniciais automaticamente.
  */
 const FOUNDERS = {
   natanael: {
@@ -33,11 +32,124 @@ const FOUNDERS = {
       { label: 'E-mail', url: 'mailto:natanaelmgs04@gmail.com' }
     ]
   },
-  alex: { name: 'Alex Chen Marubayashi', role: 'Equipe match.IA', initials: 'AC', photo: 'assets/img/team/alex.png' },
-  cinthia: { name: 'Cinthia Yamamoto Gushiken', role: 'Identidade & produto', initials: 'CY', photo: 'assets/img/team/cinthia.png' },
-  italo: { name: 'Ítalo Santos de Morais', role: 'Equipe match.IA', initials: 'IS', photo: 'assets/img/team/italo.png' },
-  julya: { name: 'Julya Vitoria Souza Vieira', role: 'Equipe match.IA', initials: 'JV', photo: 'assets/img/team/julya.png' },
-  roberto: { name: 'Roberto de Andrade Paiva Filho', role: 'Identidade visual & back-end', initials: 'RP', photo: 'assets/img/team/roberto.png' }
+  alex: {
+    name: 'Alex Chen Marubayashi',
+    role: 'Back-end',
+    initials: 'AC',
+    photo: 'assets/img/team/alex.png',
+    eyebrow: 'Fundador · Back-end',
+    tagline: 'Mantém de pé a parte que ninguém vê, mas que faz o match acontecer.',
+    bio: [
+      'Atua no back-end do match.IA: a camada de servidor e banco de dados que guarda cadastros, perfis de clientes e arquitetos e sustenta o cálculo de compatibilidade entre eles.',
+      'É a frente que garante que o que aparece na tela — o score de match, o ranking, as mensagens — venha de dados consistentes e de respostas rápidas da API.',
+      'Trabalha junto do Roberto, que construiu a base do back-end, e do Natanael, que conecta essas respostas à interface e à IA generativa.'
+    ],
+    factsLeft: [
+      { label: 'Frente', value: 'Back-end' },
+      { label: 'Tecnologias', value: 'Node.js · Express · MongoDB' },
+      { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
+    ],
+    factsRight: [
+      { label: 'No projeto', value: 'API, dados e regras do match' },
+      { label: 'Trabalha com', value: 'Roberto e Natanael' },
+      { label: 'Turma', value: '3EMIB — FIAP School' }
+    ]
+  },
+  cinthia: {
+    name: 'Cinthia Yamamoto Gushiken',
+    role: 'Identidade & produto',
+    initials: 'CY',
+    photo: 'assets/img/team/cinthia.png',
+    eyebrow: 'Fundadora · Identidade & produto',
+    tagline: 'Cuida de como o match.IA se apresenta — e de como ele faz sentido para quem usa.',
+    bio: [
+      'Atua na identidade e no produto do match.IA: a forma como a marca se mostra e como a experiência se organiza para clientes e arquitetos, da primeira tela ao resultado do match.',
+      'Olha o projeto pelos dois lados da plataforma — quem procura um arquiteto e quem quer ser encontrado — para que a proposta de valor apareça de forma clara, sem jargão.',
+      'Ajuda a manter coerência entre o que a marca promete e o que o produto entrega: estilo, personalização e autoria do arquiteto no centro.'
+    ],
+    factsLeft: [
+      { label: 'Frente', value: 'Identidade & produto' },
+      { label: 'Foco', value: 'Experiência de clientes e arquitetos' },
+      { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
+    ],
+    factsRight: [
+      { label: 'No projeto', value: 'Marca, narrativa e produto' },
+      { label: 'Também cuida de', value: 'Coerência entre marca e produto' },
+      { label: 'Turma', value: '3EMIB — FIAP School' }
+    ]
+  },
+  italo: {
+    name: 'Ítalo Santos de Morais',
+    role: 'Marketing',
+    initials: 'IS',
+    photo: 'assets/img/team/italo.png',
+    eyebrow: 'Fundador · Marketing',
+    tagline: 'Faz a proposta do match.IA chegar a quem precisa dela.',
+    bio: [
+      'Responsável pelo marketing do match.IA: como a proposta — encontrar o arquiteto certo por compatibilidade, e não por tentativa e erro — é comunicada a clientes e arquitetos.',
+      'Traduz a pesquisa de campo do TCC em mensagem: as dores reais de quem contrata um projeto e de quem projeta viram o argumento central do que o time apresenta.',
+      'Pensa nos canais e no posicionamento para que a plataforma seja conhecida pelos públicos certos desde o início.'
+    ],
+    factsLeft: [
+      { label: 'Frente', value: 'Marketing' },
+      { label: 'Foco', value: 'Posicionamento e comunicação' },
+      { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
+    ],
+    factsRight: [
+      { label: 'No projeto', value: 'Mensagem, canais e público' },
+      { label: 'Parte de', value: 'Pesquisa de campo do TCC' },
+      { label: 'Turma', value: '3EMIB — FIAP School' }
+    ]
+  },
+  julya: {
+    name: 'Julya Vitoria Souza Vieira',
+    role: 'Gestão',
+    initials: 'JV',
+    photo: 'assets/img/team/julya.png',
+    eyebrow: 'Fundadora · Gestão',
+    tagline: 'Mantém as frentes do time andando no mesmo ritmo, do início à entrega.',
+    bio: [
+      'Responsável pela gestão do projeto match.IA: organiza prazos, entregas e prioridades para que produto, tecnologia, identidade e marketing avancem de forma alinhada.',
+      'Faz a ponte entre as frentes do time e a orientação do TCC, acompanhando o que já está pronto, o que depende de quem e o que precisa ser decidido em seguida.',
+      'Cuida também do lado de negócio do projeto: como a plataforma se sustenta e como o time apresenta isso para a banca.'
+    ],
+    factsLeft: [
+      { label: 'Frente', value: 'Gestão do projeto' },
+      { label: 'Foco', value: 'Prazos, entregas e alinhamento' },
+      { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
+    ],
+    factsRight: [
+      { label: 'No projeto', value: 'Planejamento e coordenação' },
+      { label: 'Também cuida de', value: 'Modelo de negócio' },
+      { label: 'Turma', value: '3EMIB — FIAP School' }
+    ]
+  },
+  roberto: {
+    name: 'Roberto de Andrade Paiva Filho',
+    role: 'Identidade visual & back-end',
+    initials: 'RP',
+    photo: 'assets/img/team/roberto.png',
+    eyebrow: 'Fundador · Identidade visual & back-end',
+    tagline: 'Construiu a base técnica sobre a qual o match.IA foi montado.',
+    bio: [
+      'Construiu o back-end original da plataforma — a API em Node.js, Express e MongoDB, que nasceu no repositório Arkitetum.AI — e o banco de materiais arquitetônicos usado no cálculo de compatibilidade.',
+      'É também responsável pela identidade visual do projeto, dando à marca a linguagem que aparece em toda a plataforma.',
+      'As funcionalidades novas do match.IA foram acrescentadas sobre essa base, e mudanças no back-end passam pela revisão dele antes de irem para o repositório principal.'
+    ],
+    factsLeft: [
+      { label: 'Frente', value: 'Back-end & identidade visual' },
+      { label: 'Tecnologias', value: 'Node.js · Express · MongoDB' },
+      { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
+    ],
+    factsRight: [
+      { label: 'No projeto', value: 'API original e identidade da marca' },
+      { label: 'Repositório', value: 'Arkitetum.AI' },
+      { label: 'Turma', value: '3EMIB — FIAP School' }
+    ],
+    links: [
+      { label: 'GitHub', url: 'https://github.com/RobPFilho' }
+    ]
+  }
 };
 
 const FounderModal = (() => {
