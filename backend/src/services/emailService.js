@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { escapeHtml } from "./assistantService.js";
 
 let transporter = null;
 function getTransporter() {
@@ -84,9 +85,12 @@ export function passwordResetEmail(user, resetUrl) {
 }
 
 export function newMessageEmail(recipient, senderName, text) {
+  // O texto é digitado pelo remetente (ou gerado por IA a partir do que ele
+  // escreveu): escapa antes de entrar no HTML do e-mail.
+  const safeName = escapeHtml(senderName);
   return sendEmail({
     to: recipient.email,
     subject: `Nova mensagem de ${senderName} no match.IA`,
-    html: `<p>${senderName} te enviou uma mensagem no match.IA:</p><blockquote>${text}</blockquote><p>Entre no seu painel para responder.</p>`,
+    html: `<p>${safeName} te enviou uma mensagem no match.IA:</p><blockquote style="white-space:pre-wrap">${escapeHtml(text)}</blockquote><p>Entre no seu painel para responder.</p>`,
   });
 }

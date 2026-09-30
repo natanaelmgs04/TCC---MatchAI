@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/assistente.css">
 </head>
 <body>
 <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
@@ -36,6 +37,7 @@
       <li><a href="index.html#como-funciona">Como funciona</a></li>
       <li><a href="projetos.html" data-page="projetos.html">Projetos</a></li>
       <li><a href="orcamento.html" data-page="orcamento.html">Orçamento</a></li>
+      <li><a href="dashboard.html#assistente" data-assistant-link>Assistente</a></li>
       <li><a href="destaques.html" data-page="destaques.html">Arquitetos</a></li>
       <li><a href="planos.html" data-page="planos.html">Planos</a></li>
       <li><a href="blog.html" data-page="blog.html">Blog</a></li>
@@ -132,14 +134,19 @@
           </button>
         </div>
         <div class="profile-tabs" id="clientProfileTabs" role="tablist" aria-label="Seções do painel">
-          <button type="button" class="profile-tab active" data-profile-panel="projeto" role="tab" aria-selected="true">Seu projeto</button>
+          <button type="button" class="profile-tab active" data-profile-panel="assistente" role="tab" aria-selected="true">Assistente</button>
+          <button type="button" class="profile-tab" data-profile-panel="projeto" role="tab" aria-selected="false">Seu projeto</button>
           <button type="button" class="profile-tab" data-profile-panel="match" role="tab" aria-selected="false">Compatibilidade</button>
           <button type="button" class="profile-tab" data-profile-panel="favoritos" role="tab" aria-selected="false">Favoritos</button>
           <button type="button" class="profile-tab" data-profile-panel="mensagens" role="tab" aria-selected="false">Mensagens <span class="unread-badge" id="clientUnreadBadge" style="display:none;"></span></button>
           <button type="button" class="profile-tab" data-profile-panel="conta" role="tab" aria-selected="false">Conta</button>
         </div>
 
-        <div class="profile-panel" data-profile-panel-content="projeto">
+        <div class="profile-panel" data-profile-panel-content="assistente" id="assistantPanel">
+          <div id="assistantMount"></div>
+        </div>
+
+        <div class="profile-panel" data-profile-panel-content="projeto" hidden>
           <div class="dash-card spotlight">
             <h3>Resumo do projeto</h3>
             <p class="card-lead">Este é o resumo que os arquitetos veem no seu match — revise antes de validar.</p>
@@ -435,6 +442,7 @@
 <script src="assets/js/style-share.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/site.js"></script>
+<script src="assets/js/assistente.js"></script>
 <script src="assets/js/dashboard.js"></script>
 </body>
 </html>

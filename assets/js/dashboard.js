@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // rodar até a declaração original dessas listas, disparando um
   // ReferenceError de temporal dead zone.
   let myProjects = [];
+  let assistant = null; // aba "Assistente" (assistente.js), criada no painel do cliente
   let myPortfolio = [];
   const apiBanner = document.getElementById('apiBanner');
   document.getElementById('apiBaseLabel').textContent = MatchAPI.base();
@@ -136,6 +137,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupChat(me, 'clientConversationList', 'clientChatShell');
     renderProjects(me);
     setupProjects(me);
+    const clientTabs = document.getElementById('clientProfileTabs'), clientScope = document.getElementById('clientPanel');
+    assistant = MatchAssistant.mount(document.getElementById('assistantMount'), {
+      user: me,
+      getProjects: () => myProjects,
+      onCreateProject: () => document.getElementById('openProjectsDrawerBtn').click(),
+      // O briefing só pode ir para quem apareceu no match deste projeto
+      onRunMatch: (projectId) => { activateProfileTab(clientTabs, clientScope, 'match'); runMatch(me, projectId); },
+      // A conversa com o arquiteto continua na aba Mensagens (caminho que a comissão acompanha)
+      onOpenConversation: (architectId, name) => {
+        activateProfileTab(clientTabs, clientScope, 'mensagens');
+        loadConversations(me, 'clientConversationList', 'clientChatShell');
+        openConversation(architectId, name, 'clientChatShell', me);
+      },
+    });
     renderMatchHistory(me);
     setupCompareExport(me);
     refreshUnreadBadge('clientUnreadBadge', 'overviewUnreadCount');
@@ -398,6 +413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // painel, sem precisar clicar em "Ver meus projetos" primeiro. Clicar num
   // item abre a mesma gaveta que já existia (lista completa + detalhe).
   function renderHeroProjects() {
+    assistant?.refresh(); // a aba Assistente lista os mesmos projetos
     const rail = document.getElementById('heroProjectsRail');
     if (!rail) return;
     if (!myProjects.length) { rail.style.display = 'none'; return; }
@@ -1966,11 +1982,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       listEl.innerHTML = conversations.map(c => `
-        <div class="conversation-list-item" data-conv-user="${c.userId}" data-conv-name="${c.name}">
+        <div class="conversation-list-item" data-conv-user="${escapeHtml(c.userId)}" data-conv-name="${escapeHtml(c.name)}">
           <div class="conv-avatar">${(c.name || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()}</div>
           <div class="conv-info">
-            <div class="conv-name">${c.name}</div>
-            <div class="conv-preview">${c.lastMessage}</div>
+            <div class="conv-name">${escapeHtml(c.name)}</div>
+            <div class="conv-preview">${escapeHtml(c.lastMessage)}</div>
           </div>
         </div>`).join('');
       listEl.querySelectorAll('[data-conv-user]').forEach(item => {
@@ -2020,6 +2036,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
   }
 
+  // O texto das mensagens é digitado por outra pessoa (ou gerado por IA a
+  // partir do que ela escreveu): nunca entra como HTML cru.
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  }
+
   function renderMessages(container, messages, user) {
     const myId = uid(user);
     // Cliente sempre vê o histórico completo. Arquiteto free vê só as
@@ -2032,7 +2054,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       : '';
     container.innerHTML = limitNote + (visible.length ? visible.map(m => `
       <div class="chat-bubble ${String(m.from) === String(myId) ? 'mine' : 'theirs'}">
-        ${m.text}
+        <span style="white-space:pre-wrap;">${escapeHtml(m.text)}</span>
         <span class="chat-time">${new Date(m.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
       </div>`).join('') : '<p style="text-align:center; color:var(--ink-faint); font-size:0.84rem;">Nenhuma mensagem ainda. Diga oi!</p>');
     container.scrollTop = container.scrollHeight;

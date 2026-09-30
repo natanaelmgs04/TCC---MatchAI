@@ -308,6 +308,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Estado de sessão no cabeçalho (login/cadastro <-> painel/sair)
   const user = typeof MatchAPI !== 'undefined' ? MatchAPI.currentUser() : null;
+  // O assistente é só do cliente: some do menu para arquiteto e loja logados.
+  if (user && user.role !== 'client') document.querySelectorAll('[data-assistant-link]').forEach(a => a.closest('li')?.remove());
   const authSlot = document.querySelector('[data-auth-slot]');
   if (authSlot) {
     if (user) {

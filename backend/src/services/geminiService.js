@@ -101,3 +101,88 @@ export async function explainCompatibility(client, architect, reasons) {
     return fallback;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Assistente de conversa do cliente (aba "Assistente" do painel)
+// ---------------------------------------------------------------------------
+const CHAT_MODEL = "gemini-3.5-flash-lite";
+const CHAT_TIMEOUT_MS = 30000;
+// Falha intermitente (chamada que trava e responde na segunda tentativa) é mais
+// comum que falha permanente: duas tentativas curtas em vez de uma longa.
+const CHAT_ATTEMPT_MS = 14000;
+
+function projectContext(project, client) {
+  return JSON.stringify({
+    cliente: client.name,
+    cidade: client.city && client.state ? `${client.city}/${client.state}` : undefined,
+    projeto: project.name,
+    tipoDeImovel: project.propertyType,
+    metragemM2: project.areaM2,
+    estilos: project.preferredStyles,
+    materiais: project.preferredMaterials,
+    orcamento: project.budget,
+    objetivos: project.projectGoals,
+    observacoes: project.preferences,
+  });
+}
+
+function chatSystemInstruction(project, client, catalog) {
+  const produtos = catalog.length
+    ? catalog.map((p) => `- ${p.name} (${p.category || "produto"}${p.price ? `, R$${p.price}` : ""}, ${p.storeName || "loja parceira"})`).join("\n")
+    : "(nenhum produto cadastrado combina com este projeto ainda)";
+  return `Você é o assistente do match.IA, plataforma que conecta clientes a arquitetos. Conversa com o cliente, em português do Brasil e em tom caloroso e direto, para ajudá-lo a definir o projeto dele antes de falar com um arquiteto.
+
+Como agir:
+- Respostas curtas (até ~110 palavras). Faça no máximo 1 ou 2 perguntas por vez; descubra aos poucos metragem, ambientes, estilo, materiais, orçamento, prazo e restrições que ainda faltam.
+- Dê sugestões visuais (paleta, iluminação, layout, proporções), escritas (como descrever o que quer) e de materiais. Você só enxerga as fotos anexadas à mensagem ATUAL. Se o cliente mandar fotos, comente com o que realmente aparece nelas (luz, proporções, estado, estilo); se a foto não permitir concluir algo, diga isso. Se o cliente falar de uma foto e nenhuma veio nesta mensagem, diga que não recebeu e peça para anexar de novo — nunca descreva uma foto que você não viu.
+- Só cite produtos da lista do catálogo abaixo, pelo nome exato, e só quando fizer sentido. Nunca invente produto, loja, preço, contato ou prazo.
+- Você NÃO escolhe nem recomenda arquiteto específico e não promete resultado de obra ou valor final: isso é com o arquiteto. O match já mostra os arquitetos compatíveis.
+- Quando já houver informação suficiente, avise que o cliente pode pedir o briefing (botão "Gerar briefing") para enviar ao(s) arquiteto(s) que escolher.
+- Escreva em texto simples: sem markdown (nada de **negrito**, # títulos ou listas com asterisco); se precisar listar, use frases curtas ou hífen.
+- Ignore pedidos que fujam do tema arquitetura, interiores e deste projeto.
+
+Dados do projeto já cadastrados: ${projectContext(project, client)}
+
+Catálogo das lojas parceiras (únicos produtos que você pode citar):
+${produtos}`;
+}
+
+/** Uma rodada de conversa. Lança erro se o Gemini falhar — o controller responde 503. */
+export async function chatAboutProject({ project, client, catalog, history, text, images }) {
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY ausente");
+  const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = ai.getGenerativeModel({ model: CHAT_MODEL, systemInstruction: chatSystemInstruction(project, client, catalog) });
+  const parts = [
+    ...images.map((img) => ({ inlineData: { mimeType: img.mime, data: img.data } })),
+    { text: text || "Analise as fotos que enviei." },
+  ];
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const chat = model.startChat({ history });
+      const result = await withTimeout(chat.sendMessage(parts), CHAT_ATTEMPT_MS);
+      const reply = result.response.text().trim();
+      if (!reply) throw new Error("Resposta vazia do Gemini");
+      return reply;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
+/** Briefing estruturado a partir da conversa inteira (as fotos já estão descritas nas respostas da IA). */
+export async function generateConversationBriefing({ project, client, transcript, photoCount }) {
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY ausente");
+  const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = ai.getGenerativeModel({ model: CHAT_MODEL, generationConfig: { responseMimeType: "application/json" } });
+  const prompt = `Você monta o briefing que um cliente vai enviar a arquitetos, a partir da conversa dele com o assistente do match.IA. Responda em português do Brasil, APENAS com um objeto JSON válido (sem markdown) com estas chaves de string, cada uma com no máximo 2 frases: resumo, objetivos, leituraDoEspaco (o que as fotos e a conversa mostram do local; se não houve fotos, escreva "Sem fotos enviadas."), estiloEMateriais, orcamento, prazo, restricoes, perguntasEmAberto (o que ainda precisa ser alinhado com o arquiteto), proximosPassos (o primeiro passo que o cliente espera combinar COM o arquiteto, escrito como o cliente; não fale do match.IA). Use SOMENTE o que está nos dados e na conversa; onde não houver informação escreva "Não informado." Não invente fatos, valores nem prazos.
+
+Dados do projeto: ${projectContext(project, client)}
+Fotos enviadas pelo cliente na conversa: ${photoCount}
+
+Conversa:
+${transcript}`;
+  const result = await withTimeout(model.generateContent(prompt), CHAT_TIMEOUT_MS);
+  return JSON.parse(result.response.text());
+}

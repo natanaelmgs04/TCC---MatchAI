@@ -24,6 +24,7 @@ import caseStudyRoutes from "./routes/caseStudies.js";
 import briefRoutes from "./routes/briefs.js";
 import commissionRoutes from "./routes/commissions.js";
 import storeRoutes from "./routes/stores.js";
+import assistantRoutes from "./routes/assistant.js";
 
 const app = express(),
   root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
@@ -32,7 +33,10 @@ const app = express(),
   siteRoot = path.resolve(root, "..");
 
 app.use(cors());
-app.use(express.json({ limit: "100kb" }));
+// /api/assistant recebe fotos em base64 e tem o próprio parser (limite maior,
+// ver routes/assistant.js) — o global de 100kb barraria a foto antes dela.
+const jsonParser = express.json({ limit: "100kb" });
+app.use((req, res, next) => (req.path.startsWith("/api/assistant") ? next() : jsonParser(req, res, next)));
 app.use(
   "/api/auth",
   rateLimit({ windowMs: 15 * 60 * 1000, limit: 40 }),
@@ -55,6 +59,7 @@ app.use("/api/case-studies", caseStudyRoutes);
 app.use("/api/briefs", briefRoutes);
 app.use("/api/commissions", commissionRoutes);
 app.use("/api/stores", storeRoutes);
+app.use("/api/assistant", assistantRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Site (front-end) servido pelo mesmo processo/porta que a API — sem
@@ -81,6 +86,9 @@ app.use((err, _req, res, _next) => {
     return res.status(400).json({
       error: Object.values(err.errors).map((e) => e.message).join("; "),
     });
+  }
+  if (err?.type === "entity.too.large") {
+    return res.status(413).json({ error: "Conteúdo grande demais. Envie menos fotos ou fotos menores." });
   }
   if (err?.code === 11000) {
     return res.status(409).json({ error: "Este e-mail já está cadastrado" });
