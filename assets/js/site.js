@@ -226,14 +226,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const target = parseFloat(el.dataset.countTo);
     const suffix = el.dataset.countSuffix || '';
     if (reduceMotion) { el.textContent = target + suffix; return; }
+    // data-count-delay (ms): espera a entrada coreografada do elemento antes
+    // de contar (usado no hero, onde cada número aparece num tempo diferente)
+    const delay = parseFloat(el.dataset.countDelay) || 0;
+    el.textContent = '0' + suffix;
     const io = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         io.unobserve(entry.target);
         const duration = 1100;
-        const start = performance.now();
+        const start = performance.now() + delay;
         const step = (now) => {
-          const progress = Math.min(1, (now - start) / duration);
+          const progress = Math.max(0, Math.min(1, (now - start) / duration));
           const eased = 1 - Math.pow(1 - progress, 3);
           el.textContent = Math.round(target * eased) + suffix;
           if (progress < 1) requestAnimationFrame(step);
@@ -251,6 +255,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroSection = particleCanvas.closest('.hero');
     let particles = [];
     let width, height, rafId;
+    // cursor dentro do hero: as partículas mais próximas se afastam de leve
+    // e ligam um fio até ele (fica "vivo" sem chamar atenção demais)
+    const cursor = { x: -9999, y: -9999 };
+    heroSection.addEventListener('pointermove', (e) => {
+      const r = heroSection.getBoundingClientRect();
+      cursor.x = e.clientX - r.left; cursor.y = e.clientY - r.top;
+    });
+    heroSection.addEventListener('pointerleave', () => { cursor.x = cursor.y = -9999; });
 
     function resize() {
       width = particleCanvas.width = heroSection.offsetWidth;
@@ -271,9 +283,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function tick() {
       ctx.clearRect(0, 0, width, height);
       particles.forEach((p) => {
+        const dx = p.x - cursor.x, dy = p.y - cursor.y, d = Math.hypot(dx, dy);
+        if (d < 140 && d > 0.1) {
+          const push = (1 - d / 140) * 0.9;
+          p.x += (dx / d) * push; p.y += (dy / d) * push;
+          ctx.strokeStyle = `rgba(176, 117, 90, ${0.28 * (1 - d / 140)})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(cursor.x, cursor.y); ctx.stroke();
+        }
         p.x += p.vx; p.y += p.vy;
-        if (p.x < 0 || p.x > width) p.vx *= -1;
-        if (p.y < 0 || p.y > height) p.vy *= -1;
+        if (p.x < 0 || p.x > width) { p.vx *= -1; p.x = Math.max(0, Math.min(width, p.x)); }
+        if (p.y < 0 || p.y > height) { p.vy *= -1; p.y = Math.max(0, Math.min(height, p.y)); }
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(176, 117, 90, 0.35)';

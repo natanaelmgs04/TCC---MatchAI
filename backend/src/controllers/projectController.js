@@ -1,5 +1,6 @@
 import Project from "../models/Project.js";
 import { suggestProductsForProject } from "../services/storeMatchService.js";
+import { normalizeStyleNotes, normalizeStylePicks, normalizeExperience } from "../services/projectPreferences.js";
 
 const normalizeStringArray = (value) =>
   Array.isArray(value)
@@ -36,6 +37,9 @@ export async function createProject(req, res) {
     preferences: req.body.preferences,
     areaM2: req.body.areaM2 ? Number(req.body.areaM2) : undefined,
     status: req.body.status,
+    styleNotes: normalizeStyleNotes(req.body.styleNotes),
+    stylePicks: normalizeStylePicks(req.body.stylePicks),
+    experience: normalizeExperience(req.body.experience),
   });
   res.status(201).json(project);
 }
@@ -51,6 +55,9 @@ export async function updateProject(req, res) {
   if (req.body.preferredStyles !== undefined) project.preferredStyles = normalizeStringArray(req.body.preferredStyles);
   if (req.body.preferredMaterials !== undefined) project.preferredMaterials = normalizeStringArray(req.body.preferredMaterials);
   if (req.body.budgetMin !== undefined || req.body.budgetMax !== undefined) project.budget = normalizeBudget(req.body);
+  if (req.body.styleNotes !== undefined) project.styleNotes = normalizeStyleNotes(req.body.styleNotes);
+  if (req.body.stylePicks !== undefined) project.stylePicks = normalizeStylePicks(req.body.stylePicks);
+  if (req.body.experience !== undefined) project.experience = normalizeExperience(req.body.experience);
 
   await project.save();
   res.json(project);
@@ -60,6 +67,33 @@ export async function deleteProject(req, res) {
   const project = await Project.findOneAndDelete({ _id: req.params.id, client: req.user.id });
   if (!project) return res.status(404).json({ error: "Projeto não encontrado" });
   res.json({ ok: true });
+}
+
+// Projetos de clientes que contrataram este arquiteto pela plataforma
+// (ver validationController.createCommissionForClosedValidation) — alimenta
+// a aba "Seus projetos" e o assistente de IA do lado do arquiteto.
+export async function listArchitectProjects(req, res) {
+  const projects = await Project.find({ architect: req.user.id })
+    .sort("-updatedAt")
+    .populate("client", "name city state");
+  res.json(
+    projects.map((p) => ({
+      _id: p.id,
+      name: p.name,
+      status: p.status,
+      propertyType: p.propertyType,
+      areaM2: p.areaM2,
+      preferredStyles: p.preferredStyles,
+      preferredMaterials: p.preferredMaterials,
+      budget: p.budget,
+      projectGoals: p.projectGoals,
+      preferences: p.preferences,
+      styleNotes: p.styleNotes,
+      stylePicks: p.stylePicks,
+      experience: p.experience,
+      client: p.client ? { id: p.client.id, name: p.client.name, city: p.client.city, state: p.client.state } : null,
+    })),
+  );
 }
 
 export async function listSuggestedProducts(req, res) {

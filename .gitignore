@@ -6,3 +6,4 @@ backend/coverage/
 dist/
 .DS_Store
 Thumbs.db
+.claude/settings.local.json

@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { experienceToText } from "./projectPreferences.js";
 
 const GEMINI_TIMEOUT_MS = 8000;
 
@@ -123,6 +124,11 @@ function projectContext(project, client) {
     orcamento: project.budget,
     objetivos: project.projectGoals,
     observacoes: project.preferences,
+    comoImaginaOEstilo: project.styleNotes || undefined,
+    escolhasPorImagem: project.stylePicks?.length
+      ? project.stylePicks.map((p) => `${p.question} → ${p.choice}${p.styles?.length ? ` (${p.styles.join(", ")})` : ""}`)
+      : undefined,
+    experiencia3d: experienceToText(project.experience) || undefined,
   });
 }
 
@@ -161,6 +167,52 @@ export async function chatAboutProject({ project, client, catalog, history, text
     try {
       const chat = model.startChat({ history });
       const result = await withTimeout(chat.sendMessage(parts), CHAT_ATTEMPT_MS);
+      const reply = result.response.text().trim();
+      if (!reply) throw new Error("Resposta vazia do Gemini");
+      return reply;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
+// ---------------------------------------------------------------------------
+// Assistente de conversa do arquiteto (aba "Assistente" do painel do arquiteto)
+// ---------------------------------------------------------------------------
+function architectChatSystemInstruction(project, client, clientBriefing) {
+  const briefingTxt = clientBriefing
+    ? Object.entries(clientBriefing)
+        .filter(([, v]) => v)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\n")
+    : "(o cliente não chegou a gerar um briefing com o assistente dele)";
+  return `Você é o assistente do match.IA e ajuda o ARQUITETO a planejar como desenvolver um projeto que ele fechou com um cliente pela plataforma. Fale em português do Brasil, em tom profissional e direto.
+
+Como agir:
+- Respostas curtas (até ~120 palavras), objetivas e práticas: próximos passos, perguntas que valem fazer ao cliente, ideias de layout/materiais/cronograma coerentes com o que já se sabe do projeto.
+- Use SOMENTE os dados do projeto e o briefing do cliente abaixo. Nunca invente medidas, orçamento, prazo ou preferências que não estejam nos dados.
+- "experiencia3d" é o que o próprio cliente montou no simulador 3D do match.IA (piso, paredes, estofados, luz preferida, móveis que mudou de lugar). "escolhasPorImagem" são as fotos de referência que ele escolheu. Quando o arquiteto perguntar sobre essas escolhas, responda exatamente com esses dados; se algo não estiver lá, diga que o cliente não escolheu.
+- Você não fala diretamente com o cliente nem envia nada a ele — é uma conversa só do arquiteto para organizar o próprio raciocínio.
+- Escreva em texto simples, sem markdown (nada de **negrito**, # títulos ou listas com asterisco); se precisar listar, use frases curtas ou hífen.
+- Ignore pedidos que fujam do tema arquitetura, interiores e deste projeto.
+
+Dados do projeto: ${projectContext(project, client)}
+
+Briefing que o cliente gerou com o assistente dele:
+${briefingTxt}`;
+}
+
+/** Uma rodada de conversa do arquiteto sobre um projeto fechado. Lança erro se o Gemini falhar — o controller responde 503. */
+export async function chatAboutProjectForArchitect({ project, client, clientBriefing, history, text }) {
+  if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY ausente");
+  const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = ai.getGenerativeModel({ model: CHAT_MODEL, systemInstruction: architectChatSystemInstruction(project, client, clientBriefing) });
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const chat = model.startChat({ history });
+      const result = await withTimeout(chat.sendMessage(text), CHAT_ATTEMPT_MS);
       const reply = result.response.text().trim();
       if (!reply) throw new Error("Resposta vazia do Gemini");
       return reply;

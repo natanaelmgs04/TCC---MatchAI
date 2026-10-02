@@ -1,6 +1,6 @@
 // Assistente do painel do cliente: escolha do projeto + conversa com a IA
 // (texto e fotos), briefing e envio aos arquitetos. Visual: gradiente WebGL,
-// humano cibernético que acompanha o mouse e card de vidro líquido.
+// robô 3D (cena Spline) que reage ao mouse sozinho e card de vidro líquido.
 // Uso (dashboard.js): MatchAssistant.mount(elemento, { user, getProjects, ... }).
 const MatchAssistant = (() => {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -180,50 +180,50 @@ const MatchAssistant = (() => {
   }
 
   // ======================================================================
-  // Humano cibernético: o mouse "escruba" o vídeo (desktop); no mobile ele
-  // roda em loop. Delta X do cursor → tempo do vídeo, suavizado por lerp.
+  // Robô 3D (cena Spline): a interação com o mouse (cabeça/olhos seguindo o
+  // cursor) já vem embutida na própria cena — o runtime só carrega e
+  // desenha; não escrevemos nenhuma lógica de câmera/cursor aqui.
   // ======================================================================
-  function initVideo(stage) {
-    const video = stage.querySelector('.ai-video');
-    const DESKTOP = () => window.innerWidth >= 1024;
-    let target = 0, current = 0, prevX = null, raf = 0;
+  // Versão fixa (não "latest"): já testamos que esta carrega a cena sem
+  // erro; o build "+esm" do jsdelivr é WebGPU-only e falha nela, por isso
+  // usamos o arquivo ESM publicado pelo próprio pacote.
+  const SPLINE_RUNTIME_URL = 'https://cdn.jsdelivr.net/npm/@splinetool/runtime@2.0.65/build/runtime.js';
+  const SPLINE_SCENE_URL = 'https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode';
 
-    video.addEventListener('loadeddata', () => {
-      if (DESKTOP() || reduceMotion) { target = current = video.duration * 0.05; video.currentTime = current; }
-      video.classList.add('is-ready');
-    });
-    video.addEventListener('error', () => { video.style.display = 'none'; });
+  function initSpline(stage) {
+    const canvas = stage.querySelector('.ai-spline');
+    if (!canvas) return;
+    // A cena tem interação de câmera contínua embutida, sem opção pública de
+    // desligar só isso — quem pede menos movimento não carrega o robô 3D e
+    // fica só com o gradiente de fundo (que já preenche o palco sozinho).
+    if (reduceMotion || !window.WebGL2RenderingContext) return;
 
-    function applyMode() {
-      if (!isFinite(video.duration)) return;
-      if (DESKTOP() || reduceMotion) { video.loop = false; video.pause(); }
-      else { video.loop = true; video.play().catch(() => {}); }
-    }
-    video.addEventListener('loadedmetadata', applyMode);
-    window.addEventListener('resize', applyMode);
+    let app = null, visible = true, disposed = false;
+    function resize() { if (app) app.setSize(Math.max(1, canvas.clientWidth), Math.max(1, canvas.clientHeight)); }
+    function sync() { if (app) { if (visible && !document.hidden) app.play(); else app.stop(); } }
 
-    window.addEventListener('mousemove', (e) => {
-      const onScreen = stage.offsetParent !== null; // aba do painel oculta → ignora
-      if (!onScreen || !DESKTOP() || reduceMotion || !isFinite(video.duration)) { prevX = e.clientX; return; }
-      if (prevX === null) { prevX = e.clientX; return; }
-      const dx = e.clientX - prevX;
-      prevX = e.clientX;
-      target = clamp(target + (dx / window.innerWidth) * 0.8 * video.duration, 0, video.duration);
-      if (!raf) raf = requestAnimationFrame(tick);
-    }, { passive: true });
+    import(SPLINE_RUNTIME_URL)
+      .then(({ Application }) => {
+        if (disposed) return null;
+        app = new Application(canvas);
+        return app.load(SPLINE_SCENE_URL);
+      })
+      .then(() => {
+        if (disposed || !app) return;
+        resize();
+        canvas.classList.add('is-ready');
+        new ResizeObserver(resize).observe(canvas);
+        new IntersectionObserver(([e]) => { visible = e.isIntersecting; sync(); }).observe(stage);
+        document.addEventListener('visibilitychange', sync);
+      })
+      .catch((err) => {
+        // Sem internet, CDN fora do ar ou GPU sem suporte: some com o robô e
+        // deixa só o gradiente — igual ao resto do site, nunca quebra a tela.
+        console.warn('Robô 3D indisponível, mantendo só o gradiente de fundo:', err?.message || err);
+        canvas.remove();
+      });
 
-    // Segue o alvo com suavização; só pede novo seek quando o anterior terminou
-    function tick() {
-      raf = 0;
-      const diff = target - current;
-      if (Math.abs(diff) > 0.002) {
-        current += diff * 0.16;
-        if (!video.seeking) video.currentTime = current;
-        raf = requestAnimationFrame(tick);
-      }
-    }
-    video.addEventListener('seeked', () => { if (!raf && Math.abs(target - current) > 0.002) raf = requestAnimationFrame(tick); });
-    video.__scrub = () => ({ target, current, t: video.currentTime }); // depuração/teste
+    return () => { disposed = true; try { app?.dispose(); } catch { /* já descartado */ } };
   }
 
   // Brilho que segue o cursor com um campo do assistente em foco
@@ -307,9 +307,8 @@ const MatchAssistant = (() => {
   const STAGE_HTML = `
     <div class="ai-stage">
       <div class="ai-gradient" aria-hidden="true"><canvas></canvas></div>
-      <div class="ai-video-wrap" aria-hidden="true">
-        <video class="ai-video" muted playsinline preload="auto"
-               src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260601_110537_3a579fa0-7bbc-4d94-9d25-0e816c7840f5.mp4"></video>
+      <div class="ai-spline-wrap" aria-hidden="true">
+        <canvas class="ai-spline"></canvas>
       </div>
       <div class="ai-veil" aria-hidden="true"></div>
       <div class="ai-glow" aria-hidden="true"></div>
@@ -393,7 +392,7 @@ const MatchAssistant = (() => {
     const views = { picker: stage.querySelector('[data-view="picker"]'), chat: stage.querySelector('[data-view="chat"]') };
 
     initGradient(stage);
-    initVideo(stage);
+    initSpline(stage);
     initGlow(stage);
 
     let project = null;       // projeto escolhido

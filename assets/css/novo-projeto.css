@@ -1,0 +1,164 @@
+/* ---------- Novo projeto (novo-projeto.html) ----------
+   Página cheia em etapas. Usa só tokens de style.css (cores, raios, sombras,
+   --ease-out) e o mesmo vidro líquido do painel (.dash-card). */
+
+.np-shell { max-width: 980px; margin: 0 auto; padding: 40px 24px 120px; }
+.np-head { text-align: center; margin-bottom: 32px; }
+.np-head h1 { font-size: clamp(2rem, 4.4vw, 3rem); margin: 6px 0 26px; }
+.np-head h1 em, .np-card h2 em { font-style: italic; color: var(--terracotta); }
+
+/* Stepper: números em círculo ligados por um fio que se preenche. */
+.np-stepper { list-style: none; margin: 0 auto; padding: 0; display: flex; justify-content: center; gap: 0; max-width: 720px; counter-reset: none; }
+.np-stepper li {
+  flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-size: 0.78rem; font-weight: 600; color: var(--ink-faint); letter-spacing: .02em;
+  transition: color .3s var(--ease-out);
+}
+.np-stepper li span {
+  position: relative; z-index: 1; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 0.82rem; background: var(--bg); border: 1px solid var(--line); color: var(--ink-faint);
+  transition: background .3s var(--ease-out), color .3s var(--ease-out), border-color .3s var(--ease-out), transform .3s var(--ease-spring);
+}
+.np-stepper li + li::before {
+  content: ''; position: absolute; top: 16px; right: 50%; width: 100%; height: 1px; background: var(--line);
+}
+.np-stepper li + li::after {
+  content: ''; position: absolute; top: 16px; right: 50%; width: 100%; height: 1px; background: var(--terracotta);
+  transform: scaleX(0); transform-origin: left; transition: transform .5s var(--ease-out);
+}
+.np-stepper li.is-done + li::after, .np-stepper li.is-current::after { transform: scaleX(1); }
+.np-stepper li.is-current { color: var(--ink); }
+.np-stepper li.is-current span { background: var(--terracotta); border-color: var(--terracotta); color: var(--on-accent); transform: scale(1.08); }
+.np-stepper li.is-done span { border-color: var(--terracotta); color: var(--terracotta); }
+.np-stepper li:last-child span { border-style: dashed; }
+
+/* Cartão de vidro líquido, igual ao .dash-card do painel. */
+.np-card {
+  position: relative; border-radius: var(--radius-lg); padding: clamp(24px, 4vw, 40px);
+  background: color-mix(in srgb, var(--white) 74%, transparent);
+  backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .07), inset 0 1px 1px rgba(255, 255, 255, .14);
+}
+.np-card::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; padding: 1.2px;
+  background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.18) 22%, rgba(255,255,255,0) 42%, rgba(255,255,255,0) 58%, rgba(255,255,255,.16) 78%, rgba(255,255,255,.5) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.np-card h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); margin-bottom: 8px; }
+.np-card .card-lead { margin-bottom: 26px; max-width: 60ch; }
+.np-error { color: #9c3b23; font-size: 0.86rem; margin: 6px 0 0; min-height: 1.2em; }
+
+/* Entrada de cada etapa: desliza na direção da navegação. */
+.np-step.is-entering { animation: np-enter .55s var(--ease-out) both; }
+.np-step[data-dir="prev"].is-entering { animation-name: np-enter-back; }
+@keyframes np-enter { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes np-enter-back { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+
+.np-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.np-link {
+  background: none; border: none; padding: 6px 2px; color: var(--ink-soft); font-size: 0.86rem; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.np-link:hover { color: var(--terracotta); }
+.np-link:disabled { opacity: .6; cursor: progress; }
+
+/* ---------- Referências por imagem ---------- */
+.np-quiz-head { text-align: center; margin-bottom: 26px; }
+.np-quiz-head h2 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); margin: 6px 0 8px; outline: none; }
+.np-quiz-head .card-lead { margin: 0 auto; }
+.np-quiz-count { font-size: 0.72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--terracotta); }
+
+.np-choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-inline: auto;
+  /* as 4 fotos cabem na tela sem rolar: a largura acompanha a altura disponível */
+  max-width: max(520px, calc((100dvh - 388px) * 4 / 3 + 18px)); }
+.np-choice { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.np-choices.is-entering .np-choice { animation: np-card-in .6s var(--ease-out) both; animation-delay: calc(var(--i) * 70ms); }
+@keyframes np-card-in { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
+
+.np-choice-btn {
+  position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: none; cursor: pointer;
+  border-radius: var(--radius-md); overflow: hidden; background: var(--bg-alt);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .1);
+  transition: transform .35s var(--ease-out), box-shadow .35s var(--ease-out), opacity .35s var(--ease-out), filter .35s var(--ease-out);
+}
+.np-choice-btn img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .8s var(--ease-out); }
+.np-choice-btn:hover img { transform: scale(1.04); }
+.np-choice-btn:hover { box-shadow: 0 18px 44px rgba(0, 0, 0, .16); }
+.np-choice-btn:focus-visible { outline: 3px solid var(--terracotta); outline-offset: 3px; }
+
+/* Rótulo em vidro escuro sobre a foto — legível em qualquer imagem. */
+.np-choice-label {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 10px 14px; border-radius: var(--radius-sm);
+  text-align: left; font-size: 0.92rem; font-weight: 600; color: #fff;
+  background: rgba(20, 17, 15, .42); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .16);
+}
+.np-choice-check {
+  position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--terracotta); box-shadow: var(--shadow-glow); transform: scale(0); opacity: 0;
+  transition: transform .35s var(--ease-spring), opacity .2s ease;
+}
+.np-choice-check::after {
+  content: ''; position: absolute; left: 10px; top: 7px; width: 7px; height: 13px;
+  border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+}
+.np-choice.is-selected .np-choice-btn { box-shadow: 0 0 0 3px var(--terracotta), 0 18px 44px rgba(176, 117, 90, .32); transform: translateY(-3px); }
+.np-choice.is-selected .np-choice-check { transform: scale(1); opacity: 1; }
+.np-choices.has-choice .np-choice:not(.is-selected) .np-choice-btn { opacity: .45; filter: saturate(.6); transform: scale(.98); }
+.np-choice-credit { font-size: 0.7rem; color: var(--ink-faint); text-align: right; }
+.np-choice-credit:hover { color: var(--terracotta); }
+
+.np-quiz-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+.np-quiz-dots { display: flex; gap: 8px; }
+.np-quiz-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background .3s ease, width .3s var(--ease-out); }
+.np-quiz-dots i.is-done { background: var(--sage); }
+.np-quiz-dots i.is-current { width: 24px; border-radius: 4px; background: var(--terracotta); }
+
+/* ---------- Ponte para a experiência 3D ---------- */
+.np-card--bridge { text-align: center; padding-top: clamp(36px, 6vw, 64px); padding-bottom: clamp(36px, 6vw, 64px); overflow: hidden; }
+.np-card--bridge .card-lead { margin: 0 auto 24px; font-size: 1rem; }
+.np-card--bridge h2 { font-size: clamp(1.9rem, 4vw, 2.8rem); }
+.np-bridge-styles { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-bottom: 30px; min-height: 8px; }
+.np-bridge-label { width: 100%; font-size: 0.72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 4px; }
+.np-style-pill { padding: 7px 16px; border-radius: 999px; border: 1px solid var(--line); font-size: 0.86rem; font-weight: 600; color: var(--ink-soft); background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.np-style-pill.is-lead { background: var(--terracotta); border-color: var(--terracotta); color: var(--on-accent); }
+.np-bridge-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.np-bridge-actions .btn { padding: 16px 32px; font-size: 1rem; }
+
+@media (max-width: 640px) {
+  .np-shell { padding: 24px 16px 96px; }
+  .np-stepper li { font-size: 0.66rem; }
+  .np-choices { gap: 12px; }
+  .np-choice-label { left: 8px; right: 8px; bottom: 8px; padding: 7px 9px; font-size: 0.78rem; }
+  .np-actions .btn { flex: 1; }
+}
+@media (max-width: 420px) {
+  .np-stepper li { font-size: 0; gap: 0; }
+}
+
+/* ---------- Vidro líquido nos detalhes (mesma construção dos .btn do site) ---------- */
+.np-stepper li span {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, .05) 55%), color-mix(in srgb, var(--bg) 60%, transparent);
+  backdrop-filter: blur(10px) saturate(160%); -webkit-backdrop-filter: blur(10px) saturate(160%);
+  box-shadow: inset 1px 1px 1px -0.5px rgba(255, 255, 255, .8), inset -1px -1px 1px -0.5px rgba(0, 0, 0, .12);
+}
+.np-stepper li.is-current span {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, 0) 50%), var(--terracotta);
+  box-shadow: inset 1px 1px 1px -0.5px rgba(255, 255, 255, .8), inset -1px -1px 1px -0.5px rgba(0, 0, 0, .25), var(--shadow-glow);
+}
+.np-style-pill {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .45), rgba(255, 255, 255, 0) 55%), color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%);
+  box-shadow: inset 1px 1px 1px -0.5px rgba(255, 255, 255, .8), inset -1px -1px 1px -0.5px rgba(0, 0, 0, .1);
+}
+.np-style-pill.is-lead {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, 0) 48%), var(--terracotta);
+  box-shadow: inset 1px 1px 1px -0.5px rgba(255, 255, 255, .8), inset -1px -1px 1px -0.5px rgba(0, 0, 0, .25), var(--shadow-glow);
+}
+.np-choice-check {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .4), rgba(255, 255, 255, 0) 50%), rgba(176, 117, 90, .85);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 1px 1px 1px -0.5px rgba(255, 255, 255, .9), inset -1px -1px 1px -0.5px rgba(0, 0, 0, .3), var(--shadow-glow);
+}
+.np-choice-label { box-shadow: inset 1px 1px 1px -0.5px rgba(255, 255, 255, .55), inset -1px -1px 1px -0.5px rgba(0, 0, 0, .3); }
+.np-quiz-dots i.is-current { background: linear-gradient(135deg, rgba(255, 255, 255, .4), rgba(255, 255, 255, 0) 60%), var(--terracotta); }

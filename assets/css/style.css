@@ -1196,6 +1196,71 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .profile-tab:hover { color: var(--ink); }
 .profile-tab.active { color: var(--terracotta); border-bottom-color: var(--terracotta); }
+
+/* ---- Painel com menu lateral persistente: em telas largas as mesmas abas
+   (.profile-tabs/.profile-tab, lógica inalterada em dashboard.js) viram uma
+   coluna fixa de vidro fosco à esquerda, que não se move ao trocar de aba —
+   cada aba vira uma "página" de tela cheia à direita (sem acúmulo de hero
+   e cards de visão geral em todas elas: isso fica só na aba Home). Em telas
+   estreitas cai de volta pra barra horizontal rolável de sempre. */
+.dash-app { display: block; }
+@media (min-width: 1024px) {
+  .dash-app { display: flex; align-items: flex-start; gap: 28px; }
+  .dash-app > .profile-tabs {
+    flex: 0 0 236px; flex-direction: column; border: none; margin-bottom: 0; gap: 2px;
+    position: sticky; top: 96px; overflow: visible;
+    padding: 16px 12px; border-radius: var(--radius-md);
+  }
+  .dash-app > .profile-tabs .profile-tab {
+    border-bottom: none; border-left: 2px solid transparent; justify-content: flex-start;
+    padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 0;
+  }
+  .dash-app > .profile-tabs .profile-tab:hover { background: color-mix(in srgb, var(--white) 55%, transparent); }
+  .dash-app > .profile-tabs .profile-tab.active { background: color-mix(in srgb, var(--white) 70%, transparent); border-left-color: var(--terracotta); }
+  /* "Tela cheia": cada página de conteúdo ocupa o resto da altura visível,
+     em vez de ficar do tamanho do pouco conteúdo que ela tiver. */
+  .dash-main { flex: 1; min-width: 0; min-height: calc(100vh - 230px); }
+}
+.dash-main > .dash-overview { margin-bottom: 20px; }
+
+/* ---- Aba "Home": único lugar onde o hero de perfil (movido pra cá via JS,
+   ver dashboard.js) e a visão geral/gráfico aparecem — as outras páginas
+   (Assistente, Seus projetos, Mensagens...) ficam livres pra usar o espaço
+   inteiro com o próprio conteúdo. ---- */
+#clientHomePanel .dash-hero,
+#architectHomePanel .dash-hero,
+#storeHomePanel .dash-hero { margin-bottom: 28px; }
+
+/* ---- Gráfico de estatísticas na aba Home (Chart.js via CDN) ---- */
+.dash-stats-card { height: 260px; }
+.dash-stats-card canvas { max-height: 190px; }
+.dash-stats-empty { font-size: 0.86rem; color: var(--ink-faint); }
+
+/* ---- Grade de "Seus projetos" (cliente) / projetos contratados (arquiteto)
+   inline no painel, além da gaveta de detalhe já existente. ---- */
+.dash-projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 16px; }
+.dash-project-card {
+  position: relative;
+  text-align: left; background: color-mix(in srgb, var(--white) 60%, transparent);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px; cursor: pointer;
+  transition: box-shadow .15s ease, transform .15s ease;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.dash-project-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.dash-project-card strong { display: block; font-size: 0.95rem; margin-bottom: 2px; }
+.dash-project-card span { display: block; font-size: 0.78rem; color: var(--ink-faint); }
+.dash-project-card .tag { margin-top: 8px; display: inline-block; }
+/* Botão "Rodar match" dentro do card -- fica por cima do clique do card
+   inteiro (que abre o detalhe), por isso para a propagação no JS. */
+.dash-project-card-run {
+  align-self: flex-start; margin-top: 10px;
+  background: none; border: 1px solid color-mix(in srgb, var(--terracotta) 45%, transparent);
+  color: var(--terracotta-dark); border-radius: 999px; padding: 6px 12px;
+  font-size: 0.76rem; font-weight: 700; cursor: pointer; transition: background .15s ease;
+}
+.dash-project-card-run:hover { background: color-mix(in srgb, var(--terracotta) 12%, transparent); }
+.dash-project-card-run:disabled { opacity: .6; cursor: not-allowed; }
+
 @media (max-width: 700px) {
   .profile-header { gap: 16px; }
   .profile-avatar-lg { width: 72px; height: 72px; font-size: 1.5rem; }
@@ -2731,4 +2796,77 @@ body::before {
 @media (max-width: 600px) {
   .featured-hero { padding: 24px; min-height: 420px; }
   .fh-avatar-thumb { width: 38px; height: 38px; }
+}
+
+/* ---------- Ranking de arquitetos em formato leaderboard (showcase.js) ----------
+   Uma lista em vidro: posição com coroa no pódio, foto, nome com
+   especialidade/cidade e a nota à direita. Fica acima do carrossel 3D
+   (z-index), que antes deslizava por trás dos cards do ranking. */
+.showcase-ranking.lb {
+  --rank-1: #C79A3E; --rank-2: #98A2A8; --rank-3: var(--terracotta);
+  position: relative; z-index: 3; isolation: isolate; display: block; padding: 6px; border-radius: 22px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, .1) 60%), color-mix(in srgb, var(--white) 78%, transparent);
+  backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: var(--shadow-md), inset 1px 1px 1px -.5px rgba(255, 255, 255, .9), inset -1px -1px 1px -.5px rgba(0, 0, 0, .08);
+}
+.lb-row {
+  position: relative; display: grid; grid-template-columns: 46px 44px minmax(0, 1fr) auto auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 16px; color: inherit; text-decoration: none;
+  transition: background .18s ease, transform .2s var(--ease-out), box-shadow .2s var(--ease-out);
+}
+.lb-row + .lb-row::before { content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 1px; background: var(--line); transition: opacity .18s ease; }
+.lb-row:hover, .lb-row:focus-visible { background: color-mix(in srgb, var(--bg-alt) 70%, transparent); transform: translateX(3px); outline: none; }
+.lb-row:hover::before, .lb-row:hover + .lb-row::before, .lb-row:focus-visible::before, .lb-row:focus-visible + .lb-row::before { opacity: 0; }
+.lb-row:focus-visible { box-shadow: 0 0 0 2px var(--terracotta); }
+.lb-row--1 { background: linear-gradient(100deg, color-mix(in srgb, var(--rank-1) 14%, transparent), transparent 70%); }
+
+.lb-rank { display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.lb-rank b { min-width: 14px; }
+.lb-crown { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .35s var(--ease-spring); }
+.lb-row--1 .lb-crown { color: var(--rank-1); fill: color-mix(in srgb, var(--rank-1) 25%, transparent); }
+.lb-row--2 .lb-crown { color: var(--rank-2); }
+.lb-row--3 .lb-crown { color: var(--rank-3); }
+.lb-row:hover .lb-crown { transform: rotate(-10deg) translateY(-2px) scale(1.12); }
+
+.lb-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--bg-alt); box-shadow: 0 0 0 2px color-mix(in srgb, var(--white) 80%, transparent), var(--shadow-sm); }
+.lb-row--1 .lb-avatar { box-shadow: 0 0 0 2px var(--rank-1), var(--shadow-sm); }
+.lb-who { min-width: 0; }
+.lb-who strong { display: block; font-weight: 600; font-size: .94rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-who strong em { font-style: normal; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--terracotta); margin-left: 4px; }
+.lb-who small { display: block; font-size: .78rem; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-badges { display: flex; gap: 4px; }
+.lb-badge {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 8px; border-radius: 999px;
+  font-size: .66rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--on-accent);
+  box-shadow: inset 1px 1px 1px -.5px rgba(255, 255, 255, .8), inset -1px -1px 1px -.5px rgba(0, 0, 0, .2);
+}
+.lb-badge--pro { background: linear-gradient(135deg, rgba(255, 255, 255, .35), rgba(255, 255, 255, 0) 55%), var(--terracotta); }
+.lb-badge--ok { padding: 0; background: linear-gradient(135deg, rgba(255, 255, 255, .35), rgba(255, 255, 255, 0) 55%), var(--sage); }
+.lb-value { text-align: right; min-width: 64px; }
+.lb-value b { display: block; font-family: var(--font-display); font-size: 1.12rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.lb-value b span { color: var(--rank-1); font-size: .9em; }
+.lb-value .lb-new { font-family: var(--font-body); font-size: .8rem; color: var(--sage-dark); }
+.lb-value small { display: block; font-size: .68rem; color: var(--ink-faint); white-space: nowrap; }
+
+.lb-row.is-me { background: color-mix(in srgb, var(--bg-alt) 80%, transparent); box-shadow: inset 0 0 0 2px var(--terracotta); }
+
+/* entrada em sequência quando a lista aparece (translate separado do
+   transform do hover, pra animação e hover não brigarem) */
+.lb:not(.is-in) .lb-row { opacity: 0; }
+.lb.is-in .lb-row { animation: lb-in .55s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 80ms); }
+@keyframes lb-in { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+
+@media (max-width: 520px) {
+  .lb-row { grid-template-columns: 34px 40px minmax(0, 1fr) auto; gap: 10px; padding: 10px 8px; }
+  .lb-avatar { width: 40px; height: 40px; }
+  .lb-badges { display: none; }
+  .lb-crown { width: 16px; height: 16px; }
+}
+/* O carrossel 3D gira cards para fora da própria coluna; nas bordas eles
+   esmaecem em vez de invadir o ranking ao lado. */
+@media (min-width: 901px) {
+  .showcase-track.pc3d-viewport {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 88%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 88%, transparent 100%);
+  }
 }

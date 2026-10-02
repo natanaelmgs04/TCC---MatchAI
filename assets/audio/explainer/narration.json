@@ -1,0 +1,121 @@
+{
+ "intro-0": {
+  "src": "assets/audio/explainer/intro-0.mp3",
+  "start": 0.0,
+  "dur": 8.75,
+  "text": "Oi! Aqui é o match.IA. Deixa eu te mostrar, rapidinho, como a gente ajuda quem quer construir e quem projeta.",
+  "who": "ia"
+ },
+ "intro-1": {
+  "src": "assets/audio/explainer/intro-1.mp3",
+  "start": 0.05,
+  "dur": 1.13,
+  "text": "Pode mostrar!",
+  "who": "voce"
+ },
+ "c1-0": {
+  "src": "assets/audio/explainer/c1-0.mp3",
+  "start": 0.0,
+  "dur": 7.61,
+  "text": "Você me conta seu estilo, seu orçamento e o que a sua família precisa. Eu calculo quais arquitetos combinam de verdade com você.",
+  "who": "ia"
+ },
+ "c2-0": {
+  "src": "assets/audio/explainer/c2-0.mp3",
+  "start": 0.0,
+  "dur": 6.31,
+  "text": "E você acompanha tudo: o score, as sugestões e as referências que a IA gerou pra você.",
+  "who": "ia"
+ },
+ "c3-0": {
+  "src": "assets/audio/explainer/c3-0.mp3",
+  "start": 0.0,
+  "dur": 5.19,
+  "text": "O que você escolhe no cadastro vira critério de verdade, do estilo aos detalhes do dia a dia.",
+  "who": "ia"
+ },
+ "c4-0": {
+  "src": "assets/audio/explainer/c4-0.mp3",
+  "start": 0.0,
+  "dur": 4.84,
+  "text": "Resultado: menos reuniões de alinhamento, e mais tempo e dinheiro pro que importa.",
+  "who": "ia"
+ },
+ "c5-0": {
+  "src": "assets/audio/explainer/c5-0.mp3",
+  "start": 0.0,
+  "dur": 3.87,
+  "text": "Do questionário ao acompanhamento do projeto, tudo é pensado pra você.",
+  "who": "ia"
+ },
+ "c5-1": {
+  "src": "assets/audio/explainer/c5-1.mp3",
+  "start": 0.05,
+  "dur": 2.89,
+  "text": "Legal! E se eu for arquiteto?",
+  "who": "voce"
+ },
+ "bridge-0": {
+  "src": "assets/audio/explainer/bridge-0.mp3",
+  "start": 0.0,
+  "dur": 4.66,
+  "text": "Aí a IA vira sua parceira de trabalho. Olha só.",
+  "who": "ia"
+ },
+ "a1-0": {
+  "src": "assets/audio/explainer/a1-0.mp3",
+  "start": 0.0,
+  "dur": 7.05,
+  "text": "A IA aprende o seu estilo, mas não substitui a sua assinatura. A criação continua sua.",
+  "who": "ia"
+ },
+ "a2-0": {
+  "src": "assets/audio/explainer/a2-0.mp3",
+  "start": 0.0,
+  "dur": 5.9,
+  "text": "Ela acelera a pesquisa e sugere conceitos, materiais e referências sob medida pra cada projeto.",
+  "who": "ia"
+ },
+ "a3-0": {
+  "src": "assets/audio/explainer/a3-0.mp3",
+  "start": 0.0,
+  "dur": 6.04,
+  "text": "Você recebe o perfil do cliente organizado: estilo, orçamento e família, tudo num só lugar.",
+  "who": "ia"
+ },
+ "a4-0": {
+  "src": "assets/audio/explainer/a4-0.mp3",
+  "start": 0.0,
+  "dur": 5.96,
+  "text": "E tem um banco de materiais integrado, com sugestões de materiais e layouts pra adiantar o conceito.",
+  "who": "ia"
+ },
+ "a5-0": {
+  "src": "assets/audio/explainer/a5-0.mp3",
+  "start": 0.0,
+  "dur": 2.99,
+  "text": "Menos tempo em briefing, mais tempo projetando.",
+  "who": "ia"
+ },
+ "a6-0": {
+  "src": "assets/audio/explainer/a6-0.mp3",
+  "start": 0.0,
+  "dur": 6.63,
+  "text": "Quem combina com o cliente aparece com prioridade nos resultados. Mais conversas viram projetos fechados.",
+  "who": "ia"
+ },
+ "outro-0": {
+  "src": "assets/audio/explainer/outro-0.mp3",
+  "start": 0.0,
+  "dur": 6.64,
+  "text": "O cliente encontra quem entende o que ele quer. O arquiteto, quem valoriza o seu trabalho. Bora dar o match?",
+  "who": "ia"
+ },
+ "outro-1": {
+  "src": "assets/audio/explainer/outro-1.mp3",
+  "start": 0.05,
+  "dur": 0.75,
+  "text": "Bora!",
+  "who": "voce"
+ }
+}

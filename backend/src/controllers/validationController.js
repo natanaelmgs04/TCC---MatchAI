@@ -2,6 +2,7 @@ import Validation from "../models/Validation.js";
 import User from "../models/User.js";
 import Commission from "../models/Commission.js";
 import MatchHistory from "../models/MatchHistory.js";
+import Project from "../models/Project.js";
 import { validationClosedEmail } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
 
@@ -38,6 +39,12 @@ async function createCommissionForClosedValidation(validation) {
     { $setOnInsert: { architect: architect.id, client: client.id, project: history?.project?._id, validation: validation._id, rate: COMMISSION_RATE, estimatedValue, amount } },
     { upsert: true, new: true },
   );
+
+  // Marca o projeto como "contratado" por este arquiteto, pra alimentar a
+  // aba "Seus projetos" e o assistente de IA do lado do arquiteto.
+  if (history?.project?._id) {
+    await Project.findByIdAndUpdate(history.project._id, { architect: architect.id, status: "in_progress" });
+  }
 
   await User.updateOne({ _id: architect.id }, { $inc: { "architectProfile.closedProjectsCount": 1 } });
   notify(architect.id, "commission", `Projeto fechado com ${client.name} pela plataforma — comissão simulada de R$${amount}`, "dashboard.html");

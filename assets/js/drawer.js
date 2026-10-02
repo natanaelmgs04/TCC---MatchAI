@@ -36,7 +36,11 @@ const ProjectDrawer = (() => {
     overlay.querySelector('.drawer-title').textContent = cfg.title;
     document.body.classList.add('no-scroll');
     overlay.classList.add('open');
-    showList();
+    // openId: pula direto pro detalhe de um item (ex.: clicou num card da
+    // grade "Seus projetos" fora da gaveta) em vez de sempre abrir na lista.
+    const target = config.openId != null ? cfg.items().find((item) => String(cfg.idOf(item)) === String(config.openId)) : null;
+    if (target) showDetail(target);
+    else showList();
   }
 
   function close() {
@@ -57,7 +61,7 @@ const ProjectDrawer = (() => {
           ? items.map((item) => `<button type="button" class="drawer-list-item" data-drawer-id="${cfg.idOf(item)}">${cfg.cardHtml(item)}</button>`).join('')
           : `<p class="drawer-empty">${cfg.emptyLabel || 'Nada por aqui ainda.'}</p>`
       }</div>`;
-    body.querySelector('.drawer-new-btn').addEventListener('click', () => showDetail(null));
+    body.querySelector('.drawer-new-btn').addEventListener('click', () => (cfg.onNew ? cfg.onNew() : showDetail(null)));
     body.querySelectorAll('[data-drawer-id]').forEach((el) => {
       el.addEventListener('click', () => showDetail(items.find((item) => String(cfg.idOf(item)) === el.dataset.drawerId)));
     });

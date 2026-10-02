@@ -35,27 +35,47 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>`;
   }
 
+  // Ranking em formato de leaderboard: posição (coroa no pódio), foto, nome,
+  // especialidade/cidade e a nota à direita. Sem setas de "subiu/desceu" de
+  // propósito — a API não guarda histórico de posição, e inventar não dá.
+  const CROWN = '<svg class="lb-crown" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.56 3.27a.5.5 0 0 1 .88 0l2.95 5.6a1 1 0 0 0 1.52.3l4.27-3.67a.5.5 0 0 1 .8.52l-2.83 10.25a1 1 0 0 1-.96.73H5.81a1 1 0 0 1-.96-.73L2.02 6.02a.5.5 0 0 1 .8-.52l4.27 3.67a1 1 0 0 0 1.52-.3z"/><path d="M5 21h14"/></svg>';
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const me = (() => { try { return MatchAPI.currentUser()?.id || null; } catch { return null; } })();
+
   function rankingItemHtml(a, i) {
-    const badges = [
-      a.isPro ? '<span class="badge-pro">★ Pro</span>' : '',
-      a.isVerifiedTrackRecord ? '<span class="status-pill badge-validated">Trajetória verificada</span>' : '',
-    ].filter(Boolean).join('');
-    const location = [a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada';
+    const rank = i + 1;
+    const location = [a.city, a.state].filter(Boolean).join(' · ');
+    const style = a.profile?.styles?.[0];
+    const closed = a.profile?.closedProjectsCount || 0;
+    const byline = [style, location || 'Localização não informada', closed ? `${closed} projeto${closed > 1 ? 's' : ''} fechado${closed > 1 ? 's' : ''}` : '']
+      .filter(Boolean).join(' · ');
     const photo = PROFILE_PHOTOS[i % PROFILE_PHOTOS.length];
+    const isMe = me && String(a.id) === String(me);
+    const rated = a.avgRating > 0;
+    const badges = [
+      a.isPro ? '<span class="lb-badge lb-badge--pro" title="Assinante Pro">Pro</span>' : '',
+      a.isVerifiedTrackRecord ? '<span class="lb-badge lb-badge--ok" title="Trajetória verificada">✓</span>' : '',
+    ].join('');
     return `
-      <div class="arch-card arch-card-compact">
-        <a href="arquiteto.html?id=${a.id}" class="arch-card-link">
-          <div class="arch-card-photo">
-            <img src="${photo}" alt="" loading="lazy">
-            <span class="arch-card-rank">${i + 1}</span>
-          </div>
-          <div class="arch-card-body">
-            <h4>${a.name}</h4>
-            <span class="arch-card-meta">${location}${a.avgRating ? ` · ★ ${a.avgRating}` : ''}</span>
-            ${badges ? `<div class="arch-card-badges">${badges}</div>` : ''}
-          </div>
-        </a>
-      </div>`;
+      <a class="lb-row${rank <= 3 ? ` lb-row--podium lb-row--${rank}` : ''}${isMe ? ' is-me' : ''}" role="listitem" href="arquiteto.html?id=${esc(a.id)}" style="--i:${i}">
+        <span class="lb-rank"><b>${rank}</b>${rank <= 3 ? CROWN : ''}</span>
+        <img class="lb-avatar" src="${photo}" alt="" loading="lazy" width="44" height="44">
+        <span class="lb-who">
+          <strong>${esc(a.name)}${isMe ? ' <em>você</em>' : ''}</strong>
+          <small>${esc(byline)}</small>
+        </span>
+        ${badges ? `<span class="lb-badges">${badges}</span>` : ''}
+        <span class="lb-value">
+          ${rated ? `<b><span aria-hidden="true">★</span> ${a.avgRating.toFixed(1)}</b><small>${a.reviewCount} avaliaç${a.reviewCount === 1 ? 'ão' : 'ões'}</small>` : '<b class="lb-new">Novo</b><small>sem avaliações</small>'}
+        </span>
+      </a>`;
+  }
+
+  // as linhas entram em sequência quando a lista aparece na tela
+  function revealRows() {
+    if (!('IntersectionObserver' in window)) { ranking.classList.add('is-in'); return; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { ranking.classList.add('is-in'); io.disconnect(); } }, { threshold: 0.25 });
+    io.observe(ranking);
   }
 
   const prevBtn = document.getElementById('showcasePrev');
@@ -80,9 +100,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         : '<p class="showcase-empty">Ainda não temos projetos publicados o suficiente — os primeiros matches confirmados aparecerão aqui.</p>';
     }
 
-    ranking.innerHTML = archResult.architects.length
-      ? archResult.architects.map(rankingItemHtml).join('')
-      : '<p class="showcase-empty">Nenhum arquiteto cadastrado ainda.</p>';
+    if (archResult.architects.length) {
+      ranking.classList.add('lb');
+      ranking.setAttribute('role', 'list');
+      ranking.setAttribute('aria-label', 'Ranking dos arquitetos com melhor mérito');
+      ranking.innerHTML = archResult.architects.map(rankingItemHtml).join('');
+      revealRows();
+    } else {
+      ranking.innerHTML = '<p class="showcase-empty">Nenhum arquiteto cadastrado ainda.</p>';
+    }
   } catch {
     track.innerHTML = '<p class="showcase-empty">Não foi possível carregar a vitrine agora.</p>';
     ranking.innerHTML = '';

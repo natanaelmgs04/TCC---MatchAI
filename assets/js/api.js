@@ -138,5 +138,9 @@ const MatchAPI = (() => {
     submitTestimonial: (otherId, testimonial) => request(`/case-studies/${encodeURIComponent(otherId)}/testimonial`, { method: 'POST', auth: true, body: { testimonial } }),
     approveCaseStudy: (otherId) => request(`/case-studies/${encodeURIComponent(otherId)}/approve`, { method: 'POST', auth: true }),
     publishedCaseStudies: (architectId) => request(`/case-studies/architect/${encodeURIComponent(architectId)}`),
+    architectProjects: () => request('/architect-projects', { auth: true }),
+    architectAssistantChat: (projectId) => request(`/architect-assistant/${encodeURIComponent(projectId)}`, { auth: true }),
+    architectAssistantSend: (projectId, payload) => request(`/architect-assistant/${encodeURIComponent(projectId)}/message`, { method: 'POST', auth: true, body: payload }),
+    architectAssistantReset: (projectId) => request(`/architect-assistant/${encodeURIComponent(projectId)}`, { method: 'DELETE', auth: true }),
   };
 })();

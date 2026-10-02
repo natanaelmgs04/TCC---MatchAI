@@ -26,20 +26,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const apiBanner = document.getElementById('apiBanner');
   document.getElementById('apiBaseLabel').textContent = MatchAPI.base();
   const uid = (u) => u.id || u._id;
-  const PROJECT_STYLES = ['Moderno', 'Contemporâneo', 'Minimalista', 'Industrial', 'Clássico', 'Rústico', 'Escandinavo', 'Biofílico', 'Brutalista', 'Alto padrão'];
-  // Mesmas fotos da vitrine "Estilos arquitetônicos" da home.
-  const PROJECT_STYLE_THUMBS = {
-    'Moderno': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=80&q=70',
-    'Contemporâneo': 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=80&q=70',
-    'Minimalista': 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=80&q=70',
-    'Industrial': 'https://images.unsplash.com/photo-1567767292278-a4f21aa2d36e?auto=format&fit=crop&w=80&q=70',
-    'Clássico': 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=80&q=70',
-    'Rústico': 'https://images.unsplash.com/photo-1523755231516-e43fd2e8dca5?auto=format&fit=crop&w=80&q=70',
-    'Escandinavo': 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=80&q=70',
-    'Biofílico': 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=80&q=70',
-    'Brutalista': 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=80&q=70',
-    'Alto padrão': 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=80&q=70',
-  };
+  const PROJECT_STYLES = MatchProjectStyles.list;
+  const PROJECT_STYLE_THUMBS = MatchProjectStyles.thumbs;
 
   // Foto do hero do painel muda a cada visita. Usa fotos diretas do Unsplash
   // (mesmas já usadas no hero da home/carrossel de projetos), não a busca
@@ -60,6 +48,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!bg) return;
     const url = HERO_BACKGROUNDS[Math.floor(Math.random() * HERO_BACKGROUNDS.length)];
     bg.style.backgroundImage = `url("${url}")`;
+  }
+
+  // O hero de perfil (#dashHero) existe uma única vez no HTML -- assim que
+  // o papel logado é descoberto, ele é movido pra dentro da aba "Home" desse
+  // papel, em vez de ficar sempre visível acima de toda e qualquer aba.
+  function moveHeroIntoHome(homePanelId) {
+    const hero = document.getElementById('dashHero');
+    const home = document.getElementById(homePanelId);
+    if (hero && home) home.prepend(hero);
   }
 
   async function refreshUnreadBadge(badgeId, mirrorId) {
@@ -107,13 +104,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderPlanCard(me);
 
   if (me.role === 'client') {
-    document.getElementById('clientPanel').style.display = 'block';
-    document.getElementById('clientActions').style.display = 'block';
+    document.getElementById('clientPanel').style.display = '';
+    moveHeroIntoHome('clientHomePanel');
     document.getElementById('roleLabel').textContent = 'Painel do cliente';
-    document.getElementById('runMatchBtn').addEventListener('click', () => {
-      activateProfileTab(document.getElementById('clientProfileTabs'), document.getElementById('clientPanel'), 'match');
-      runMatch(me);
-    });
     document.getElementById('matchResults').addEventListener('click', (e) => handleResultClick(e, me));
     document.getElementById('matchExtraPanels').addEventListener('click', (e) => handleResultClick(e, me));
     setupMatchTabs();
@@ -141,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     assistant = MatchAssistant.mount(document.getElementById('assistantMount'), {
       user: me,
       getProjects: () => myProjects,
-      onCreateProject: () => document.getElementById('openProjectsDrawerBtn').click(),
+      onCreateProject: () => { location.href = 'novo-projeto.html'; },
       // O briefing só pode ir para quem apareceu no match deste projeto
       onRunMatch: (projectId) => { activateProfileTab(clientTabs, clientScope, 'match'); runMatch(me, projectId); },
       // A conversa com o arquiteto continua na aba Mensagens (caminho que a comissão acompanha)
@@ -155,12 +148,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupCompareExport(me);
     refreshUnreadBadge('clientUnreadBadge', 'overviewUnreadCount');
   } else if (me.role === 'architect') {
-    document.getElementById('architectPanel').style.display = 'block';
-    document.getElementById('clientActions').style.display = 'none';
+    document.getElementById('architectPanel').style.display = '';
+    moveHeroIntoHome('architectHomePanel');
     document.getElementById('roleLabel').textContent = 'Painel do arquiteto';
     setupProfileTabs('architectProfileTabs', 'architectPanel');
     document.getElementById('architectStatRating').style.display = '';
     document.getElementById('architectStatPortfolio').style.display = '';
+    document.getElementById('architectOverview').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-jump-tab]');
+      if (btn) activateProfileTab(document.getElementById('architectProfileTabs'), document.getElementById('architectPanel'), btn.dataset.jumpTab);
+    });
     renderOnboardingChecklist(me);
     renderPortfolio(me);
     setupPortfolioForm(me);
@@ -170,15 +167,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupShareProfile(me);
     renderArchitectReviews(me);
     setupChat(me, 'architectConversationList', 'architectChatShell');
-    refreshUnreadBadge('architectUnreadBadge');
+    refreshUnreadBadge('architectUnreadBadge', 'overviewArchitectUnreadCount');
     renderPendingValidations();
     setupMetrics(me);
     renderCommissions();
     setupCaseStudies(me);
     renderCaseStudies(me);
+    renderArchitectStatsChart();
+    ArchitectAssistant.mount(document.getElementById('architectAssistantMount'));
   } else {
-    document.getElementById('storePanel').style.display = 'block';
-    document.getElementById('clientActions').style.display = 'none';
+    document.getElementById('storePanel').style.display = '';
+    moveHeroIntoHome('storeHomePanel');
     document.getElementById('roleLabel').textContent = 'Painel da loja parceira';
     setupProfileTabs('storeProfileTabs', 'storePanel');
     setupStoreProducts(me);
@@ -189,12 +188,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupPrivacyActions(me);
   setupReferral(me);
 
+  // O link "Assistente" do menu do site aponta pra dashboard.html#assistente
+  // -- se a aba existir pro papel logado, abre direto nela em vez de cair
+  // sempre na Home.
+  const hashTab = location.hash.replace('#', '');
+  if (hashTab) {
+    const ids = { client: ['clientProfileTabs', 'clientPanel'], architect: ['architectProfileTabs', 'architectPanel'], store: ['storeProfileTabs', 'storePanel'] };
+    const [tabsId, scopeId] = ids[me.role] || ids.client;
+    const tabsBar = document.getElementById(tabsId);
+    if (tabsBar.querySelector(`[data-profile-panel="${hashTab}"]`)) {
+      activateProfileTab(tabsBar, document.getElementById(scopeId), hashTab);
+    }
+  }
+
   // Quem acabou de se cadastrar cai num painel vazio -- abre direto o
   // menu de "criar meu primeiro projeto"/"adicionar minha primeira peça de
   // portfólio" em vez de deixar a pessoa procurar o botão sozinha.
   if (sessionStorage.getItem('matchia_just_registered') === '1') {
     sessionStorage.removeItem('matchia_just_registered');
-    document.getElementById(me.role === 'client' ? 'openProjectsDrawerBtn' : 'openPortfolioDrawerBtn')?.click();
+    if (me.role === 'client') location.href = 'novo-projeto.html'; else document.getElementById('openPortfolioDrawerBtn')?.click();
   }
 
   function renderProfile(user) {
@@ -407,6 +419,63 @@ document.addEventListener('DOMContentLoaded', async () => {
       myProjects = [];
     }
     renderHeroProjects();
+    renderProjectsGrid(user);
+    renderStatusChart('clientStatsChart', myProjects);
+  }
+
+  // Grade "Seus projetos" dentro da própria aba (além da gaveta de sempre) —
+  // mostra TODOS os projetos de uma vez, não só os 3 da estante do hero, e é
+  // daqui que o match é rodado para um projeto específico (não existe mais
+  // um botão genérico de "rodar match" fora daqui).
+  function renderProjectsGrid() {
+    const grid = document.getElementById('clientProjectsGrid');
+    if (!grid) return;
+    if (!myProjects.length) {
+      grid.innerHTML = '';
+      return;
+    }
+    grid.innerHTML = myProjects.map((p) => `
+      <div class="dash-project-card" role="button" tabindex="0" data-project-id="${p._id}">
+        <strong>${p.name}</strong>
+        <span>${[STATUS_LABEL_PT[p.status] || 'Rascunho', p.propertyType].filter(Boolean).join(' · ')}</span>
+        <span class="tag">${p.areaM2 ? `${p.areaM2} m²` : 'Metragem não informada'}</span>
+        <button type="button" class="dash-project-card-run" data-run-match="${p._id}">Rodar match com IA</button>
+      </div>`).join('');
+  }
+
+  const STATUS_LABEL_PT = { draft: 'Rascunho', matching: 'Buscando arquiteto', in_progress: 'Em andamento', completed: 'Concluído' };
+  const STATUS_CHART_COLORS = { draft: '#C9BBA8', matching: '#B0755A', in_progress: '#7B8E7E', completed: '#5B6B5D' };
+  const chartInstances = {};
+
+  // Gráfico simples (doughnut) de projetos por status — mesmos dados que já
+  // carregam a estante/gaveta de projetos, sem precisar de outra chamada à API.
+  function renderStatusChart(canvasId, projects) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    const counts = {};
+    projects.forEach((p) => { counts[p.status || 'draft'] = (counts[p.status || 'draft'] || 0) + 1; });
+    const labels = Object.keys(counts);
+    const empty = document.getElementById(canvasId.replace('Chart', 'Empty'));
+    chartInstances[canvasId]?.destroy();
+    if (empty) empty.hidden = Boolean(labels.length);
+    canvas.style.display = labels.length ? '' : 'none';
+    if (!labels.length) return;
+    chartInstances[canvasId] = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: labels.map((k) => STATUS_LABEL_PT[k] || k),
+        datasets: [{
+          data: labels.map((k) => counts[k]),
+          backgroundColor: labels.map((k) => STATUS_CHART_COLORS[k] || '#B0755A'),
+          borderWidth: 0,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+      },
+    });
   }
 
   // "Meus projetos" na estante do hero -- sempre visível ao carregar o
@@ -589,17 +658,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function openProjectsDrawer(user, openId) {
+    ProjectDrawer.open({
+      title: 'Meus projetos',
+      newLabel: '+ Novo projeto',
+      emptyLabel: 'Você ainda não criou nenhum projeto — crie um pra rodar seu primeiro match.',
+      items: () => myProjects,
+      idOf: (p) => p._id,
+      cardHtml: projectDrawerCardHtml,
+      renderDetail: (project, container, helpers) => renderProjectDetail(project, container, helpers, user),
+      // Criar projeto agora é a página cheia (formulário + experiência 3D); a gaveta fica só para editar.
+      onNew: () => { location.href = 'novo-projeto.html'; },
+      openId,
+    });
+  }
+
   function setupProjects(user) {
-    document.getElementById('openProjectsDrawerBtn').addEventListener('click', () => {
-      ProjectDrawer.open({
-        title: 'Meus projetos',
-        newLabel: '+ Novo projeto',
-        emptyLabel: 'Você ainda não criou nenhum projeto — crie um pra rodar seu primeiro match.',
-        items: () => myProjects,
-        idOf: (p) => p._id,
-        cardHtml: projectDrawerCardHtml,
-        renderDetail: (project, container, helpers) => renderProjectDetail(project, container, helpers, user),
-      });
+    document.getElementById('openProjectsDrawerBtn').addEventListener('click', () => openProjectsDrawer(user));
+    const grid = document.getElementById('clientProjectsGrid');
+    const clientTabs = document.getElementById('clientProfileTabs'), clientScope = document.getElementById('clientPanel');
+    // Clicar num card da grade "Seus projetos" vai direto ao detalhe daquele
+    // projeto; o botão "Rodar match" dentro do card roda o match só para
+    // ESTE projeto e pula pra aba Compatibilidade (não existe mais um botão
+    // genérico de rodar match fora daqui).
+    grid.addEventListener('click', (e) => {
+      const runBtn = e.target.closest('[data-run-match]');
+      if (runBtn) {
+        activateProfileTab(clientTabs, clientScope, 'match');
+        runMatch(user, runBtn.dataset.runMatch, runBtn);
+        return;
+      }
+      const card = e.target.closest('[data-project-id]');
+      if (card) openProjectsDrawer(user, card.dataset.projectId);
+    });
+    grid.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('[data-project-id]');
+      if (card) { e.preventDefault(); openProjectsDrawer(user, card.dataset.projectId); }
     });
   }
 
@@ -1151,7 +1246,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-selected', String(active));
     });
-    scope.querySelectorAll(':scope > [data-profile-panel-content]').forEach(panel => {
+    // Não usa ":scope >" (só filho direto) porque os painéis agora vivem
+    // dentro do wrapper ".dash-main" do layout com menu lateral, não mais
+    // soltos direto dentro do scope do papel.
+    scope.querySelectorAll('[data-profile-panel-content]').forEach(panel => {
       panel.hidden = panel.dataset.profilePanelContent !== key;
     });
     document.getElementById('contaPanel').hidden = key !== 'conta';
@@ -1206,8 +1304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  async function runMatch(user, projectId) {
-    const btn = document.getElementById('runMatchBtn');
+  async function runMatch(user, projectId, btn) {
     const list = document.getElementById('matchResults');
     const empty = document.getElementById('matchEmpty');
     const contextLabel = document.getElementById('matchContextLabel');
@@ -1222,8 +1319,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Analisando compatibilidade...';
+    const originalBtnText = btn?.textContent;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analisando compatibilidade...'; }
     empty.style.display = 'none';
     list.innerHTML = `
       <div class="skeleton-result">
@@ -1260,8 +1357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('matchExtraPanels').innerHTML = '';
       if (err.offline) apiBanner.classList.add('show');
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Rodar match com IA';
+      if (btn) { btn.disabled = false; btn.textContent = originalBtnText || 'Rodar match'; }
     }
   }
 
@@ -1905,6 +2001,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { reviews, average, count } = await MatchAPI.reviews(uid(user));
       document.getElementById('statRatingValue').textContent = count ? `★ ${average}` : '—';
       document.getElementById('statReviewCount').textContent = count ? `${count} avaliaç${count > 1 ? 'ões' : 'ão'}` : 'sem avaliações';
+      const overviewRating = document.getElementById('overviewRatingValue');
+      if (overviewRating) overviewRating.textContent = count ? `★ ${average}` : '—';
       if (!count) {
         container.innerHTML = emptyStateHtml('Você ainda não recebeu avaliações.');
         return;
@@ -1928,6 +2026,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // ---------------- Estatísticas dos projetos contratados (arquiteto) ----------------
+  async function renderArchitectStatsChart() {
+    let projects = [];
+    try { projects = await MatchAPI.architectProjects(); } catch { projects = []; }
+    renderStatusChart('architectStatsChart', projects);
+  }
+
   // ---------------- Comissões (arquiteto) ----------------
   async function renderCommissions() {
     const list = document.getElementById('commissionsList');
@@ -1935,6 +2040,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { total, count, commissions } = await MatchAPI.myCommissions();
       document.getElementById('commissionTotal').textContent = `R$${total}`;
       document.getElementById('commissionCount').textContent = count;
+      const overviewCommissionCount = document.getElementById('overviewCommissionCount');
+      if (overviewCommissionCount) overviewCommissionCount.textContent = count;
       list.innerHTML = commissions.length
         ? `<div class="tag-row" style="flex-direction:column; align-items:stretch; gap:8px;">${commissions.map(c => `
           <div class="material-card spotlight" style="padding:14px;">

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script>try{var t=localStorage.getItem('matchia_theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
+<script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('js-intro');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>match.IA — A inteligência que conecta você ao arquiteto ideal</title>
 <meta name="description" content="match.IA usa inteligência artificial para conectar clientes e arquitetos com base em estilo, orçamento e necessidades — reduzindo retrabalho e aumentando a satisfação dos projetos.">
@@ -22,6 +23,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/explainer.css">
+<link rel="stylesheet" href="assets/css/home-motion.css">
 </head>
 <body>
 <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
@@ -53,40 +56,48 @@
 
 <main id="main-content">
 
-  <!-- HERO -->
+  <!-- HERO — entrada coreografada em CSS (home-motion.css, ativada pela classe
+       .js-intro posta no <head>) + profundidade com o mouse (home-motion.js).
+       Sem JS ou com motion reduzido, tudo aparece pronto. -->
   <section class="hero">
     <canvas id="heroParticles" aria-hidden="true"></canvas>
+    <div class="hero-glow" aria-hidden="true"></div>
     <div class="container hero-grid">
-      <div class="hero-copy" data-stagger>
-        <span class="eyebrow">Mais assertividade, menos dor de cabeça</span>
-        <h1>Encontre seu arquiteto ideal com <span class="accent shimmer-text">Inteligência Artificial</span></h1>
-        <p class="lead">Encontre o arquiteto certo para o seu projeto, sem perder horas procurando.</p>
+      <div class="hero-copy">
+        <span class="eyebrow hi-eyebrow">Mais assertividade, menos dor de cabeça</span>
+        <h1 class="hi-title"><span class="hi-w"><span>Encontre</span></span> <span class="hi-w"><span>seu</span></span> <span class="hi-w"><span>arquiteto</span></span> <span class="hi-w"><span>ideal</span></span> <span class="hi-w"><span>com</span></span> <span class="accent shimmer-text hi-accent">Inteligência Artificial</span></h1>
+        <p class="lead hi-lead">Encontre o arquiteto certo para o seu projeto, sem perder horas procurando.</p>
         <div class="hero-actions">
-          <a href="cadastro.html?tipo=cliente" class="btn btn-primary magnetic">Encontrar meu arquiteto</a>
-          <a href="cadastro.html?tipo=arquiteto" class="btn btn-secondary">Sou arquiteto</a>
+          <a href="cadastro.html?tipo=cliente" class="btn btn-primary magnetic hi-btn hi-btn--1">Encontrar meu arquiteto</a>
+          <a href="cadastro.html?tipo=arquiteto" class="btn btn-secondary hi-btn hi-btn--2">Sou arquiteto</a>
         </div>
         <div class="hero-stats">
-          <div><strong data-count-to="4" data-count-suffix="+">0</strong><span>arquitetos por match</span></div>
-          <div><strong data-count-to="95" data-count-suffix="%">0</strong><span>compatibilidade média</span></div>
+          <div class="hi-stat hi-stat--1"><strong data-count-to="4" data-count-suffix="+" data-count-delay="1300">0</strong><span>arquitetos por match</span></div>
+          <div class="hi-stat hi-stat--2"><strong data-count-to="95" data-count-suffix="%" data-count-delay="1400">0</strong><span>compatibilidade média</span></div>
         </div>
       </div>
-      <div class="hero-visual reveal">
-        <div class="hero-photo">
-          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" alt="Residência contemporânea com fachada de vidro, madeira e concreto">
+      <div class="hero-visual">
+        <div class="hero-photo hi-photo">
+          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" alt="Residência contemporânea com fachada de vidro, madeira e concreto" fetchpriority="high">
+          <span class="hi-beam" aria-hidden="true"></span>
         </div>
-        <div class="floating-card profile">
-          <div class="fc-label">Seu perfil</div>
-          <ul>
-            <li>Estilo Contemporâneo</li>
-            <li>Família com 2 filhos</li>
-            <li>90m² - 120m²</li>
-            <li>Integração &amp; sustentabilidade</li>
-          </ul>
+        <div class="hero-layer" data-depth="18">
+          <div class="floating-card profile hi-card hi-card--profile">
+            <div class="fc-label">Seu perfil</div>
+            <ul>
+              <li>Estilo Contemporâneo</li>
+              <li>Família com 2 filhos</li>
+              <li>90m² - 120m²</li>
+              <li>Integração &amp; sustentabilidade</li>
+            </ul>
+          </div>
         </div>
-        <div class="floating-card match glow-border">
-          <div class="fc-label">Match encontrado</div>
-          <strong>Teresa Younes</strong>
-          <div class="fc-score">95% de compatibilidade</div>
+        <div class="hero-layer" data-depth="22">
+          <div class="floating-card match glow-border hi-card hi-card--match">
+            <div class="fc-label">Match encontrado</div>
+            <strong>Teresa Younes</strong>
+            <div class="fc-score"><span data-count-to="95" data-count-suffix="%" data-count-delay="2500">95%</span> de compatibilidade</div>
+          </div>
         </div>
       </div>
     </div>
@@ -112,26 +123,53 @@
         <span class="eyebrow">Como funciona</span>
         <h2>Encontre o arquiteto certo para o seu projeto, sem perder horas procurando.</h2>
       </div>
-      <div class="steps" data-stagger>
+      <!-- Animado pela rolagem (assets/js/home-motion.js): a linha vai se
+           desenhando e cada etapa acende quando ela chega; sem JS fica tudo visível. -->
+      <div class="steps steps--story" data-scrub="steps">
+        <div class="steps-track" aria-hidden="true"><i class="steps-fill"></i></div>
         <div class="step">
-          <div class="step-num">1</div>
+          <div class="step-num"><span>1</span></div>
           <h3>Conte sua ideia</h3>
           <p>Responda um questionário inteligente sobre estilo, necessidade e orçamento.</p>
+          <div class="step-peek peek-quiz" aria-hidden="true">
+            <small>Qual estilo combina com você?</small>
+            <div><span>Industrial</span><span class="is-pick">Contemporâneo</span><span>Clássico</span></div>
+          </div>
         </div>
         <div class="step">
-          <div class="step-num">2</div>
+          <div class="step-num"><span>2</span></div>
           <h3>IA analisa seu perfil</h3>
           <p>A tecnologia do match.IA cruza seu projeto com o portfólio de arquitetos cadastrados.</p>
+          <div class="step-peek peek-scan" aria-hidden="true">
+            <div class="peek-thumbs">
+              <i style="background-image:url('assets/3d/textures/concreto-aparente/swatch.webp')"></i>
+              <i style="background-image:url('assets/3d/textures/carvalho-claro/swatch.webp')"></i>
+              <i style="background-image:url('assets/3d/textures/travertino/swatch.webp')"></i>
+              <i style="background-image:url('assets/3d/textures/linho-salvia/swatch.webp')"></i>
+              <b class="peek-beam"></b>
+            </div>
+            <small>Cruzando estilo, materiais e orçamento…</small>
+          </div>
         </div>
         <div class="step">
-          <div class="step-num">3</div>
+          <div class="step-num"><span>3</span></div>
           <h3>Escolha seu arquiteto</h3>
           <p>Compare perfis, portfólios e o nível de compatibilidade de cada um.</p>
+          <div class="step-peek peek-rank" aria-hidden="true">
+            <div class="is-top"><span>Teresa Y.</span><i style="--v:.95"></i><b>95%</b></div>
+            <div><span>Estúdio B</span><i style="--v:.87"></i><b>87%</b></div>
+            <div><span>Estúdio C</span><i style="--v:.78"></i><b>78%</b></div>
+          </div>
         </div>
         <div class="step">
-          <div class="step-num">4</div>
+          <div class="step-num"><span>4</span></div>
           <h3>Resultado com IA</h3>
           <p>Após o match, o arquiteto reduz o prazo com sugestões baseadas em IA.</p>
+          <div class="step-peek peek-time" aria-hidden="true">
+            <small>Prazo do projeto</small>
+            <div class="peek-bar"><i></i></div>
+            <span class="peek-spark">✦ sugestões da IA</span>
+          </div>
         </div>
       </div>
     </div>
@@ -145,115 +183,423 @@
         <h2>A IA compara seu perfil com o portfólio de arquitetos cadastrados</h2>
         <p> Nossa tecnologia encontra seus arquitetos mais compatíveis com seu projeto — pontuação por estilo, materiais, localização, especialidade e disponibilidade.</p>
       </div>
-      <div class="match-demo" data-stagger>
-        <div class="match-card">
+      <!-- Animado pela rolagem (assets/js/home-motion.js). Os critérios do perfil
+           são botões: depois que a cena monta, dá pra desligar um e ver o score mudar. -->
+      <div class="match-demo match-demo--live" data-scrub="match">
+        <div class="match-card match-profile">
           <h4>Seu perfil</h4>
           <ul>
-            <li>Contemporâneo</li>
-            <li>Família com 2 filhos</li>
-            <li>Integração de ambientes</li>
-            <li>Sustentabilidade</li>
-            <li>Orçamento médio-alto</li>
+            <li><button type="button" class="match-crit" data-w="30" aria-pressed="true">Contemporâneo</button></li>
+            <li><button type="button" class="match-crit" data-w="15" aria-pressed="true">Família com 2 filhos</button></li>
+            <li><button type="button" class="match-crit" data-w="20" aria-pressed="true">Integração de ambientes</button></li>
+            <li><button type="button" class="match-crit" data-w="15" aria-pressed="true">Sustentabilidade</button></li>
+            <li><button type="button" class="match-crit" data-w="15" aria-pressed="true">Orçamento médio-alto</button></li>
           </ul>
+          <p class="match-hint">Toque num critério para ver a compatibilidade mudar.</p>
         </div>
         <div class="match-score">
-          <div class="score-ring"><strong>95%</strong><span>compatibilidade</span></div>
+          <i class="match-wire match-wire--in" aria-hidden="true"></i>
+          <div class="score-ring">
+            <svg class="score-arc" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47" pathLength="100"/></svg>
+            <strong><span data-score>95</span>%</strong><span>compatibilidade</span>
+          </div>
+          <i class="match-wire match-wire--out" aria-hidden="true"></i>
+          <p class="match-sr" aria-live="polite" data-score-live></p>
         </div>
         <div class="match-card result">
           <h4>Arquiteto encontrado</h4>
           <div class="arch-name">Teresa Younes</div>
           <div class="arch-meta">São Paulo · SP — ★ 4.9 (36)</div>
-          <p style="font-size:0.86rem; color:var(--ink-soft); margin:0;">"Excelente opção por estilo arquitetônico compatível, preferências de materiais em comum e 9 anos de experiência."</p>
+          <p class="arch-quote">"Excelente opção por estilo arquitetônico compatível, preferências de materiais em comum e 9 anos de experiência."</p>
           <div class="tag-row">
             <span class="tag">Concreto aparente</span>
             <span class="tag">Madeira</span>
             <span class="tag">Vidro</span>
           </div>
+          <p class="match-note">Compatibilidade baixa: com esse perfil, a IA buscaria outros arquitetos para você.</p>
         </div>
       </div>
-      <p class="center" style="margin-top:36px;">
+      <p class="center match-cta" style="margin-top:36px;">
         <a href="destaques.html" class="btn btn-sage">Ver arquitetos disponíveis</a>
       </p>
     </div>
   </section>
 
-  <!-- PARA CLIENTES / ARQUITETOS -->
-  <section class="section">
+  <!-- PARA CLIENTES / ARQUITETOS — vídeo explicativo animado (assets/js/explainer-video.js).
+       Cada cena é uma peça do vídeo; as falas ficam na transcrição logo abaixo
+       (fonte única: o player lê as falas dela, e quem não usa o player lê ali). -->
+  <section class="section xv-section" id="para-clientes-e-arquitetos">
     <div class="container">
-      <div class="split-head reveal">
-        <div>
-          <span class="eyebrow">Para clientes</span>
-          <h2>Mais assertividade, menos dor de cabeça</h2>
-        </div>
-        <div>
-          <span class="eyebrow">Para arquitetos</span>
-          <h2>IA como sua parceira-chave</h2>
-        </div>
+      <div class="section-head reveal">
+        <span class="eyebrow">Para clientes e arquitetos</span>
+        <h2>O que o match.IA faz por você, numa conversa rápida</h2>
+        <p>Dê o play: a gente conversa com você e mostra como ajudamos quem vai construir ou reformar e quem projeta.</p>
       </div>
-      <div class="feature-grid for-clients" data-stagger style="margin-bottom:20px;">
-        <div class="feature-card spotlight tilt">
-          <span class="index">01</span>
-          <h3>Encontre seu arquiteto ideal</h3>
-          <p>Compatibilidade calculada a partir do seu estilo, orçamento e necessidades reais.</p>
+
+      <div class="xv reveal" data-xv tabindex="0" role="region" aria-label="Vídeo: o que o match.IA faz por clientes e arquitetos">
+        <div class="xv-stage" data-xv-stage>
+          <div class="xv-bg" aria-hidden="true"><i class="xv-blob xv-blob--a"></i><i class="xv-blob xv-blob--b"></i><i class="xv-grain"></i></div>
+
+          <!-- 0 · abertura -->
+          <div class="xv-scene xv-scene--intro" data-scene="intro" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">match.IA explica</span>
+              <h3 class="xv-title fx" data-at=".25">Dois lados, <em>um match</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-duo">
+                <div class="xv-person xv-glass fx fx-left" data-at=".5">
+                  <span class="xv-avatar xv-avatar--t">C</span>
+                  <b>Você, cliente</b><small>quer construir ou reformar</small>
+                </div>
+                <svg class="xv-link" viewBox="0 0 440 300" aria-hidden="true"><path class="fx fx-draw" data-at="1.1" data-d="1.2" pathLength="1" d="M150 66 C 230 66, 220 110, 220 150 C 220 190, 210 234, 290 234"/></svg>
+                <div class="xv-core fx fx-pop" data-at="1.7"><img src="assets/img/mark.png" alt="" width="40" height="40"></div>
+                <div class="xv-person xv-person--s xv-glass fx fx-right" data-at=".8">
+                  <span class="xv-avatar xv-avatar--s">A</span>
+                  <b>Você, arquiteto</b><small>quer projetos que combinam</small>
+                </div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 1 · cliente 01 -->
+          <div class="xv-scene" data-scene="c1" data-act="0" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, cliente · 01</span>
+              <h3 class="xv-title fx" data-at=".2">Encontre seu <em>arquiteto ideal</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-match">
+                <div class="xv-chips">
+                  <span class="xv-chip fx fx-left" data-at=".6">Contemporâneo</span>
+                  <span class="xv-chip fx fx-left" data-at=".8">Orçamento médio-alto</span>
+                  <span class="xv-chip fx fx-left" data-at="1">Família com 2 filhos</span>
+                  <span class="xv-chip fx fx-left" data-at="1.2">Muita luz natural</span>
+                </div>
+                <div class="xv-ring fx fx-pop" data-at="1.8" data-s="2" data-sd="1.6">
+                  <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44"/><circle class="xv-ring-fill" cx="50" cy="50" r="44" pathLength="100"/></svg>
+                  <strong><span data-count="95" data-at="2" data-d="1.6">0</span>%</strong><small>compatível</small>
+                </div>
+                <div class="xv-archcard xv-glass fx" data-at="3.4">
+                  <span class="xv-avatar xv-avatar--photo">TY</span>
+                  <div><b>Teresa Younes</b><small>Contemporâneo · concreto, madeira e vidro</small></div>
+                </div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 2 · cliente 02 -->
+          <div class="xv-scene" data-scene="c2" data-act="0" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, cliente · 02</span>
+              <h3 class="xv-title fx" data-at=".2">Mais <em>transparência</em> no processo</h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-panel xv-glass fx fx-pop" data-at=".4">
+                <div class="xv-panel-row"><small>Score de compatibilidade</small><b><span data-count="95" data-at=".9" data-d="1.4">0</span>%</b></div>
+                <div class="xv-meter"><i class="fx-grow" data-s=".9" data-sd="1.4" style="--w:.95"></i></div>
+                <div class="xv-panel-row xv-sug fx fx-left" data-at="1.8"><span class="xv-dot"></span>Integrar cozinha e sala</div>
+                <div class="xv-panel-row xv-sug fx fx-left" data-at="2.1"><span class="xv-dot"></span>Brises de madeira na fachada oeste</div>
+                <div class="xv-refs">
+                  <span class="fx fx-pop" data-at="2.6" style="background-image:url('https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=320&q=70')"></span>
+                  <span class="fx fx-pop" data-at="2.8" style="background-image:url('https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=320&q=70')"></span>
+                  <span class="fx fx-pop" data-at="3" style="background-image:url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=320&q=70')"></span>
+                </div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 3 · cliente 03 -->
+          <div class="xv-scene" data-scene="c3" data-act="0" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, cliente · 03</span>
+              <h3 class="xv-title fx" data-at=".2">Projetos alinhados <em>ao seu estilo</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-style">
+                <ul class="xv-checks xv-glass fx" data-at=".4">
+                  <li class="fx fx-left" data-at=".8"><i class="xv-tick"></i>Contemporâneo</li>
+                  <li class="fx fx-left" data-at="1.1"><i class="xv-tick"></i>Cozinha aberta</li>
+                  <li class="fx fx-left" data-at="1.4"><i class="xv-tick"></i>Home office silencioso</li>
+                  <li class="fx fx-left" data-at="1.7"><i class="xv-tick"></i>Madeira e tons terrosos</li>
+                </ul>
+                <svg class="xv-arrow" viewBox="0 0 60 20" aria-hidden="true"><path class="fx fx-draw" data-at="2.2" data-d=".6" pathLength="1" d="M2 10 H52 M44 3 L54 10 L44 17"/></svg>
+                <div class="xv-board">
+                  <span class="fx fx-pop" data-at="2.7" style="background-image:url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=360&q=70')"></span>
+                  <span class="fx fx-pop" data-at="2.9" style="background-image:url('assets/3d/textures/carvalho-mel/color.webp')"></span>
+                  <span class="fx fx-pop" data-at="3.1" style="background-image:url('assets/3d/textures/terracota/color.webp')"></span>
+                  <span class="fx fx-pop" data-at="3.3" style="background-image:url('https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=360&q=70')"></span>
+                </div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 4 · cliente 04 -->
+          <div class="xv-scene" data-scene="c4" data-act="0" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, cliente · 04</span>
+              <h3 class="xv-title fx" data-at=".2">Economia de <em>tempo e dinheiro</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-week xv-glass fx fx-pop" data-at=".4">
+                <div class="xv-week-head"><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span></div>
+                <div class="xv-week-grid">
+                  <i class="fx" data-at=".8" data-out="2.4" style="--c:1;--r:1">Alinhamento</i>
+                  <i class="fx" data-at=".9" data-out="2.6" style="--c:2;--r:2">Alinhamento</i>
+                  <i class="fx" data-at="1" style="--c:3;--r:1">Reunião com a arquiteta</i>
+                  <i class="fx" data-at="1.1" data-out="2.8" style="--c:4;--r:3">Alinhamento</i>
+                  <i class="fx" data-at="1.2" data-out="3" style="--c:5;--r:2">Alinhamento</i>
+                  <i class="xv-free fx fx-pop" data-at="3.4" style="--c:1;--r:2">Tempo livre</i>
+                  <i class="xv-free fx fx-pop" data-at="3.6" style="--c:4;--r:1">Tempo livre</i>
+                  <i class="xv-free fx fx-pop" data-at="3.8" style="--c:5;--r:3">Tempo livre</i>
+                </div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 5 · cliente 05 -->
+          <div class="xv-scene" data-scene="c5" data-act="0" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, cliente · 05</span>
+              <h3 class="xv-title fx" data-at=".2">Personalizado <em>do início ao fim</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-journey">
+                <svg viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true"><path class="fx fx-draw" data-at=".6" data-d="3" pathLength="1" d="M20 20 H380"/></svg>
+                <div class="xv-step fx fx-pop" data-at=".6" style="--x:5%"><i>1</i><span>Questionário</span></div>
+                <div class="xv-step fx fx-pop" data-at="1.6" style="--x:35%"><i>2</i><span>Match</span></div>
+                <div class="xv-step fx fx-pop" data-at="2.6" style="--x:65%"><i>3</i><span>Projeto</span></div>
+                <div class="xv-step fx fx-pop" data-at="3.6" style="--x:95%"><i>4</i><span>Acompanhamento</span></div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 6 · ponte para o arquiteto -->
+          <div class="xv-scene xv-scene--bridge" data-scene="bridge" data-act="1" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, arquiteto</span>
+              <h3 class="xv-title fx" data-at=".3">IA como sua <em>parceira-chave</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-compass fx fx-pop" data-at=".5">
+                <svg viewBox="0 0 120 120" aria-hidden="true">
+                  <path class="fx fx-draw" data-at=".7" data-d="1.4" pathLength="1" d="M60 14 L30 106 M60 14 L90 106 M40 76 A 30 30 0 0 0 80 76"/>
+                  <circle class="fx fx-pop" data-at=".6" cx="60" cy="14" r="6"/>
+                </svg>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 7 · arquiteto 01 -->
+          <div class="xv-scene" data-scene="a1" data-act="1" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, arquiteto · 01</span>
+              <h3 class="xv-title fx" data-at=".2">Preserve sua <em>identidade autoral</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-sign xv-glass fx fx-pop" data-at=".4">
+                <svg viewBox="0 0 300 110" aria-hidden="true"><path class="fx fx-draw" data-at=".9" data-d="2.2" pathLength="1" d="M14 78 C 30 20, 52 18, 46 66 C 42 92, 70 40, 82 52 C 92 62, 96 76, 110 54 C 122 34, 128 70, 142 62 C 156 54, 160 34, 176 48 C 190 60, 196 82, 214 58 C 228 40, 240 46, 252 60 C 262 72, 276 64, 290 50"/><path class="fx fx-draw" data-at="3" data-d=".5" pathLength="1" d="M40 96 H262"/></svg>
+                <div class="xv-tags">
+                  <span class="fx" data-at="3.2">estilo aprendido</span>
+                  <span class="fx" data-at="3.4">assinatura sua</span>
+                </div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 8 · arquiteto 02 -->
+          <div class="xv-scene" data-scene="a2" data-act="1" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, arquiteto · 02</span>
+              <h3 class="xv-title fx" data-at=".2">Acelere <em>pesquisa e criação</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-fan">
+                <div class="xv-card xv-glass fx" data-at=".6" style="--rot:-7deg"><small>Conceito</small><b>Casa pátio com luz zenital</b></div>
+                <div class="xv-card xv-glass fx" data-at="1" style="--rot:0deg"><small>Materiais</small>
+                  <span class="xv-sw"><i style="background-image:url('assets/3d/textures/travertino/swatch.webp')"></i><i style="background-image:url('assets/3d/textures/carvalho-claro/swatch.webp')"></i><i style="background-image:url('assets/3d/textures/linho/swatch.webp')"></i></span></div>
+                <div class="xv-card xv-glass fx" data-at="1.4" style="--rot:7deg"><small>Referências</small><span class="xv-ph" style="background-image:url('https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=320&q=70')"></span></div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 9 · arquiteto 03 -->
+          <div class="xv-scene" data-scene="a3" data-act="1" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, arquiteto · 03</span>
+              <h3 class="xv-title fx" data-at=".2">Entenda melhor <em>o cliente</em></h3>
+            </div>
+            <div class="xv-visual">
+              <dl class="xv-brief xv-glass fx fx-pop" data-at=".4">
+                <div class="fx fx-left" data-at=".9"><dt>Estilo</dt><dd>Contemporâneo</dd></div>
+                <div class="fx fx-left" data-at="1.2"><dt>Orçamento</dt><dd>Médio-alto</dd></div>
+                <div class="fx fx-left" data-at="1.5"><dt>Família</dt><dd>Casal e 2 filhos</dd></div>
+                <div class="fx fx-left" data-at="1.8"><dt>Prioridades</dt><dd>Integração e luz natural</dd></div>
+              </dl>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 10 · arquiteto 04 -->
+          <div class="xv-scene" data-scene="a4" data-act="1" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, arquiteto · 04</span>
+              <h3 class="xv-title fx" data-at=".2">Sugestões de <em>materiais e layouts</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-lib">
+                <div class="xv-mats">
+                  <figure class="fx fx-pop" data-at=".5"><i style="background-image:url('assets/3d/textures/travertino/swatch.webp')"></i><figcaption>Travertino</figcaption></figure>
+                  <figure class="fx fx-pop" data-at=".65"><i style="background-image:url('assets/3d/textures/carvalho-mel/swatch.webp')"></i><figcaption>Carvalho</figcaption></figure>
+                  <figure class="fx fx-pop" data-at=".8"><i style="background-image:url('assets/3d/textures/cimento-queimado/swatch.webp')"></i><figcaption>Cimento</figcaption></figure>
+                  <figure class="fx fx-pop" data-at=".95"><i style="background-image:url('assets/3d/textures/linho-salvia/swatch.webp')"></i><figcaption>Linho</figcaption></figure>
+                  <figure class="fx fx-pop" data-at="1.1"><i style="background-image:url('assets/3d/textures/terracota/swatch.webp')"></i><figcaption>Terracota</figcaption></figure>
+                  <figure class="fx fx-pop" data-at="1.25"><i style="background-image:url('assets/3d/textures/marmore-branco/swatch.webp')"></i><figcaption>Mármore</figcaption></figure>
+                </div>
+                <div class="xv-plan xv-glass fx" data-at="1.6">
+                  <svg viewBox="0 0 160 110" aria-hidden="true"><path class="fx fx-draw" data-at="1.9" data-d="2" pathLength="1" d="M8 8 H152 V102 H8 Z M8 56 H70 M70 8 V40 M70 72 V102 M104 56 H152 M104 56 V78"/><path class="xv-plan-door fx fx-draw" data-at="3.6" data-d=".6" pathLength="1" d="M70 40 A 16 16 0 0 1 86 56"/></svg>
+                </div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 11 · arquiteto 05 -->
+          <div class="xv-scene" data-scene="a5" data-act="1" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, arquiteto · 05</span>
+              <h3 class="xv-title fx" data-at=".2">Mais <em>produtividade</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-split xv-glass fx fx-pop" data-at=".4">
+                <small>Antes</small>
+                <div class="xv-split-bar fx" data-at=".7"><i style="flex:3">Briefing</i><i style="flex:2">Projeto</i></div>
+                <small>Com o match.IA</small>
+                <div class="xv-split-bar xv-split-bar--now fx" data-at="1.6" data-s="1.9" data-sd="1.4"><i class="xv-shrink">Briefing</i><i class="xv-grow">Projeto</i></div>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 12 · arquiteto 06 -->
+          <div class="xv-scene" data-scene="a6" data-act="1" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">Para você, arquiteto · 06</span>
+              <h3 class="xv-title fx" data-at=".2">Mais <em>projetos fechados</em></h3>
+            </div>
+            <div class="xv-visual">
+              <ol class="xv-rank xv-glass fx fx-pop" data-at=".4" data-s="1.6" data-sd="1.1">
+                <li style="--from:0;--to:1"><span>Estúdio A</span><b>81%</b></li>
+                <li style="--from:1;--to:2"><span>Estúdio B</span><b>78%</b></li>
+                <li class="xv-me" style="--from:3;--to:0"><span>Você</span><b>94%</b><em class="fx fx-pop" data-at="3">Projeto fechado</em></li>
+                <li style="--from:2;--to:3"><span>Estúdio C</span><b>74%</b></li>
+              </ol>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- 13 · fechamento -->
+          <div class="xv-scene xv-scene--outro" data-scene="outro" aria-hidden="true">
+            <div class="xv-head">
+              <span class="xv-kicker fx" data-at=".1">match.IA</span>
+              <h3 class="xv-title fx" data-at=".2">Bora dar <em>o match?</em></h3>
+            </div>
+            <div class="xv-visual">
+              <div class="xv-cta fx fx-pop" data-at=".6">
+                <img src="assets/img/mark.png" alt="" width="56" height="56">
+                <p>A inteligência que conecta você ao arquiteto ideal.</p>
+                <div class="xv-cta-actions">
+                  <a href="cadastro.html?tipo=cliente" class="btn btn-primary btn-sm" tabindex="-1">Sou cliente</a>
+                  <a href="cadastro.html?tipo=arquiteto" class="btn btn-sage btn-sm" tabindex="-1">Sou arquiteto</a>
+                </div>
+                <button type="button" class="xv-replay" data-xv-replay tabindex="-1">Assistir de novo</button>
+              </div>
+            </div>
+            <div class="xv-chat" data-chat></div>
+          </div>
+
+          <!-- capa (antes do play) -->
+          <button type="button" class="xv-poster" data-xv-poster aria-label="Assistir o vídeo">
+            <span class="xv-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+            <span class="xv-poster-text"><b>Assistir o vídeo</b><small data-xv-length>com narração e legendas</small></span>
+          </button>
         </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">02</span>
-          <h3>Menos retrabalho e alterações</h3>
-          <p>O match certo desde o início reduz revisões e mudanças de rota no projeto.</p>
+
+        <div class="xv-bar" data-xv-bar>
+          <button type="button" class="xv-btn" data-xv-toggle aria-label="Reproduzir">
+            <svg class="xv-i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+            <svg class="xv-i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+          </button>
+          <span class="xv-time" data-xv-time>0:00</span>
+          <div class="xv-track">
+            <div class="xv-track-fill" data-xv-fill aria-hidden="true"></div>
+            <div class="xv-ticks" data-xv-ticks aria-hidden="true"></div>
+            <input type="range" class="xv-range" data-xv-range min="0" max="100" step="0.1" value="0" aria-label="Posição no vídeo">
+          </div>
+          <span class="xv-time xv-time--total" data-xv-total>0:00</span>
+          <button type="button" class="xv-btn" data-xv-sound aria-label="Desligar narração" aria-pressed="true">
+            <svg class="xv-i-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="xv-wave" d="M15.5 9a4 4 0 0 1 0 6M17.8 6.8a7.2 7.2 0 0 1 0 10.4"/></svg>
+            <svg class="xv-i-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="xv-wave" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+          </button>
+          <button type="button" class="xv-btn" data-xv-full aria-label="Tela cheia">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path class="xv-wave" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          </button>
         </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">03</span>
-          <h3>Mais transparência no processo</h3>
-          <p>Acompanhe score, sugestões e referências geradas por IA.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">04</span>
-          <h3>Projetos alinhados ao seu estilo</h3>
-          <p>Preferências estéticas e funcionais levadas a sério desde o cadastro.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">05</span>
-          <h3>Economia de tempo e dinheiro</h3>
-          <p>Menos reuniões de alinhamento, mais tempo dedicado ao que importa.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">06</span>
-          <h3>Experiência personalizada do início ao fim</h3>
-          <p>Do questionário ao acompanhamento do projeto, tudo pensado para você.</p>
-        </div>
+        <p class="xv-sr" aria-live="polite" data-xv-live></p>
       </div>
-      <div class="feature-grid for-architects" data-stagger>
-        <div class="feature-card spotlight tilt">
-          <span class="index">01</span>
-          <h3>Preserve sua identidade autoral</h3>
-          <p>A IA aprende o seu estilo — não substitui sua assinatura criativa.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">02</span>
-          <h3>Acelere pesquisa e criação</h3>
-          <p>Sugestões de conceitos, materiais e referências visuais sob medida.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">03</span>
-          <h3>Entenda melhor o perfil do cliente</h3>
-          <p>Dados estruturados de estilo, orçamento e composição familiar num só lugar.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">04</span>
-          <h3>Sugestões de materiais e layouts</h3>
-          <p>Banco de materiais integrado para acelerar a etapa conceitual.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">05</span>
-          <h3>Aumente produtividade e eficiência</h3>
-          <p>Menos tempo em briefing, mais tempo em projeto.</p>
-        </div>
-        <div class="feature-card spotlight tilt">
-          <span class="index">06</span>
-          <h3>Mais conversões e projetos fechados</h3>
-          <p>Visibilidade priorizada nos resultados de compatibilidade.</p>
-        </div>
+
+      <div class="xv-chapters reveal">
+        <button type="button" class="xv-chapter" data-xv-jump="c1"><span class="xv-chapter-dot"></span><span><b>Para clientes</b><small>Mais assertividade, menos dor de cabeça</small></span></button>
+        <button type="button" class="xv-chapter xv-chapter--s" data-xv-jump="bridge"><span class="xv-chapter-dot"></span><span><b>Para arquitetos</b><small>IA como sua parceira-chave</small></span></button>
       </div>
+
+      <details class="xv-transcript reveal">
+        <summary>Ler a transcrição do vídeo</summary>
+        <div class="xv-transcript-body" data-xv-script>
+          <p data-line="intro" data-who="ia">Oi! Aqui é o match.IA. Deixa eu te mostrar, rapidinho, como a gente ajuda quem quer construir e quem projeta.</p>
+          <p data-line="intro" data-who="voce">Pode mostrar!</p>
+
+          <h3>Para clientes: mais assertividade, menos dor de cabeça</h3>
+          <h4>Encontre seu arquiteto ideal</h4>
+          <p data-line="c1" data-who="ia">Você me conta seu estilo, seu orçamento e o que a sua família precisa. Eu calculo quais arquitetos combinam de verdade com você.</p>
+          <h4>Mais transparência no processo</h4>
+          <p data-line="c2" data-who="ia">E você acompanha tudo: o score, as sugestões e as referências que a IA gerou pra você.</p>
+          <h4>Projetos alinhados ao seu estilo</h4>
+          <p data-line="c3" data-who="ia">O que você escolhe no cadastro vira critério de verdade, do estilo aos detalhes do dia a dia.</p>
+          <h4>Economia de tempo e dinheiro</h4>
+          <p data-line="c4" data-who="ia">Resultado: menos reuniões de alinhamento, e mais tempo e dinheiro pro que importa.</p>
+          <h4>Experiência personalizada do início ao fim</h4>
+          <p data-line="c5" data-who="ia">Do questionário ao acompanhamento do projeto, tudo é pensado pra você.</p>
+          <p data-line="c5" data-who="voce">Legal! E se eu for arquiteto?</p>
+
+          <h3>Para arquitetos: IA como sua parceira-chave</h3>
+          <p data-line="bridge" data-who="ia">Aí a IA vira sua parceira de trabalho. Olha só.</p>
+          <h4>Preserve sua identidade autoral</h4>
+          <p data-line="a1" data-who="ia">A IA aprende o seu estilo, mas não substitui a sua assinatura. A criação continua sua.</p>
+          <h4>Acelere pesquisa e criação</h4>
+          <p data-line="a2" data-who="ia">Ela acelera a pesquisa e sugere conceitos, materiais e referências sob medida pra cada projeto.</p>
+          <h4>Entenda melhor o perfil do cliente</h4>
+          <p data-line="a3" data-who="ia">Você recebe o perfil do cliente organizado: estilo, orçamento e família, tudo num só lugar.</p>
+          <h4>Sugestões de materiais e layouts</h4>
+          <p data-line="a4" data-who="ia">E tem um banco de materiais integrado, com sugestões de materiais e layouts pra adiantar o conceito.</p>
+          <h4>Aumente produtividade e eficiência</h4>
+          <p data-line="a5" data-who="ia">Menos tempo em briefing, mais tempo projetando.</p>
+          <h4>Mais conversões e projetos fechados</h4>
+          <p data-line="a6" data-who="ia">Quem combina com o cliente aparece com prioridade nos resultados. Mais conversas viram projetos fechados.</p>
+
+          <p data-line="outro" data-who="ia">O cliente encontra quem entende o que ele quer. O arquiteto, quem valoriza o seu trabalho. Bora dar o match?</p>
+          <p data-line="outro" data-who="voce">Bora!</p>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -369,5 +715,7 @@
 <script src="assets/js/showcase.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/site.js"></script>
+<script src="assets/js/explainer-video.js"></script>
+<script src="assets/js/home-motion.js"></script>
 </body>
 </html>

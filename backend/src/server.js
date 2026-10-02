@@ -25,6 +25,8 @@ import briefRoutes from "./routes/briefs.js";
 import commissionRoutes from "./routes/commissions.js";
 import storeRoutes from "./routes/stores.js";
 import assistantRoutes from "./routes/assistant.js";
+import architectProjectRoutes from "./routes/architectProjects.js";
+import architectAssistantRoutes from "./routes/architectAssistant.js";
 
 const app = express(),
   root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
@@ -60,6 +62,8 @@ app.use("/api/briefs", briefRoutes);
 app.use("/api/commissions", commissionRoutes);
 app.use("/api/stores", storeRoutes);
 app.use("/api/assistant", assistantRoutes);
+app.use("/api/architect-projects", architectProjectRoutes);
+app.use("/api/architect-assistant", architectAssistantRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Site (front-end) servido pelo mesmo processo/porta que a API — sem

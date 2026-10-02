@@ -1,7 +1,8 @@
 /* =========================================================
    match.IA — Assistente do painel do cliente
-   Palco com três camadas: gradiente WebGL (fundo) → vídeo do
-   humano cibernético (multiply/screen) → card de vidro líquido.
+   Palco com três camadas: gradiente WebGL (fundo) → robô 3D
+   (cena Spline, com fundo preto embutido, mascarado à esquerda
+   pra revelar o gradiente) → card de vidro líquido.
    O card alterna entre "escolher projeto" e "conversa".
    ========================================================= */
 
@@ -15,21 +16,20 @@
 .ai-gradient { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
 .ai-gradient canvas { display: block; width: 100%; height: 100%; }
 
-/* Vídeo: o fundo branco-lavanda some com multiply no tema claro; no escuro
-   invertemos a imagem (figura vira cromo claro) e usamos screen. */
-/* Sem z-index de propósito: um z-index aqui criaria um contexto de empilhamento
-   próprio e o mix-blend-mode do vídeo deixaria de enxergar o gradiente por baixo. */
-.ai-video-wrap { position: absolute; inset: 0; pointer-events: none; }
-.ai-video {
-  width: 100%; height: 100%; object-fit: cover; object-position: 68% 100%;
-  mix-blend-mode: multiply; display: block;
-  opacity: 0; transition: opacity .9s var(--ease-out);
+/* Robô 3D: a cena vem com um fundo preto sólido embutido (a API pública do
+   runtime não deixa esse fundo transparente) — em vez de blend-mode, uma
+   máscara revela o gradiente da marca perto do texto e deixa o robô cheio
+   no resto do palco. O canvas precisa receber eventos de mouse de verdade
+   (é assim que a própria cena sabe pra onde olhar), por isso pointer-events
+   fica em auto nele, mesmo com o wrapper em none. */
+.ai-spline-wrap { position: absolute; inset: 0; pointer-events: none; }
+.ai-spline {
+  width: 100%; height: 100%; display: block; pointer-events: auto;
+  opacity: 0; transition: opacity 1s var(--ease-out);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 42%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 42%);
 }
-.ai-video.is-ready { opacity: 1; }
-:root[data-theme="dark"] .ai-video { mix-blend-mode: screen; filter: invert(1) hue-rotate(180deg) saturate(1.2) brightness(.92) contrast(1.35); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ai-video { mix-blend-mode: screen; filter: invert(1) hue-rotate(180deg) saturate(1.2) brightness(.92) contrast(1.35); }
-}
+.ai-spline.is-ready { opacity: 1; }
 
 /* Véu à esquerda: garante leitura do texto sem apagar o humano */
 .ai-veil { position: absolute; inset: 0; z-index: 2; pointer-events: none;
@@ -45,7 +45,11 @@
 .ai-stage.is-focused .ai-glow { opacity: .55; }
 
 /* ---------- Coluna do chat (um pouco na lateral) ---------- */
-.ai-shell { position: relative; z-index: 3; width: 100%; padding: 40px clamp(20px, 4vw, 56px); }
+/* pointer-events: none aqui é o que faz o robô reagir ao mouse em qualquer
+   ponto do palco: mesmo invisível, uma div de largura/altura 100% (como esta,
+   no desktop) intercepta o hover antes dele chegar no canvas por baixo. Só o
+   card e os chips (de verdade clicáveis) reabrem pointer-events: auto. */
+.ai-shell { position: relative; z-index: 3; width: 100%; padding: 40px clamp(20px, 4vw, 56px); pointer-events: none; }
 .ai-column { width: min(480px, 100%); display: flex; flex-direction: column; }
 .ai-eyebrow { align-self: flex-start; }
 .ai-title {
@@ -58,6 +62,7 @@
 
 /* ---------- Card de vidro líquido ---------- */
 .ai-card {
+  pointer-events: auto; /* .ai-shell acima devolve o mouse ao robô; aqui ele volta a ser capturado */
   position: relative; isolation: isolate; border-radius: 26px;
   background: linear-gradient(155deg, color-mix(in srgb, var(--white) 62%, transparent), color-mix(in srgb, var(--white) 34%, transparent));
   backdrop-filter: blur(26px) saturate(170%); -webkit-backdrop-filter: blur(26px) saturate(170%);
@@ -255,7 +260,7 @@
 
 /* ---------- Sugestões e notas ---------- */
 .ai-chips[hidden] { display: none; }
-.ai-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.ai-chips { pointer-events: auto; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .ai-chip {
   display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font: 500 0.8rem var(--font-body); color: var(--ink-soft);
   padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line);
@@ -309,11 +314,13 @@
 /* ---------- Responsivo ---------- */
 @media (max-width: 1023px) {
   .ai-stage { display: block; min-height: 0; }
-  /* No mobile o humano vira uma faixa no topo (sem scrub; o vídeo roda em loop) */
-  .ai-video-wrap { position: relative; inset: auto; height: min(46svh, 380px); }
-  /* Máscara no próprio <video> (não no wrapper): assim o blend com o gradiente continua valendo */
-  .ai-video { object-position: 66% 100%;
-    -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 100%); mask-image: linear-gradient(to bottom, #000 58%, transparent 100%); }
+  /* No mobile o robô vira uma faixa no topo (sem mouse pra seguir, mas a cena
+     já tem uma pose padrão) — máscara agora vertical, esmaecendo embaixo. */
+  .ai-spline-wrap { position: relative; inset: auto; height: min(46svh, 380px); }
+  .ai-spline {
+    -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
+  }
   .ai-veil, .ai-glow, .ai-cursor-hint { display: none; }
   .ai-shell { padding: 0 14px 28px; margin-top: -28px; }
   .ai-column { width: 100%; }

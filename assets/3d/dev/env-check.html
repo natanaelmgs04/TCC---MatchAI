@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Ambiente 3D — verificação (dev)</title>
+<!--
+  IMPORT MAP CANÔNICO do match.IA para 3D/motion. Esta é a fonte da verdade:
+  qualquer página que use three/gsap/lenis copia este bloco INTEIRO para o
+  <head>, antes de qualquer <script type="module">. Ao trocar de versão,
+  atualize aqui primeiro, regenere os hashes (ver 3D-SETUP.md) e abra
+  esta página para confirmar que tudo carrega.
+-->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.186.1/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.186.1/examples/jsm/",
+    "gsap": "https://unpkg.com/gsap@3.15.0/index.js",
+    "gsap/ScrollTrigger": "https://unpkg.com/gsap@3.15.0/ScrollTrigger.js",
+    "gsap/CustomEase": "https://unpkg.com/gsap@3.15.0/CustomEase.js",
+    "lenis": "https://unpkg.com/lenis@1.3.26/dist/lenis.mjs",
+    "lil-gui": "https://unpkg.com/lil-gui@0.21.0/dist/lil-gui.esm.min.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.186.1/build/three.module.js": "sha384-m8JoFX52V6NGv2usipnlLJKnJfL7IE8dbniPDDCSGSQv3Hm4n6PjfV6syVwfuoRc",
+    "https://unpkg.com/three@0.186.1/build/three.core.js": "sha384-mdKeCwPEcbDvzaxwhm+MVuLoMou+E7jQqrs4tmu/n8HBYPGI1kZt0MkJxlMR4zFM",
+    "https://unpkg.com/three@0.186.1/examples/jsm/controls/OrbitControls.js": "sha384-LSqANrugPGTgf0eYsQTloqKWy926dOOXo2iZ9y6wLMIDEQoU9AaCLJF1Vcc7oJXr",
+    "https://unpkg.com/three@0.186.1/examples/jsm/loaders/GLTFLoader.js": "sha384-jmhN0si8z6E7+h0t9KiwQ71oyrC3PhTpols1FXeN/vODuFa/L4bPIe9sLbOlhjq7",
+    "https://unpkg.com/three@0.186.1/examples/jsm/utils/BufferGeometryUtils.js": "sha384-Rm97j4mcjlLkGsYC2LX3nZG9VU2R8lgK0QE+DmBr4thue+H7J+SHm+68If2ZLBVg",
+    "https://unpkg.com/three@0.186.1/examples/jsm/utils/SkeletonUtils.js": "sha384-Pozn8j5+YFr3ak8Pm90ayqDrGYn/DV7vVs/YIIqzJhzeJT0LQksoS1fZQ5lfsYlw",
+    "https://unpkg.com/three@0.186.1/examples/jsm/loaders/DRACOLoader.js": "sha384-6vtmq3WPvctEi9PzdgMxiAGLRIRtWQSrgL9Pxy26rq+Lu2s8qY/tRpq2Ked1wfLW",
+    "https://unpkg.com/three@0.186.1/examples/jsm/loaders/HDRLoader.js": "sha384-fbU1GKwlFx1tBP+OcUiSeQDdBEboM0tGl5vVjihXfzY/0O6/JwPltPR0mbNOXeaS",
+    "https://unpkg.com/three@0.186.1/examples/jsm/environments/RoomEnvironment.js": "sha384-/H49oz0ZtMgJNgMZ+OhhuMuKBOsaiC3kY0/PZSvgJJXAOJJwmSBJjzlV5lJul3MB",
+    "https://unpkg.com/three@0.186.1/examples/jsm/geometries/RoundedBoxGeometry.js": "sha384-gHmgcgYfabbVCqiNiLLSop7dMvxAqZsQsjokoDYKyrHmCD5jCPvDvFaXaAkHtTfM",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/EffectComposer.js": "sha384-9Rdp95mYHRj8gGxPz4TqkDaCUh8rd67b7V5slkjz7GA9uNXtykhptQdEPPOocbUn",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/Pass.js": "sha384-927X5fcqlqKPsXZV1w3tv5BZx797OXX3D/TDJk0FHwJd12z58B5aqS77g5LZoprI",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/ShaderPass.js": "sha384-0DjIyth2/18aCmCo4x7GEOqSJTu3uNx5ptRg+rlkZ7zs9MlNfUXVEhbUuzVzglaG",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/MaskPass.js": "sha384-5MFlCMNYgjI2KQDXH12DjwyKtWiXRsrFMMGKIP3pCQemWtt1INLwPKwZDF0TEKG9",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/RenderPass.js": "sha384-uXlYrFHzQTAiW5xsJFs0kB/Pym7jA0qunZ+aS1V25CJ1MjaKbgNQv5SjoEzNoa4F",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/GTAOPass.js": "sha384-YvTlnX5ZV8iyXD41aGDTNz+CXwK4EGxSPE0vnYoJ0VW9/31DFynBMuJ4yhjhD7kY",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/UnrealBloomPass.js": "sha384-J699EvlO1FVuoaUhw+StnAgeSEEK6d2YjxWcmFt5WIQznsMXDgyfAY5Q4F7fhSgn",
+    "https://unpkg.com/three@0.186.1/examples/jsm/postprocessing/OutputPass.js": "sha384-3IFYrRLOw90S3gt5Xi3JVTJrETpklthjLSmnmeyqxQmh1knUIaGPwbRsk35kgNoW",
+    "https://unpkg.com/three@0.186.1/examples/jsm/shaders/CopyShader.js": "sha384-Hxod3deUgRexb42wOr+7J8ySu/QNr1oXlCfY9bivrSKBseng+R34eirHq/Rvvxee",
+    "https://unpkg.com/three@0.186.1/examples/jsm/shaders/GTAOShader.js": "sha384-Vzy332Htapj4ylV0T8/PWIycS377IR435ZYJFP3+FIP1hBppZKHK6uB4X5Z9uwQM",
+    "https://unpkg.com/three@0.186.1/examples/jsm/shaders/PoissonDenoiseShader.js": "sha384-9TmXYAPLd/EezQq3Ak+vYUGEvDtanSVB6I8VfwK7qspzZfUmhxsXk28mseonzROP",
+    "https://unpkg.com/three@0.186.1/examples/jsm/math/SimplexNoise.js": "sha384-IwC6d45K1GYEOKIe6xPySXxRzXCN862+MGz2r55ZDvPrc1LxaLCbaKWCRGLAFk16",
+    "https://unpkg.com/three@0.186.1/examples/jsm/shaders/LuminosityHighPassShader.js": "sha384-pJrfb1+CmauCtIjocA5YIJaosvBlTpTYBJLn6km9pktlMGoyTXhviuXjgzV2jcns",
+    "https://unpkg.com/three@0.186.1/examples/jsm/shaders/OutputShader.js": "sha384-7B5u2okAR4bArb4emcYnTiZPFpV3wPNvV3ZY9xre0xp3cNKs2TeaYiOyMDa/bDAi",
+    "https://unpkg.com/gsap@3.15.0/index.js": "sha384-CXonANN5Q5Pae0kOCXGnbY2891Skh1oEA3KdyFrgl5A+9HbgTfL39dJzkIbDN/y8",
+    "https://unpkg.com/gsap@3.15.0/gsap-core.js": "sha384-XDwKydO5jn3iq1X9bPtpysv+OnwM177VnImvUWy02ocrXFD4FwAFLzVwsXV4SxZw",
+    "https://unpkg.com/gsap@3.15.0/CSSPlugin.js": "sha384-oKyHECOP3meKRCINSz3zIjedU+A3qKtOaTInP2gE+6e3u4B1HUk8bD1FGbDQEXJX",
+    "https://unpkg.com/gsap@3.15.0/ScrollTrigger.js": "sha384-WW4mqizgtRZ/H3kF9Ft+qKKnlEWB1szkNS9ugP0c5qOYKfxOFOS/4S3VcSdkPd4R",
+    "https://unpkg.com/gsap@3.15.0/Observer.js": "sha384-QX956+0RnoQ+7makHXvXM64N7Rja/60VZYnytkYSJOAkpYs3dRqsRiSABqsg+Pf+",
+    "https://unpkg.com/gsap@3.15.0/CustomEase.js": "sha384-UdFIyIayuxOlqjTYdhGagFbTrABZ+w1W3OnmcGKsnnxG1DjU30Vp3Fd++QdgVsrZ",
+    "https://unpkg.com/gsap@3.15.0/utils/paths.js": "sha384-MpZzF9ixePOvS3Pt0B9l+qbIcybbpoHpagsmA8lM1p5Vez+uJAeMwZmBDWe9McNJ",
+    "https://unpkg.com/lenis@1.3.26/dist/lenis.mjs": "sha384-JiGOspU4LEGz2Zpoi87397s+e4yEH3/aryeKAvWB1AnZGznCFIHssmYBcGkKLz3V",
+    "https://unpkg.com/lil-gui@0.21.0/dist/lil-gui.esm.min.js": "sha384-6d+WSm8Yon/yBd0igp6VIN3j2vn1gYETuplvJw4ARkxsNorY87Y3rVaTkuebZ17j"
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="https://unpkg.com/lenis@1.3.26/dist/lenis.css">
+<style>
+  .env-wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 96px; display: grid; gap: 24px; }
+  .env-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 760px) { .env-grid { grid-template-columns: 1fr; } }
+  #stage { position: relative; height: 360px; border-radius: var(--radius-md); overflow: hidden; background: var(--bg-alt); }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 0.88rem; }
+  .checks li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .checks li:last-child { border-bottom: none; }
+  .checks .ok { color: var(--sage-dark); font-weight: 600; }
+  .checks .fail { color: var(--terracotta-dark); font-weight: 600; }
+  .checks .wait { color: var(--ink-faint); }
+  #summary { font-weight: 600; }
+</style>
+</head>
+<body>
+<main class="env-wrap">
+  <div>
+    <span class="eyebrow">Somente desenvolvimento</span>
+    <h1>Ambiente 3D do match.IA</h1>
+    <p class="card-lead">Verifica se three.js, carregadores GLTF/Draco, GSAP, ScrollTrigger, Lenis e lil-gui carregam pelo import map canônico, com SRI. Não faz parte do site público.</p>
+  </div>
+
+  <div class="env-grid">
+    <div class="dash-card"><div id="stage" aria-label="Cena de teste three.js"></div></div>
+    <div class="dash-card">
+      <h3>Verificações</h3>
+      <ul class="checks" id="checks"></ul>
+      <p id="summary" class="wait">Rodando…</p>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+const list = document.getElementById('checks');
+const results = [];
+function row(label) {
+  const li = document.createElement('li');
+  li.innerHTML = `<span></span><span class="wait">…</span>`;
+  li.firstChild.textContent = label;
+  list.append(li);
+  return (ok, detail) => {
+    const s = li.lastChild;
+    s.className = ok ? 'ok' : 'fail';
+    s.textContent = (ok ? '✓ ' : '✗ ') + (detail || '');
+    results.push(ok);
+  };
+}
+async function check(label, fn) {
+  const done = row(label);
+  try { done(true, await fn()); }
+  catch (err) { done(false, err?.message || String(err)); console.error(label, err); }
+}
+
+const webgl2 = !!document.createElement('canvas').getContext('webgl2');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+await check('WebGL2 disponível', async () => { if (!webgl2) throw new Error('sem WebGL2 — usar fallback'); return 'sim'; });
+
+let THREE, scene, camera, renderer, mesh;
+await check('three (core)', async () => {
+  THREE = await import('three');
+  return `r${THREE.REVISION}`;
+});
+
+await check('OrbitControls + RoomEnvironment + render', async () => {
+  const [{ OrbitControls }, { RoomEnvironment }] = await Promise.all([
+    import('three/addons/controls/OrbitControls.js'),
+    import('three/addons/environments/RoomEnvironment.js'),
+  ]);
+  const host = document.getElementById('stage');
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(host.clientWidth, host.clientHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  host.append(renderer.domElement);
+  scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
+  camera = new THREE.PerspectiveCamera(40, host.clientWidth / host.clientHeight, 0.1, 100);
+  camera.position.set(3, 2, 4);
+  new OrbitControls(camera, renderer.domElement).enableDamping = true;
+  // Paleta do site: terracota (#B0755A) e sálvia (#7B8E7E).
+  mesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, 1.4), new THREE.MeshStandardMaterial({ color: 0xB0755A, roughness: 0.55 }));
+  scene.add(mesh);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 48), new THREE.MeshStandardMaterial({ color: 0x7B8E7E, roughness: 0.9 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5;
+  scene.add(floor);
+  renderer.setAnimationLoop(() => renderer.render(scene, camera));
+  return 'ok';
+});
+
+await check('GLTFLoader + DRACOLoader (decodifica modelo Draco)', async () => {
+  const [{ GLTFLoader }, { DRACOLoader }] = await Promise.all([
+    import('three/addons/loaders/GLTFLoader.js'),
+    import('three/addons/loaders/DRACOLoader.js'),
+  ]);
+  const draco = new DRACOLoader().setDecoderPath('https://unpkg.com/three@0.186.1/examples/jsm/libs/draco/gltf/');
+  const loader = new GLTFLoader().setDRACOLoader(draco);
+  const gltf = await loader.loadAsync('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Box/glTF-Draco/Box.gltf');
+  let tris = 0;
+  gltf.scene.traverse((o) => { if (o.isMesh) tris += o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3; });
+  gltf.scene.scale.setScalar(0.5); gltf.scene.position.set(1.4, 0, 0);
+  scene.add(gltf.scene);
+  draco.dispose();
+  return `${tris} triângulos`;
+});
+
+await check('HDRLoader (import)', async () => { await import('three/addons/loaders/HDRLoader.js'); return 'ok'; });
+
+await check('gsap + ScrollTrigger', async () => {
+  const { gsap } = await import('gsap');
+  const { ScrollTrigger } = await import('gsap/ScrollTrigger');
+  gsap.registerPlugin(ScrollTrigger);
+  if (!reduceMotion) gsap.to(mesh.rotation, { y: Math.PI * 2, duration: 6, repeat: -1, ease: 'none' });
+  return `v${gsap.version}`;
+});
+
+await check('lenis', async () => {
+  const { default: Lenis } = await import('lenis');
+  const lenis = new Lenis({ autoRaf: true });
+  const v = lenis.constructor.version || 'ok';
+  lenis.destroy();
+  return String(v);
+});
+
+await check('lil-gui (debug)', async () => {
+  const { default: GUI } = await import('lil-gui');
+  const gui = new GUI({ title: 'debug (dev)' });
+  gui.addColor(mesh.material, 'color');
+  gui.add(mesh.material, 'roughness', 0, 1);
+  return 'ok';
+});
+
+const summary = document.getElementById('summary');
+const allOk = results.every(Boolean);
+summary.className = allOk ? 'ok' : 'fail';
+summary.textContent = allOk ? 'Ambiente pronto para o configurador 3D.' : 'Há falhas — veja o console.';
+window.__envCheck = { ok: allOk, passed: results.filter(Boolean).length, total: results.length };
+</script>
+</body>
+</html>

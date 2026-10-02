@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('matchia_theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novo projeto — match.IA</title>
+<meta name="description" content="Conte como você imagina o seu projeto: o básico, o seu estilo e as referências que combinam com você.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B0755A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/novo-projeto.css">
+</head>
+<body class="np-page">
+<a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="index.html" class="logo">
+      <img src="assets/img/mark.png" alt="" width="32" height="32">
+      <span class="logo-word">match<span class="ia">.IA</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html#como-funciona">Como funciona</a></li>
+      <li><a href="projetos.html" data-page="projetos.html">Projetos</a></li>
+      <li><a href="orcamento.html" data-page="orcamento.html">Orçamento</a></li>
+      <li><a href="dashboard.html#assistente" data-assistant-link>Assistente</a></li>
+      <li><a href="destaques.html" data-page="destaques.html">Arquitetos</a></li>
+      <li><a href="planos.html" data-page="planos.html">Planos</a></li>
+      <li><a href="blog.html" data-page="blog.html">Blog</a></li>
+      <li><a href="sobre.html" data-page="sobre.html">Sobre</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="dashboard.html#projeto" class="login-link">Voltar ao painel</a>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema" type="button"></button>
+    <button class="nav-toggle" aria-label="Abrir menu"><span></span><span></span><span></span></button>
+  </nav>
+</header>
+
+<main id="main-content" class="np-shell">
+  <div class="np-head">
+    <span class="eyebrow">Novo projeto</span>
+    <h1>Vamos desenhar <em>o seu projeto</em></h1>
+    <ol class="np-stepper" id="npStepper" aria-label="Etapas">
+      <li data-step-dot="0"><span>1</span>O básico</li>
+      <li data-step-dot="1"><span>2</span>Seu estilo</li>
+      <li data-step-dot="2"><span>3</span>Referências</li>
+      <li data-step-dot="3"><span>4</span>Experiência 3D</li>
+    </ol>
+  </div>
+
+  <form id="npForm" class="np-stage" novalidate>
+    <!-- 1. O básico: os mesmos campos do formulário de projeto de antes -->
+    <section class="np-step" data-step="0" aria-labelledby="npStep0Title">
+      <div class="np-card">
+        <h2 id="npStep0Title">Conte o básico</h2>
+        <p class="card-lead">O que todo arquiteto precisa saber antes da primeira conversa.</p>
+        <div class="form-grid">
+          <div class="form-field full">
+            <label for="npName">Nome do projeto</label>
+            <input type="text" id="npName" placeholder="Ex.: Reforma do apartamento da praia" required autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label for="npPropertyType">Tipo de imóvel</label>
+            <select id="npPropertyType">
+              <option value="Residencial unifamiliar">Residencial unifamiliar</option>
+              <option value="Apartamento">Apartamento</option>
+              <option value="Reforma">Reforma</option>
+              <option value="Interiores">Interiores</option>
+              <option value="Comercial">Comercial</option>
+              <option value="Paisagismo">Paisagismo</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="npArea">Metragem (m²)</label>
+            <input type="number" id="npArea" min="0" placeholder="100">
+          </div>
+          <div class="form-field">
+            <label for="npBudgetMin">Orçamento mínimo (R$)</label>
+            <input type="number" id="npBudgetMin" min="0">
+          </div>
+          <div class="form-field">
+            <label for="npBudgetMax">Orçamento máximo (R$)</label>
+            <input type="number" id="npBudgetMax" min="0">
+          </div>
+          <div class="form-field full">
+            <label>Estilos que você já sabe que gosta <span class="hint">(opcional — as próximas etapas ajudam a descobrir)</span></label>
+            <div class="chip-select" id="npStyles"></div>
+          </div>
+          <div class="form-field full">
+            <label for="npMaterials">Materiais preferidos <span class="hint">(separados por vírgula)</span></label>
+            <input type="text" id="npMaterials" placeholder="Concreto aparente, madeira de demolição">
+          </div>
+          <div class="form-field full">
+            <label for="npGoals">Objetivos do projeto</label>
+            <textarea id="npGoals" placeholder="O que precisa mudar, o que não pode faltar, prazos importantes…"></textarea>
+          </div>
+        </div>
+        <p class="np-error" id="npError0" role="alert"></p>
+      </div>
+    </section>
+
+    <!-- 2. Mais sobre o estilo e como o cliente quer o projeto -->
+    <section class="np-step" data-step="1" aria-labelledby="npStep1Title" hidden>
+      <div class="np-card">
+        <h2 id="npStep1Title">Mais sobre o seu estilo</h2>
+        <p class="card-lead">Escreva do seu jeito — é isso que o arquiteto vai ler antes de te conhecer.</p>
+        <div class="form-grid">
+          <div class="form-field full">
+            <label for="npNotes">Como você imagina viver nesse espaço?</label>
+            <textarea id="npNotes" rows="5" placeholder="Ex.: Quero receber os amigos na cozinha, um canto de leitura com luz natural e o mínimo de coisas à vista…"></textarea>
+          </div>
+          <div class="form-field">
+            <label for="npFamily">Quantas pessoas vão morar?</label>
+            <input type="number" id="npFamily" min="1" placeholder="2">
+          </div>
+          <div class="form-field full">
+            <label>Que sensação você quer ao chegar em casa?</label>
+            <div class="chip-select" id="npFeelings" role="group" aria-label="Sensações"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Escolha por imagem, uma pergunta por vez -->
+    <section class="np-step np-step--wide" data-step="2" aria-labelledby="npQuestion" hidden>
+      <div class="np-quiz">
+        <div class="np-quiz-head">
+          <span class="np-quiz-count" id="npQuizCount">1 de 5</span>
+          <h2 id="npQuestion">—</h2>
+          <p class="card-lead" id="npQuizHint"></p>
+        </div>
+        <div class="np-choices" id="npChoices" role="radiogroup" aria-labelledby="npQuestion"></div>
+        <div class="np-quiz-foot">
+          <div class="np-quiz-dots" id="npQuizDots" aria-hidden="true"></div>
+          <button type="button" class="np-link" id="npSkipQuestion">Pular esta pergunta</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Ponte para a experiência 3D -->
+    <section class="np-step" data-step="3" aria-labelledby="npStep3Title" hidden>
+      <div class="np-card np-card--bridge">
+        <span class="eyebrow">Última etapa</span>
+        <h2 id="npStep3Title">Agora imagine <em>a sua casa</em></h2>
+        <p class="card-lead">Se esse fosse o projeto da sua casa, como você organizaria as coisas? Que estilo você colocaria? Monte em 3D — o arquiteto vai ver exatamente o que você escolheu.</p>
+        <div class="np-bridge-styles" id="npBridgeStyles"></div>
+        <div class="np-bridge-actions">
+          <a href="experiencia-3d.html" class="btn btn-primary" id="npGo3d">Entrar na experiência 3D</a>
+          <button type="button" class="np-link" id="npCreateNow">Criar o projeto sem a experiência</button>
+        </div>
+        <p class="np-error" id="npError3" role="alert"></p>
+      </div>
+    </section>
+
+    <div class="np-actions">
+      <button type="button" class="btn btn-secondary" id="npBack">Voltar</button>
+      <button type="button" class="btn btn-primary" id="npNext">Continuar</button>
+    </div>
+  </form>
+</main>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/site.js"></script>
+<script src="assets/js/data/project-styles.js"></script>
+<script src="assets/js/data/style-questions.js"></script>
+<script src="assets/js/project-draft.js"></script>
+<script src="assets/js/novo-projeto.js"></script>
+</body>
+</html>
