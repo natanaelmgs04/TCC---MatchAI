@@ -87,13 +87,9 @@ export function scoreProjectToArchitect(project, client, architect) {
   const materials = best?.materials || 0;
   const areaBonus = best ? areaProximityScore(project.areaM2, best.item.areaM2) : 0;
 
-  const location = a.workingAreas?.some((area) =>
-    [client?.city, client?.state]
-      .filter(Boolean)
-      .some((place) => area.toLowerCase().includes(place.toLowerCase())),
-  )
-    ? 20
-    : 0;
+  // Onde a obra acontece: a cidade/UF do projeto; sem elas, a do cliente.
+  const places = projectPlaces(project, client);
+  const location = places.length && architectServes(architect, places) ? 20 : 0;
   const property = a.specialties?.some(
     (s) => project.propertyType && s.toLowerCase().includes(project.propertyType.toLowerCase()),
   )
@@ -121,7 +117,25 @@ export function scoreProjectToArchitect(project, client, architect) {
     { label: "Experiência", value: experience, max: 10 },
     { label: "Metragem", value: areaBonus, max: 5 },
   ];
-  return { score, reasons, breakdown, matchedPortfolioItem: best?.item || null };
+  return { score, reasons, breakdown, matchedPortfolioItem: best?.item || null, locationKnown: places.length > 0 };
+}
+
+// "São Paulo", "sao paulo" e "SÃO PAULO" são o mesmo lugar.
+const normPlace = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+
+/** Cidade e UF onde o projeto acontece; cai na do cliente se o projeto não tiver. */
+export function projectPlaces(project, client) {
+  const fromProject = [project?.city, project?.state].filter(Boolean);
+  const places = fromProject.length ? fromProject : [client?.city, client?.state].filter(Boolean);
+  return places.map(normPlace).filter(Boolean);
+}
+
+/** O arquiteto atende algum desses lugares (áreas de atuação, ou a cidade/UF dele)? */
+function architectServes(architect, places) {
+  const a = architect.architectProfile || {};
+  const areas = [...(a.workingAreas || []), architect.city, architect.state].filter(Boolean).map(normPlace);
+  // UF (2 letras) só vale igual — senão "sp" casaria com "Espírito Santo".
+  return areas.some((area) => places.some((place) => (place.length <= 2 ? area === place : area === place || area.includes(place))));
 }
 
 /** Equivalente a categorizeMatches, mas por projeto — mesma lógica de
@@ -129,16 +143,13 @@ export function scoreProjectToArchitect(project, client, architect) {
  * pontuação de perfil↔perfil por projeto↔portfólio. */
 export function categorizeProjectMatches(project, client, architects) {
   const evaluated = architects.map((architect) => {
-    const { score, reasons, breakdown, matchedPortfolioItem } = scoreProjectToArchitect(project, client, architect);
+    const { score, reasons, breakdown, matchedPortfolioItem, locationKnown } = scoreProjectToArchitect(project, client, architect);
     const a = architect.architectProfile || {};
     const locationValue = breakdown.find((b) => b.label === "Localização")?.value || 0;
     const availabilityValue = breakdown.find((b) => b.label === "Disponibilidade")?.value || 0;
     const coreScore = score - locationValue - availabilityValue;
-    const sameCity = !!(
-      client?.city &&
-      architect.city &&
-      client.city.trim().toLowerCase() === architect.city.trim().toLowerCase()
-    );
+    const projectCity = project?.city || client?.city;
+    const sameCity = !!(projectCity && architect.city && normPlace(projectCity) === normPlace(architect.city));
     return {
       architect,
       score,
@@ -148,7 +159,9 @@ export function categorizeProjectMatches(project, client, architects) {
       coreScore,
       sameCity,
       available: a.availability !== "unavailable",
-      inRegion: locationValue > 0,
+      // Sem localização conhecida (cadastro e projeto sem cidade), ninguém é
+      // "fora da região" — mesma regra do orçamento: só separa quando dá pra provar.
+      inRegion: !locationKnown || locationValue > 0,
       inBudget: budgetsOverlap(project.budget, a.priceRange),
     };
   });

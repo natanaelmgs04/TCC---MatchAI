@@ -7,8 +7,7 @@
  * Uso: npm run seed:demo (dentro de backend/)
  * Login de demonstração: demo@matchia.com / MatchIA@Demo2026
  */
-import dotenv from "dotenv";
-dotenv.config({ path: "KEYS.env" });
+import "../config/env.js"; // carrega backend/KEYS.env de qualquer pasta
 import { connectDatabase } from "../config/database.js";
 import User from "../models/User.js";
 import Project from "../models/Project.js";
@@ -17,6 +16,7 @@ import Review from "../models/Review.js";
 import Validation from "../models/Validation.js";
 import MatchHistory from "../models/MatchHistory.js";
 import Favorite from "../models/Favorite.js";
+import Hire from "../models/Hire.js";
 import { rankArchitects } from "../services/scoringEngine.js";
 import mongoose from "mongoose";
 
@@ -28,7 +28,12 @@ await connectDatabase();
 // Recomeça do zero para a demo ficar sempre no mesmo estado, previsível.
 const existing = await User.findOne({ email: DEMO_EMAIL });
 if (existing) {
+  // Desfaz a contagem de projetos fechados das contratações antigas da demo,
+  // senão o número do arquiteto cresceria a cada vez que o seed roda.
+  const oldAccepted = await Hire.find({ client: existing._id, status: "accepted" });
+  for (const h of oldAccepted) await User.updateOne({ _id: h.architect }, { $inc: { "architectProfile.closedProjectsCount": -1 } });
   await Promise.all([
+    Hire.deleteMany({ client: existing._id }),
     Project.deleteMany({ client: existing._id }),
     Message.deleteMany({ $or: [{ from: existing._id }, { to: existing._id }] }),
     Review.deleteMany({ client: existing._id }),
@@ -110,9 +115,37 @@ await Validation.create({
 
 await Favorite.create({ client: client._id, architect: architect._id });
 
+// Um projeto já contratado (aparece em "Projetos fechados" no perfil da
+// arquiteta e em "Seus projetos" no painel dela) e a "Casa de campo" aberta,
+// para demonstrar a contratação ao vivo.
+const hiredProject = await Project.create({
+  client: client._id,
+  architect: architect._id,
+  name: "Reforma do apartamento",
+  preferredStyles: ["Moderno", "Minimalista"],
+  preferredMaterials: ["Concreto aparente", "Vidro"],
+  budget: { min: 300000, max: 450000 },
+  propertyType: "Apartamento",
+  areaM2: 110,
+  familySize: 3,
+  projectGoals: "Integrar sala, cozinha e varanda, com muita luz natural.",
+  status: "in_progress",
+});
+await Hire.create({
+  project: hiredProject._id,
+  client: client._id,
+  architect: architect._id,
+  status: "accepted",
+  message: "Gostei muito do seu portfólio e do resumo que a IA montou. Vamos fazer juntos?",
+  response: "Combinado! Vou te mandar a proposta de cronograma pelo chat.",
+  decidedAt: new Date(),
+});
+await User.updateOne({ _id: architect._id }, { $inc: { "architectProfile.closedProjectsCount": 1 } });
+
 console.log("Conta de demonstração pronta:");
 console.log(`  Login: ${DEMO_EMAIL} / MatchIA@Demo2026`);
 console.log(`  Projeto extra: "${project.name}"`);
 console.log(`  Match rodado com ${results.length} resultado(s), melhor pontuação: ${results[0]?.score ?? "—"}`);
 console.log(`  Conversa e avaliação com ${architect.name}, resumo já validado dos dois lados.`);
+console.log(`  Projeto "${hiredProject.name}" já contratado com ${architect.name}; "${project.name}" aberto para contratar.`);
 await mongoose.disconnect();

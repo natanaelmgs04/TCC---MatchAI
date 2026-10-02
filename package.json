@@ -4,11 +4,17 @@
   "version": "1.0.0",
   "description": "match.IA — um único processo Express (backend/) serve a API e o site (front-end) juntos, na mesma porta.",
   "scripts": {
+    "postinstall": "npm install --prefix backend --no-audit --no-fund --omit=dev",
     "dev": "npm run dev --prefix backend",
+    "dev:local": "npm run dev:local --prefix backend",
     "start": "npm start --prefix backend",
-    "install:all": "npm install --prefix backend"
+    "install:all": "npm install --prefix backend",
+    "setup": "node backend/src/scripts/setup.js"
   },
   "dependencies": {
     "express": "^5.2.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

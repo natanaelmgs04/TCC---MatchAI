@@ -241,3 +241,15 @@
 @media (max-width: 900px) {
   .hero-layer { position: static; }
 }
+
+/* ---------- Modo suave (motion reduzido no sistema) ----------
+   Mesma coreografia, só com fade: cada peça aparece na mesma ordem e no
+   mesmo tempo, mas sem deslizar, girar ou dar zoom. As cenas da rolagem
+   continuam montando com o scroll, também só com opacidade. */
+@keyframes hi-soft { from { opacity: 0; } }
+.motion-gentle.js-intro :is(.site-header, .hi-eyebrow, .hi-w > span, .hi-accent, .hi-lead, .hi-btn, .hi-stat, .hi-photo, .hi-card, .hi-card--profile li) { animation-name: hi-soft !important; }
+.motion-gentle.js-intro .hero-visual::before { animation-name: hi-soft !important; }
+.motion-gentle.js-intro :is(.hi-photo img, .hi-beam) { animation: none !important; }
+.motion-gentle.js-intro .hi-eyebrow::before, .motion-gentle.js-intro .hi-card--profile li::before { animation: none !important; }
+[data-scrub].is-gentle :is(.step-num, .step-num span, .step h3, .step > p, .step-peek, .match-profile, .match-card.result, .result > *, .tag, .match-crit, .score-ring) { transform: none !important; translate: none !important; }
+[data-scrub].is-gentle :is(.step-num::after, .peek-beam, .match-wire) { animation: none !important; }

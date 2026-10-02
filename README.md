@@ -42,9 +42,21 @@ assets/3d/            Estudo volumétrico 3D (three.js) — não é mais referen
 (`/api/*`) e também o site estático (HTML/CSS/JS da raiz), na mesma porta:
 
 ```bash
-npm install --prefix backend   # só na primeira vez
-npm run dev
+npm install      # só na primeira vez: instala o site e o backend (versões do package-lock)
+npm run setup    # num computador novo: cria backend/KEYS.env a partir do modelo e confere o que falta
+npm run dev      # usa o MongoDB do KEYS.env (Atlas)
 ```
+
+**Sem o KEYS.env, ou numa rede que bloqueia o Atlas** (laboratório, empresa): `npm run dev:local`.
+O servidor sobe um MongoDB local dentro do projeto (`backend/.localdb`, fora do Git), já com
+materiais, arquitetos de demonstração e a conta demo (`demo@matchia.com` / `MatchIA@Demo2026`).
+Dá para criar contas normalmente, mas elas ficam só naquele computador. Na primeira vez ele
+baixa o MongoDB (~600 MB no Windows, uma vez por usuário).
+
+O `backend/KEYS.env` guarda as senhas (MongoDB, Gemini…) e por isso não está no Git — copie
+o seu de um computador que já roda o projeto, ou preencha o criado pelo `npm run setup`
+(modelo com os nomes das variáveis em `backend/KEYS.env.example`). Se faltar algo, o
+`npm run dev` diz exatamente o quê, em vez de um erro seco.
 
 Depois acesse **`http://localhost:3000`** — é a mesma URL pro site e pra API, não tem
 mais duas portas nem dois processos pra coordenar. Em desenvolvimento os arquivos do site
@@ -127,10 +139,11 @@ Roberto — não fizemos `git push`, só editamos o clone local em `backend/`.
 - **Arquitetos em destaque** (`destaques.html`): página pública com todos os arquitetos
   cadastrados, filtrável por estilo, usando o novo `GET /api/architects` (lista) — antes só
   existia a busca por id.
-- **E-mail transacional simulado**: `backend/src/services/emailService.js` envia (ou simula,
-  se não houver SMTP configurado em `KEYS.env`) um e-mail de boas-vindas no cadastro e um
-  aviso de nova mensagem no chat. Sem `EMAIL_HOST`/`EMAIL_USER`/`EMAIL_PASS`, o e-mail só é
-  registrado no console do servidor — nada quebra, nenhum e-mail real sai.
+- **E-mail transacional**: `backend/src/services/emailService.js` envia boas-vindas,
+  redefinição de senha, mensagens do chat e avisos de contratação. Envia pela API da Brevo
+  (`BREVO_API_KEY`, funciona no Render grátis, que bloqueia SMTP) ou por SMTP
+  (`EMAIL_HOST`/`EMAIL_USER`/`EMAIL_PASS`); sem nenhum dos dois, o e-mail só é registrado no
+  console do servidor — nada quebra. Passo a passo em `DEPLOY.md`.
 - **Robustez do back-end**: todo handler assíncrono agora passa por `asyncHandler`, então um
   erro de validação do Mongoose (ex.: campo obrigatório faltando) responde 400 ao cliente em
   vez de derrubar o processo Node inteiro (bug real encontrado e corrigido nesta rodada). As

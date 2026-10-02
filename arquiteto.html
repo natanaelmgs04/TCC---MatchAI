@@ -109,6 +109,13 @@
           </div>
         </div>
         <div>
+          <!-- Contratação: o cliente escolhe um projeto e pede; o arquiteto aceita
+               ou recusa no painel (assets/js/architect.js + hireController no back-end). -->
+          <div class="dash-card spotlight hire-cta-card" id="hireCard">
+            <h3>Contratar este arquiteto</h3>
+            <p class="card-lead">Escolha o projeto e envie o pedido. O arquiteto recebe o resumo e aceita ou recusa; aceitando, o projeto fica fechado pela plataforma.</p>
+            <div id="hireCardBody"><p class="hire-muted">Carregando…</p></div>
+          </div>
           <div class="dash-card spotlight" id="messageCard">
             <h3>Enviar mensagem</h3>
             <p class="card-lead">Fale direto com este arquiteto pela plataforma.</p>
@@ -144,6 +151,11 @@
           <div class="dash-card spotlight">
             <h3>Portfólio</h3>
             <div id="archPortfolio"></div>
+          </div>
+          <div class="dash-card spotlight" id="archClosedCard" style="display:none;">
+            <h3>Projetos fechados pela plataforma</h3>
+            <p class="card-lead">Contratações aceitas pelo match.IA. Os dados do cliente ficam privados.</p>
+            <div id="archClosedList" class="closed-list"></div>
           </div>
           <div class="dash-card spotlight" id="archCaseStudiesCard" style="display:none;">
             <h3>Cases de sucesso</h3>

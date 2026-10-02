@@ -111,7 +111,7 @@ python assets/3d/dev/fetch_environment.py
 
 - `build_textures.py` leva cada foto até a cor do catálogo (mantendo a variação), gera o piso em tábuas a partir das lâminas de madeira, as miniaturas da interface e `configurator/data/textures.js` (tamanho físico, relevo, cor média). **Material novo** = uma linha em `MATERIALS` desse script + o objeto em `data/options.js`.
 - Tamanho: ~9 MB de texturas (carregadas sob demanda, só as em uso), ~3,5 MB de modelos, 1,6 MB de HDR. Aparelho fraco pula as peças decorativas opcionais e o GTAO.
-- O service worker (`sw.js`) guarda toda resposta GET sem limite — com esses assets o cache cresce; ver "Conflitos conhecidos".
+- O service worker (`sw.js`) não guarda os assets 3D (pesados demais para o cache do navegador do visitante).
 
 ## Skills do Claude Code criadas (`.claude/skills/`)
 
@@ -145,7 +145,7 @@ O do GitHub pede login (OAuth) no primeiro uso.
 
 ## Conflitos conhecidos (pendentes de decisão)
 
-1. **Service worker** (`sw.js`) guarda no cache toda resposta GET, sem limite — incluiria GLBs e texturas pesadas. Excluir modelos/texturas/wasm do cache antes de publicar o configurador.
-2. **`Cache-Control: no-store` em todos os estáticos** (`backend/src/server.js`), inclusive em produção — modelos seriam baixados de novo a cada visita. Para `assets/3d/models` e `assets/3d/textures`: cache longo + nome de arquivo versionado.
+1. ~~Service worker guardando tudo~~ — resolvido: o `sw.js` (cache `matchia-v2`) não guarda `assets/3d/`, `assets/audio/`, `.glb/.hdr/.mp3/.wasm` nem outros domínios.
+2. ~~`no-store` em produção~~ — resolvido: em produção (`NODE_ENV=production`) fotos, 3D e áudio vão com cache de 1 dia; HTML/CSS/JS são revalidados (ETag). Se trocar um modelo mantendo o nome, o navegador pode levar até 1 dia para buscar o novo — prefira nome versionado (`casa-base.v2.glb`).
 3. **`html { scroll-behavior: smooth }`** em `style.css` — se o Lenis for usado em alguma página, o `lenis.css` oficial resolve; não mexa no global.
 4. O protótipo em `assets/3d/` usa three 0.184 e `PCFSoftShadowMap` (depreciado). Fica como está até decidirem aposentá-lo ou atualizá-lo.

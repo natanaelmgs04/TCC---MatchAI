@@ -10,6 +10,20 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 });
 
+// Imagem externa que não carrega (rede que bloqueia o Unsplash, link que
+// expirou, fotos salvas no banco) vira uma imagem neutra local em vez do ícone
+// de imagem quebrada. As fotos fixas do site já são locais (assets/img/photos);
+// isto cobre as que vêm da API. Em captura porque o evento "error" de <img>
+// não sobe pela árvore.
+window.addEventListener('error', (e) => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || img.dataset.fallback) return;
+  if (new URL(img.src, location.href).origin === location.origin) return;
+  img.dataset.fallback = '1';
+  img.removeAttribute('srcset');
+  img.src = 'assets/img/photos/fallback.webp';
+}, true);
+
 // Comportamento compartilhado do site: navegação mobile, ano do rodapé,
 // destaque do link ativo, animações de entrada e estado de sessão no header.
 document.addEventListener('DOMContentLoaded', () => {
@@ -225,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-count-to]').forEach((el) => {
     const target = parseFloat(el.dataset.countTo);
     const suffix = el.dataset.countSuffix || '';
-    if (reduceMotion) { el.textContent = target + suffix; return; }
     // data-count-delay (ms): espera a entrada coreografada do elemento antes
     // de contar (usado no hero, onde cada número aparece num tempo diferente)
     const delay = parseFloat(el.dataset.countDelay) || 0;
@@ -365,10 +378,11 @@ document.addEventListener('DOMContentLoaded', () => {
           dropdown.innerHTML = '<p style="padding:14px; font-size:0.84rem; color:var(--ink-faint); margin:0;">Carregando...</p>';
           try {
             const notifications = await MatchAPI.notifications();
+            const escN = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
             dropdown.innerHTML = notifications.length
               ? notifications.map(n => `
                   <a href="${n.link || 'dashboard.html'}" class="notif-item ${n.read ? '' : 'unread'}">
-                    <span>${n.text}</span>
+                    <span>${escN(n.text)}</span>
                     <span class="notif-time">${new Date(n.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                   </a>`).join('')
               : '<p style="padding:14px; font-size:0.84rem; color:var(--ink-faint); margin:0;">Nenhuma notificação ainda.</p>';

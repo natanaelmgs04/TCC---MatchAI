@@ -18,6 +18,10 @@ const projectSchema = new mongoose.Schema(
     projectGoals: String,
     preferences: String,
     areaM2: Number,
+    // Onde a obra acontece: é a localização que o match usa (o arquiteto
+    // atende onde o projeto está, não onde o cliente mora).
+    city: { type: String, trim: true, maxlength: 80 },
+    state: { type: String, trim: true, uppercase: true, maxlength: 2 },
     // Do fluxo de criação em página cheia (novo-projeto.html + experiencia-3d.html),
     // normalizados em services/projectPreferences.js.
     styleNotes: String,

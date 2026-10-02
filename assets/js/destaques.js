@@ -6,28 +6,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   // vira uma miniatura do estilo em vez de só um nome, mais fácil de
   // reconhecer rápido numa lista de 10 opções.
   const STYLE_THUMBS = {
-    'Moderno': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=80&q=70',
-    'Contemporâneo': 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=80&q=70',
-    'Minimalista': 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=80&q=70',
-    'Industrial': 'https://images.unsplash.com/photo-1567767292278-a4f21aa2d36e?auto=format&fit=crop&w=80&q=70',
-    'Clássico': 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=80&q=70',
-    'Rústico': 'https://images.unsplash.com/photo-1523755231516-e43fd2e8dca5?auto=format&fit=crop&w=80&q=70',
-    'Escandinavo': 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=80&q=70',
-    'Biofílico': 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=80&q=70',
-    'Brutalista': 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=80&q=70',
-    'Alto padrão': 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=80&q=70',
+    'Moderno': 'assets/img/photos/photo-1600585154340-be6161a56a0c.webp',
+    'Contemporâneo': 'assets/img/photos/photo-1600566753190-17f0baa2a6c3.webp',
+    'Minimalista': 'assets/img/photos/photo-1600210492486-724fe5c67fb0.webp',
+    'Industrial': 'assets/img/photos/photo-1567767292278-a4f21aa2d36e.webp',
+    'Clássico': 'assets/img/photos/photo-1600607687920-4e2a09cf159d.webp',
+    'Rústico': 'assets/img/photos/photo-1523755231516-e43fd2e8dca5.webp',
+    'Escandinavo': 'assets/img/photos/photo-1586023492125-27b2c045efd7.webp',
+    'Biofílico': 'assets/img/photos/photo-1545324418-cc1a3fa10c00.webp',
+    'Brutalista': 'assets/img/photos/photo-1494526585095-c41746248156.webp',
+    'Alto padrão': 'assets/img/photos/photo-1600596542815-ffad4c1539a9.webp',
   };
   // Fotos de perfil (o cadastro real ainda não tem esse campo) — retratos
   // diversos, cicla por índice pra cada arquiteto renderizado.
   const PROFILE_PHOTOS = [
-    'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=480&h=600&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=480&h=600&q=80',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=480&h=600&q=80',
-    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=480&h=600&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=480&h=600&q=80',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=480&h=600&q=80',
-    'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=480&h=600&q=80',
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=480&h=600&q=80',
+    'assets/img/photos/photo-1580489944761-15a19d654956.webp',
+    'assets/img/photos/photo-1507003211169-0a1dd7228f2d.webp',
+    'assets/img/photos/photo-1573496359142-b8d87734a5a2.webp',
+    'assets/img/photos/photo-1519085360753-af0119f7cbe7.webp',
+    'assets/img/photos/photo-1500648767791-00dcc994a43e.webp',
+    'assets/img/photos/photo-1544005313-94ddf0286df2.webp',
+    'assets/img/photos/photo-1560250097-0b93528c311a.webp',
+    'assets/img/photos/photo-1472099645785-5658abf4ff4e.webp',
   ];
   const grid = document.getElementById('archGrid');
   const empty = document.getElementById('archEmpty');
@@ -57,13 +57,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     return 'Perfil em construção na plataforma.';
   }
 
+  // Nome, cidade e bio são digitados pelo arquiteto: entram escapados.
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
   function cardHtml(a, i) {
     const p = a.profile || {};
     const verified = p.cauVerification?.status === 'verified' ? '<span class="status-pill badge-validated">✓ Verificado</span>' : '';
     const proBadge = a.isPro ? '<span class="badge-pro">★ Pro</span>' : '';
     const trackRecordBadge = a.isVerifiedTrackRecord ? '<span class="status-pill badge-validated">Trajetória verificada</span>' : '';
     const checked = compareSelection.has(a.id) ? 'checked' : '';
-    const location = [a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada';
+    const location = esc([a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada');
     const ratingSuffix = a.reviewCount ? ` · ★ ${a.avgRating}` : '';
     const photo = PROFILE_PHOTOS[i % PROFILE_PHOTOS.length];
     return `
@@ -74,9 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         <a href="arquiteto.html?id=${a.id}" class="arch-card-link">
           <div class="arch-card-photo"><img src="${photo}" alt="" loading="lazy"></div>
           <div class="arch-card-body">
-            <h4>${a.name}</h4>
+            <h4>${esc(a.name)}</h4>
             <span class="arch-card-meta">${location}${ratingSuffix}</span>
-            <p class="arch-card-quote">${quoteLine(p)}</p>
+            <p class="arch-card-quote">${esc(quoteLine(p))}</p>
             ${(verified || proBadge || trackRecordBadge) ? `<div class="arch-card-badges">${verified}${proBadge}${trackRecordBadge}</div>` : ''}
           </div>
         </a>
@@ -202,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const section = document.getElementById('compareSection');
     document.getElementById('compareContent').innerHTML = `
       <table class="compare-table">
-        <thead><tr><th>Arquiteto</th>${items.map(a => `<th>${a.name}</th>`).join('')}</tr></thead>
+        <thead><tr><th>Arquiteto</th>${items.map(a => `<th>${esc(a.name)}</th>`).join('')}</tr></thead>
         <tbody>
           <tr><th>Localização</th>${items.map(a => `<td>${[a.city, a.state].filter(Boolean).join(' · ') || '—'}</td>`).join('')}</tr>
           <tr><th>Experiência</th>${items.map(a => `<td>${a.profile?.yearsExperience || 0} anos</td>`).join('')}</tr>

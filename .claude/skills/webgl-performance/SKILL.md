@@ -128,9 +128,10 @@ function disposeObject(root) {
 
 ## Conflitos já conhecidos neste projeto
 
-1. **Service worker (`sw.js`)** guarda toda resposta GET no cache `matchia-v1`, sem limite e sem expirar — incluindo CDN e futuros `.glb`/texturas de vários MB. Antes de publicar modelos, excluir do cache do SW extensões `glb|gltf|bin|hdr|ktx2|wasm` (ou criar cache próprio com limite). Mudança no SW precisa de aprovação.
-2. **Express envia `Cache-Control: no-store` para todo arquivo estático** (`backend/src/server.js`), em dev **e** em produção (Render usa o mesmo servidor). Para modelos isso significa baixar tudo de novo a cada visita. Para produção: servir `assets/3d/models` e `assets/3d/textures` com cache longo + nome de arquivo versionado (`casa-base.v2.glb`). Mudança no servidor precisa de aprovação.
-3. `html { scroll-behavior: smooth }` em `style.css` — irrelevante para WebGL, mas veja premium-motion-design se for usar Lenis.
+1. **Service worker (`sw.js`, cache `matchia-v2`)** já ignora `assets/3d/`, `assets/audio/`, `.glb|.hdr|.mp3|.wasm` e outros domínios. Novo tipo de asset pesado? Acrescente à regex `SKIP` do `sw.js` e troque o `CACHE_NAME`.
+2. **Cache HTTP** (`backend/src/server.js`): em dev tudo `no-store`; em produção mídia pesada (webp/png/jpg/svg/glb/hdr/mp3/woff) vai com `max-age=86400` e HTML/CSS/JS com `no-cache` (ETag). Ao trocar um modelo, use nome versionado (`casa-base.v2.glb`).
+3. **Content-Security-Policy** (`backend/src/config/csp.js`): script-src libera só o site, unpkg, jsdelivr e os scripts embutidos (por hash, calculado sozinho). Um addon/CDN novo fora desses domínios precisa entrar lá, senão o navegador bloqueia.
+4. `html { scroll-behavior: smooth }` em `style.css` — irrelevante para WebGL, mas veja premium-motion-design se for usar Lenis.
 
 ## Checklist de revisão
 

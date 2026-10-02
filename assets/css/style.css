@@ -74,17 +74,17 @@
 /* Respeita quem pede menos animação no sistema (tontura/enjoo com movimento,
    distração com coisas piscando/deslizando) — praticamente desliga transições,
    animações e scroll suave em todo o site. */
+/* Modo suave (antes: tudo desligado). O Windows liga "menos animação"
+   sozinho em muitos PCs — laboratórios, acesso remoto, modo "melhor
+   desempenho" — e o site inteiro ficava parado neles. Agora, com motion
+   reduzido, as entradas continuam acontecendo como fade puro (mesma ordem e
+   ritmo, sem deslocamento, que é o que causa enjoo) e só o movimento grande
+   ou contínuo para: deriva do fundo, brilhos que varrem, bordas girando,
+   parallax e inclinação com o mouse (estes no JS). */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    /* Sem isso, o atraso incremental do stagger (--reveal-delay) ainda
-       segurava cada item por até algumas centenas de ms antes do "pulo"
-       instantâneo — nada de movimento, mas ainda uma espera perceptível. */
-    transition-delay: 0s !important;
-    scroll-behavior: auto !important;
-  }
+  html { scroll-behavior: auto !important; }
+  body::before, .shimmer-text, .glow-border::before, .glass-sheen::after { animation: none !important; }
+  .reveal { transform: none !important; filter: none !important; }
 }
 
 /* Continuidade entre páginas — API nativa do navegador, sem JS e sem
@@ -2870,3 +2870,44 @@ body::before {
     mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 88%, transparent 100%);
   }
 }
+
+/* ---------- Contratação (painel do cliente, do arquiteto e perfil público) ---------- */
+.hire-row { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.hire-row-body { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 8px; }
+.hire-muted { margin: 0; font-size: 0.84rem; color: var(--ink-faint); }
+.hire-form { flex: 1 1 100%; display: grid; gap: 8px; }
+.hire-form[hidden], .hire-row [hidden] { display: none; }
+.hire-form textarea, .hire-card textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; font-size: 0.9rem;
+  background: color-mix(in srgb, var(--white) 70%, transparent); color: var(--ink); resize: vertical;
+}
+.hire-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.hire-chip {
+  display: inline-flex; align-items: center; gap: 4px; width: fit-content; padding: 4px 10px; border-radius: 999px;
+  font-size: 0.74rem; font-weight: 600; color: var(--ink-soft);
+  background: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.1) 60%), var(--bg-alt);
+  box-shadow: inset 1px 1px 1px -0.5px rgba(255,255,255,.9), inset -1px -1px 1px -0.5px rgba(0,0,0,.08);
+}
+.hire-chip.is-closed { color: var(--on-accent); background: linear-gradient(135deg, rgba(255,255,255,.35), rgba(255,255,255,0) 55%), var(--sage); }
+.hire-list { display: grid; gap: 14px; }
+.hire-empty { margin: 0; font-size: 0.88rem; color: var(--ink-faint); }
+.hire-card {
+  display: grid; gap: 10px; padding: 18px; border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--white) 72%, transparent);
+  box-shadow: var(--shadow-sm), inset 1px 1px 1px -0.5px rgba(255,255,255,.85), inset -1px -1px 1px -0.5px rgba(0,0,0,.06);
+}
+.hire-card.is-closed { border-left: 3px solid var(--sage); }
+.hire-card header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.hire-card header strong { font-family: var(--font-display); font-size: 1.05rem; }
+.hire-card header span, .hire-meta { font-size: 0.82rem; color: var(--ink-faint); }
+.hire-goals { margin: 0; font-size: 0.88rem; }
+.hire-message { margin: 0; padding: 10px 14px; border-left: 3px solid var(--terracotta); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--bg-alt) 60%, transparent); font-size: 0.88rem; white-space: pre-wrap; }
+.hire-cta-card .form-field { margin-bottom: 12px; }
+.hire-cta-card select { width: 100%; }
+.hire-status { margin: 0 0 10px; font-size: 0.88rem; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.hire-status.is-closed { color: var(--sage-dark); }
+.closed-list { display: grid; gap: 10px; }
+.closed-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--bg-alt) 55%, transparent); }
+.closed-item div { display: grid; gap: 2px; }
+.closed-item strong { font-size: 0.94rem; }
+.closed-item span:not(.hire-chip) { font-size: 0.8rem; color: var(--ink-faint); }

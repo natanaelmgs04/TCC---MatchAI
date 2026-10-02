@@ -1,5 +1,6 @@
-import dotenv from "dotenv";
-dotenv.config({ path: "KEYS.env" });
+// Primeiro import de propósito: carrega o KEYS.env antes de qualquer outro módulo ler process.env.
+import { checkEnv } from "./config/env.js";
+import { cspFor } from "./config/csp.js";
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -27,13 +28,28 @@ import storeRoutes from "./routes/stores.js";
 import assistantRoutes from "./routes/assistant.js";
 import architectProjectRoutes from "./routes/architectProjects.js";
 import architectAssistantRoutes from "./routes/architectAssistant.js";
+import hireRoutes from "./routes/hires.js";
+import { emailStatus } from "./services/emailService.js";
 
 const app = express(),
   root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
   // Raiz de verdade do projeto (site estático), um nível acima de backend/ —
   // é isso que faz o mesmo processo/porta servir a API e o front-end juntos.
-  siteRoot = path.resolve(root, "..");
+  siteRoot = path.resolve(root, ".."),
+  isProduction = process.env.NODE_ENV === "production";
 
+// Em hospedagem (Render e afins) o visitante chega por um proxy: sem isto,
+// todo mundo teria o IP do proxy e os limites por hora seriam compartilhados
+// pelo site inteiro. Só em produção — localmente não há proxy e o cabeçalho
+// X-Forwarded-For poderia ser forjado para fugir do limite.
+if (isProduction) app.set("trust proxy", 1);
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  next();
+});
 app.use(cors());
 // /api/assistant recebe fotos em base64 e tem o próprio parser (limite maior,
 // ver routes/assistant.js) — o global de 100kb barraria a foto antes dela.
@@ -64,19 +80,52 @@ app.use("/api/stores", storeRoutes);
 app.use("/api/assistant", assistantRoutes);
 app.use("/api/architect-projects", architectProjectRoutes);
 app.use("/api/architect-assistant", architectAssistantRoutes);
+app.use("/api/hires", hireRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
-// Site (front-end) servido pelo mesmo processo/porta que a API — sem
-// cache em dev, pra uma alteração em qualquer arquivo aparecer no reload
-// sem precisar de Ctrl+Shift+R (mesmo espírito do antigo serve.py).
-app.use(
-  express.static(siteRoot, {
-    setHeaders: (res) => {
-      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-      res.setHeader("Pragma", "no-cache");
+// Site (front-end) servido pelo mesmo processo/porta que a API.
+//
+// siteRoot é a raiz do repositório inteiro (backend/ com o KEYS.env,
+// node_modules/, scripts, docs...), então só sai daqui o que é site de verdade:
+// tudo em assets/ e, na raiz, as páginas *.html, o manifest e o service worker.
+// O resto cai no 404 lá embaixo. Em produção, as ferramentas de geração de
+// assets (pastas dev/) também ficam de fora.
+//
+// Cache: em dev nada é guardado (uma alteração aparece no reload, como no
+// antigo serve.py). Em produção, HTML/CSS/JS são revalidados a cada visita
+// (ETag, resposta 304 barata — os nomes não têm versão, então nunca ficam
+// velhos) e mídia pesada (fotos, 3D, áudio) fica 1 dia no navegador.
+const HEAVY_MEDIA = /\.(?:webp|png|jpe?g|svg|glb|hdr|mp3|woff2?)$/i;
+const siteStatic = (dir) =>
+  express.static(dir, {
+    setHeaders: (res, file) => {
+      // Páginas levam a Content-Security-Policy (ver config/csp.js). Em dev o
+      // hash dos scripts embutidos é recalculado a cada visita (o HTML muda).
+      if (file.endsWith(".html")) res.setHeader("Content-Security-Policy", cspFor(file, { cacheResult: isProduction }));
+      if (!isProduction) {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+      } else if (HEAVY_MEDIA.test(file)) {
+        res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      } else {
+        res.setHeader("Cache-Control", "no-cache");
+      }
     },
-  }),
-);
+  });
+const serveSiteRoot = siteStatic(siteRoot),
+  publicRootFile = /^\/(?:[\w-]+\.html|manifest\.json|sw\.js)?$/;
+app.use("/assets", (req, res, next) => (isProduction && /(^|\/)dev\//.test(req.path) ? res.status(404).end() : next()), siteStatic(path.join(siteRoot, "assets")));
+app.use((req, res, next) => {
+  // Testa o caminho já decodificado: "%2F" e "%2e%2e" não podem virar uma
+  // subpasta (ex.: /x%2F..%2Fbackend%2FKEYS.env) depois do regex.
+  let file;
+  try {
+    file = decodeURIComponent(req.path);
+  } catch {
+    return next();
+  }
+  return publicRootFile.test(file) ? serveSiteRoot(req, res, next) : next();
+});
 // Front-end de referência original do Arkitetum.AI, mantido por trás do
 // nosso site — só é alcançado por arquivos que não existem na raiz acima.
 app.use(express.static(path.join(root, "public")));
@@ -106,11 +155,17 @@ app.use((err, _req, res, _next) => {
 // uma promise rejeitada (ex.: erro de validação do Mongoose) derrubava o
 // processo inteiro do Node em vez de responder 400/500 ao cliente.
 process.on("unhandledRejection", (err) => console.error("Unhandled rejection:", err));
-connectDatabase()
+const envProblem = checkEnv();
+if (envProblem) {
+  console.error(envProblem);
+  process.exit(1);
+}
+connectDatabase({ allowLocal: true })
   .then(() =>
-    app.listen(process.env.PORT || 3000, () =>
-      console.log(`Arkitetum running at http://localhost:${process.env.PORT || 3000}`),
-    ),
+    app.listen(process.env.PORT || 3000, () => {
+      console.log(`Arkitetum running at http://localhost:${process.env.PORT || 3000}`);
+      console.log(`E-mail: ${emailStatus()}`);
+    }),
   )
   .catch((error) => {
     console.error(error.message);

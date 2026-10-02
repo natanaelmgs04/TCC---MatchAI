@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import User from "../models/User.js";
-import { welcomeEmail, passwordResetEmail } from "../services/emailService.js";
+import { welcomeEmail, passwordResetEmail, publicBaseUrl } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
 
 const hashToken = (raw) => crypto.createHash("sha256").update(raw).digest("hex");
@@ -94,7 +94,7 @@ export async function forgotPassword(req, res) {
     user.passwordResetTokenHash = hashToken(rawToken);
     user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
-    const resetUrl = `${req.protocol}://${req.get("host")}/redefinir-senha.html?token=${rawToken}`;
+    const resetUrl = `${publicBaseUrl(req)}/redefinir-senha.html?token=${rawToken}`;
     passwordResetEmail(user, resetUrl).catch((err) => console.error("Falha ao enviar e-mail de redefinição:", err.message));
   }
   res.json({ ok: true, message: "Se esse e-mail estiver cadastrado, enviamos um link de redefinição." });

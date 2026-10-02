@@ -11,14 +11,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!section) return;
 
   const PLACEHOLDER_PHOTOS = [
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_225202_f9e684f3-dc19-469a-8142-eb391bfc601b.png&w=1280&q=85',
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_225149_7937e8ea-3b0a-46ab-919f-775627695a23.png&w=1280&q=85',
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_225153_f2b1fc04-776a-4f2e-879b-b764ea762e77.png&w=1280&q=85',
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_225847_f456fd9c-8938-4103-836d-51b0e88a9510.png&w=1280&q=85',
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_225854_3958a522-6203-4f84-a7fa-3b3f1dcd7256.png&w=1280&q=85',
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_231111_fcefaa07-6851-4fdc-ac7b-98754ac9d5c4.png&w=1280&q=85',
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_231124_9a1505aa-8c44-4046-aff8-1aa0bc7b3ef3.png&w=1280&q=85',
-    'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260727_230413_62e8b331-89be-4d35-84fe-330ba9b1b64f.png&w=1280&q=85',
+    'assets/img/photos/arquiteto-hero-1.webp',
+    'assets/img/photos/arquiteto-hero-2.webp',
+    'assets/img/photos/arquiteto-hero-3.webp',
+    'assets/img/photos/arquiteto-hero-4.webp',
+    'assets/img/photos/arquiteto-hero-5.webp',
+    'assets/img/photos/arquiteto-hero-6.webp',
+    'assets/img/photos/arquiteto-hero-7.webp',
+    'assets/img/photos/arquiteto-hero-8.webp',
   ];
   const ROLE_FALLBACKS = [
     'Arquitetura residencial', 'Interiores', 'Arquitetura de conceito', 'Estilo e materiais',
@@ -46,11 +46,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   bgWrap.innerHTML = slides.map((s, i) =>
     `<div class="fh-bg${i === 0 ? ' active' : ''}" style="background-image:url('${s.photo}')"></div>`).join('');
 
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const avatarsWrap = document.getElementById('fhAvatars');
   avatarsWrap.innerHTML = slides.map((s, i) => `
-    <button type="button" class="fh-avatar-btn${i === 0 ? ' active' : ''}" data-index="${i}" aria-label="Ver ${s.name}">
+    <button type="button" class="fh-avatar-btn${i === 0 ? ' active' : ''}" data-index="${i}" aria-label="Ver ${esc(s.name)}">
       <span class="fh-avatar-dot"></span>
-      <span class="fh-avatar-thumb"><img src="${s.photo}" alt="${s.name}" loading="lazy"></span>
+      <span class="fh-avatar-thumb"><img src="${s.photo}" alt="${esc(s.name)}" loading="lazy"></span>
     </button>`).join('');
 
   const descEl = document.getElementById('fhDesc');

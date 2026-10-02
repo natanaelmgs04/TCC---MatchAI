@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let qIndex = 0;
 
   // ---------- Etapa 1: o básico ----------
-  const fields = { name: 'npName', propertyType: 'npPropertyType', areaM2: 'npArea', budgetMin: 'npBudgetMin', budgetMax: 'npBudgetMax', preferredMaterials: 'npMaterials', projectGoals: 'npGoals', familySize: 'npFamily' };
+  const fields = { name: 'npName', propertyType: 'npPropertyType', areaM2: 'npArea', city: 'npCity', state: 'npState', budgetMin: 'npBudgetMin', budgetMax: 'npBudgetMax', preferredMaterials: 'npMaterials', projectGoals: 'npGoals', familySize: 'npFamily' };
   Object.entries(fields).forEach(([key, id]) => {
     const el = $(id);
     if (draft.basics[key] != null) el.value = draft.basics[key];

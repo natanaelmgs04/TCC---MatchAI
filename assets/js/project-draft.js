@@ -50,6 +50,8 @@ const MatchProjectDraft = (() => {
       name: (b.name || '').trim(),
       propertyType: b.propertyType,
       areaM2: b.areaM2,
+      city: (b.city || '').trim(),
+      state: b.state || '',
       budgetMin: b.budgetMin,
       budgetMax: b.budgetMax,
       familySize: b.familySize,

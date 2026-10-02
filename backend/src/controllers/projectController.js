@@ -21,6 +21,10 @@ export async function listProjects(req, res) {
   res.json(projects);
 }
 
+// Localização da obra (o match usa esta; ver services/scoringEngine.js).
+const cleanCity = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 80) : undefined);
+const cleanState = (v) => (typeof v === "string" && /^[a-z]{2}$/i.test(v.trim()) ? v.trim().toUpperCase() : undefined);
+
 export async function createProject(req, res) {
   if (!req.body.name?.trim())
     return res.status(400).json({ error: "Nome do projeto é obrigatório" });
@@ -36,6 +40,8 @@ export async function createProject(req, res) {
     projectGoals: req.body.projectGoals,
     preferences: req.body.preferences,
     areaM2: req.body.areaM2 ? Number(req.body.areaM2) : undefined,
+    city: cleanCity(req.body.city),
+    state: cleanState(req.body.state),
     status: req.body.status,
     styleNotes: normalizeStyleNotes(req.body.styleNotes),
     stylePicks: normalizeStylePicks(req.body.stylePicks),
@@ -52,6 +58,8 @@ export async function updateProject(req, res) {
   for (const key of allowed) if (req.body[key] !== undefined) project[key] = req.body[key];
   if (req.body.familySize !== undefined) project.familySize = Number(req.body.familySize);
   if (req.body.areaM2 !== undefined) project.areaM2 = req.body.areaM2 ? Number(req.body.areaM2) : undefined;
+  if (req.body.city !== undefined) project.city = cleanCity(req.body.city);
+  if (req.body.state !== undefined) project.state = cleanState(req.body.state);
   if (req.body.preferredStyles !== undefined) project.preferredStyles = normalizeStringArray(req.body.preferredStyles);
   if (req.body.preferredMaterials !== undefined) project.preferredMaterials = normalizeStringArray(req.body.preferredMaterials);
   if (req.body.budgetMin !== undefined || req.body.budgetMax !== undefined) project.budget = normalizeBudget(req.body);

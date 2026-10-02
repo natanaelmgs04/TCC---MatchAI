@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/server.js",
+    "dev:local": "node --watch src/server.js --local-db",
     "start": "node src/server.js",
     "seed:materials": "node src/seeds/materials.js",
     "seed:architects": "node src/seeds/architects.js",
@@ -23,7 +24,11 @@
     "express-rate-limit": "^7.4.1",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.6.0",
+    "mongodb-memory-server-core": "^10.4.3",
     "mongoose": "^8.24.4",
     "nodemailer": "^9.1.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

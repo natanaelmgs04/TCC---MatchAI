@@ -14,23 +14,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Mesmas fotos de perfil já usadas no diretório de arquitetos
   // (destaques.js) — reaproveitadas aqui pro card compacto do ranking.
   const PROFILE_PHOTOS = [
-    'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&h=200&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&h=200&q=80',
+    'assets/img/photos/photo-1580489944761-15a19d654956.webp',
+    'assets/img/photos/photo-1507003211169-0a1dd7228f2d.webp',
+    'assets/img/photos/photo-1573496359142-b8d87734a5a2.webp',
+    'assets/img/photos/photo-1519085360753-af0119f7cbe7.webp',
+    'assets/img/photos/photo-1500648767791-00dcc994a43e.webp',
   ];
 
   function projectCardHtml(c) {
+    const img = /^(https?:|assets\/|data:image\/)/.test(String(c.image || '')) ? c.image : '';
     return `
       <div class="showcase-card spotlight tilt">
         <div class="showcase-card-media">
-          ${c.image ? `<img src="${c.image}" alt="${c.title}" loading="lazy">` : '<div class="showcase-card-noimg"></div>'}
+          ${img ? `<img src="${esc(img)}" alt="${esc(c.title)}" loading="lazy">` : '<div class="showcase-card-noimg"></div>'}
           ${typeof c.compatibilityScore === 'number' ? `<span class="showcase-compat">${c.compatibilityScore}% match</span>` : ''}
         </div>
         <div class="showcase-card-info">
-          <h4>${c.title}</h4>
-          <p>${c.architectName || 'Arquiteto'}${c.style ? ` · ${c.style}` : ''}${c.areaM2 ? ` · ${c.areaM2} m²` : ''}</p>
+          <h4>${esc(c.title)}</h4>
+          <p>${esc(c.architectName || 'Arquiteto')}${c.style ? ` · ${esc(c.style)}` : ''}${c.areaM2 ? ` · ${esc(c.areaM2)} m²` : ''}</p>
         </div>
       </div>`;
   }

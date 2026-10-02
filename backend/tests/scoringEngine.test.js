@@ -264,3 +264,33 @@ test("deletePortfolio removes the selected project from an architect's portfolio
   assert.equal(req.user.architectProfile.portfolio[0]._id, "project-1");
   assert.equal(res.statusCode, 200);
 });
+
+// ---- Localização do match (cidade/UF do projeto) ----
+import { categorizeProjectMatches, projectPlaces } from "../src/services/scoringEngine.js";
+
+const archSP = {
+  _id: "a-sp", name: "Arq SP", city: "São Paulo", state: "SP",
+  architectProfile: { availability: "available", workingAreas: ["São Paulo", "SP"], specialties: ["Residencial unifamiliar"], priceRange: { min: 100000, max: 500000 }, yearsExperience: 5, portfolio: [{ title: "Casa", styles: ["Moderno"], materials: [] }] },
+};
+const archES = {
+  _id: "a-es", name: "Arq ES", city: "Vitória", state: "ES",
+  architectProfile: { availability: "available", workingAreas: ["Espírito Santo"], specialties: [], yearsExperience: 5, portfolio: [{ title: "Casa", styles: ["Moderno"], materials: [] }] },
+};
+
+test("match sem cidade em lugar nenhum não manda ninguém para 'fora da região'", () => {
+  const { main, outOfRegion } = categorizeProjectMatches({ preferredStyles: ["Moderno"] }, { name: "Cliente sem cidade" }, [archSP, archES]);
+  assert.equal(outOfRegion.length, 0);
+  assert.equal(main.length, 2);
+});
+
+test("a cidade do projeto vale mais que a do cliente e ignora acento/maiúsculas", () => {
+  assert.deepEqual(projectPlaces({ city: "SAO PAULO", state: "sp" }, { city: "Recife" }), ["sao paulo", "sp"]);
+  const { main, outOfRegion } = categorizeProjectMatches({ preferredStyles: ["Moderno"], city: "sao paulo" }, { city: "Recife" }, [archSP, archES]);
+  assert.deepEqual(main.map((e) => e.architect.name), ["Arq SP"]);
+  assert.deepEqual(outOfRegion.map((e) => e.architect.name), ["Arq ES"]);
+});
+
+test("UF de duas letras só casa exata (SP não casa com 'Espírito Santo')", () => {
+  const { main } = categorizeProjectMatches({ preferredStyles: ["Moderno"], state: "SP" }, {}, [archES]);
+  assert.equal(main.length, 0);
+});

@@ -36,12 +36,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // referência visual do arquiteto; chamá-la de novo aqui, a cada
   // carregamento do painel, estouraria essa cota rapidinho.
   const HERO_BACKGROUNDS = [
-    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80',
-    'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80',
-    'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1600&q=80',
-    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1600&q=80',
-    'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=1600&q=80',
-    'https://images.unsplash.com/photo-1449844908441-8829872d2607?auto=format&fit=crop&w=1600&q=80',
+    'assets/img/photos/photo-1600585154340-be6161a56a0c.webp',
+    'assets/img/photos/photo-1600607687939-ce8a6c25118c.webp',
+    'assets/img/photos/photo-1600566753086-00f18fb6b3ea.webp',
+    'assets/img/photos/photo-1512917774080-9991f1c4c750.webp',
+    'assets/img/photos/photo-1487958449943-2429e8be8625.webp',
+    'assets/img/photos/photo-1449844908441-8829872d2607.webp',
   ];
   function pickHeroBackground() {
     const bg = document.getElementById('dashHeroBg');
@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupChat(me, 'clientConversationList', 'clientChatShell');
     renderProjects(me);
     setupProjects(me);
+    loadHires().then(() => renderProjectsGrid());
     const clientTabs = document.getElementById('clientProfileTabs'), clientScope = document.getElementById('clientPanel');
     assistant = MatchAssistant.mount(document.getElementById('assistantMount'), {
       user: me,
@@ -168,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderArchitectReviews(me);
     setupChat(me, 'architectConversationList', 'architectChatShell');
     refreshUnreadBadge('architectUnreadBadge', 'overviewArchitectUnreadCount');
-    renderPendingValidations();
+    renderHires(me);
     setupMetrics(me);
     renderCommissions();
     setupCaseStudies(me);
@@ -439,6 +440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <strong>${p.name}</strong>
         <span>${[STATUS_LABEL_PT[p.status] || 'Rascunho', p.propertyType].filter(Boolean).join(' · ')}</span>
         <span class="tag">${p.areaM2 ? `${p.areaM2} m²` : 'Metragem não informada'}</span>
+        ${hireLabelForProject(p._id)}
         <button type="button" class="dash-project-card-run" data-run-match="${p._id}">Rodar match com IA</button>
       </div>`).join('');
   }
@@ -750,7 +752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tagRow = document.getElementById('dashRecurringMaterials');
     const favorites = user.architectProfile?.favoriteMaterials || [];
     tagRow.innerHTML = favorites.length
-      ? favorites.map(name => `<span class="tag">${name}</span>`).join('')
+      ? favorites.map(name => `<span class="tag">${escapeHtml(name)}</span>`).join('')
       : '<span style="font-size:0.85rem; color:var(--ink-faint);">Nenhum material favorito cadastrado ainda.</span>';
   }
   function setupStyleProfile(user) {
@@ -796,7 +798,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       list.innerHTML = favorites.map(a => `
         <div class="favorite-item">
           <div>
-            <h4 style="margin:0;"><a href="arquiteto.html?id=${a.id}" style="color:inherit;">${a.name}</a></h4>
+            <h4 style="margin:0;"><a href="arquiteto.html?id=${a.id}" style="color:inherit;">${escapeHtml(a.name)}</a></h4>
             <div class="muted">${[a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada'}</div>
             <div class="tag-row" style="margin-top:6px;">${(a.profile?.styles || []).slice(0, 4).map(s => `<span class="tag">${s}</span>`).join('')}</div>
           </div>
@@ -823,6 +825,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       list.innerHTML = `<p style="font-size:0.86rem; color:var(--ink-faint);">${err.message || 'Não foi possível carregar seus favoritos agora.'}</p>`;
     }
+  }
+
+  // ---------------- Contratação (cliente) ----------------
+  // O cliente contrata o arquiteto para o projeto do match atual; o arquiteto
+  // aceita ou recusa na aba "Contratações" do painel dele.
+  let myHires = [];
+  let currentMatchProjectId = null;
+  async function loadHires() {
+    try { myHires = await MatchAPI.hires(); } catch { myHires = []; }
+    return myHires;
+  }
+  const hiresForProject = (projectId) => myHires.filter(h => h.project?.id === projectId);
+  const firstName = (name) => String(name || '').split(' ')[0];
+
+  function hireRow(architectId) {
+    return `
+      <div id="hire-${architectId}" class="hire-row">
+        <span class="mock-label">Contratação</span>
+        <div class="hire-row-body"><span class="hire-muted">Carregando…</span></div>
+      </div>`;
+  }
+
+  function hireStatusText(architectId) {
+    const list = hiresForProject(currentMatchProjectId);
+    const accepted = list.find(h => h.status === 'accepted');
+    const pending = list.find(h => h.status === 'pending');
+    if (accepted) return accepted.architect.id === architectId ? '✓ Contratado' : '—';
+    if (pending?.architect.id === architectId) return 'Pedido enviado';
+    return '—';
+  }
+
+  function hireRowContent(architectId, architectName) {
+    const list = hiresForProject(currentMatchProjectId);
+    const accepted = list.find(h => h.status === 'accepted');
+    const pending = list.find(h => h.status === 'pending');
+    const name = escapeHtml(architectName);
+    if (accepted) {
+      return accepted.architect.id === architectId
+        ? `<span class="status-pill badge-validated">✓ Contratado: projeto fechado com ${name}</span>
+           <button type="button" class="btn btn-secondary btn-sm" data-open-chat="${architectId}" data-open-chat-name="${name}">Conversar sobre o projeto</button>`
+        : `<span class="hire-muted">Este projeto já foi contratado com ${escapeHtml(accepted.architect.name)}.</span>`;
+    }
+    if (pending) {
+      return pending.architect.id === architectId
+        ? `<span class="status-pill badge-pending">⏳ Pedido enviado: aguardando resposta de ${escapeHtml(firstName(architectName))}</span>
+           <button type="button" class="btn btn-tertiary btn-sm" data-hire-cancel="${pending.id}">Cancelar pedido</button>`
+        : `<span class="hire-muted">Você tem um pedido aguardando resposta de ${escapeHtml(pending.architect.name)} para este projeto.</span>`;
+    }
+    const last = list.find(h => h.architect.id === architectId);
+    const declined = last?.status === 'declined'
+      ? `<p class="hire-muted">${name} não pôde aceitar o último pedido${last.response ? `: “${escapeHtml(last.response)}”` : '.'}</p>`
+      : '';
+    return `${declined}
+      <button type="button" class="btn btn-primary btn-sm" data-hire-open="${architectId}">Contratar ${escapeHtml(firstName(architectName))}</button>
+      <div class="hire-form" data-hire-form="${architectId}" hidden>
+        <textarea data-hire-message="${architectId}" maxlength="1000" rows="3" placeholder="Mensagem para o arquiteto (opcional): prazo, o que mais importa para você..."></textarea>
+        <div class="hire-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-hire-send="${architectId}">Enviar pedido de contratação</button>
+          <button type="button" class="btn btn-tertiary btn-sm" data-hire-close="${architectId}">Voltar</button>
+        </div>
+        <p class="hire-muted">${name} recebe o pedido com o resumo do projeto e aceita ou recusa. Aceitando, o projeto fica fechado pela plataforma.</p>
+      </div>`;
+  }
+
+  function renderHireRows() {
+    document.querySelectorAll('.hire-row[id^="hire-"]').forEach(row => {
+      const id = row.id.slice(5);
+      row.querySelector('.hire-row-body').innerHTML = hireRowContent(id, allResultsById.get(id)?.architect?.name || 'o arquiteto');
+    });
+  }
+
+  function hireLabelForProject(projectId) {
+    const list = hiresForProject(projectId);
+    const accepted = list.find(h => h.status === 'accepted');
+    if (accepted) return `<span class="hire-chip is-closed">✓ Contratado: ${escapeHtml(accepted.architect.name)}</span>`;
+    const pending = list.find(h => h.status === 'pending');
+    if (pending) return `<span class="hire-chip">⏳ Aguardando ${escapeHtml(firstName(pending.architect.name))}</span>`;
+    return '';
   }
 
   function validationRow(architectId) {
@@ -902,8 +982,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!cs) return `<p style="font-size:0.84rem; color:var(--ink-faint); margin:0;">O arquiteto ainda não propôs um case de sucesso pra este projeto — isso fica disponível depois que o resumo é confirmado pelos dois lados.</p>`;
     const published = cs.clientApproved && cs.architectApproved;
     return `
-      <span class="mock-label">${cs.title}</span>
-      ${cs.description ? `<p style="font-size:0.88rem;">${cs.description}</p>` : ''}
+      <span class="mock-label">${escapeHtml(cs.title)}</span>
+      ${cs.description ? `<p style="font-size:0.88rem;">${escapeHtml(cs.description)}</p>` : ''}
       ${(cs.images || []).length ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">${cs.images.map(url => `<img src="${url}" alt="" style="width:90px; height:90px; object-fit:cover; border-radius:8px;">`).join('')}</div>` : ''}
       <div class="form-field full">
         <label>Seu testemunho <span class="hint">(opcional, aparece junto do case)</span></label>
@@ -961,8 +1041,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const result = allResultsById.get(archId);
       const combos = MatchExtras.generateMaterialCombos(result?.architect.profile?.favoriteMaterials);
       box.innerHTML = combos.length
-        ? `<div class="constraint-note">Combinações geradas só com os materiais que ${result.architect.name} cadastrou como favoritos.</div>` +
-          combos.map(c => `<div class="combo-card"><div class="combo-name">${c.name}</div></div>`).join('')
+        ? `<div class="constraint-note">Combinações geradas só com os materiais que ${escapeHtml(result.architect.name)} cadastrou como favoritos.</div>` +
+          combos.map(c => `<div class="combo-card"><div class="combo-name">${escapeHtml(c.name)}</div></div>`).join('')
         : `<p style="font-size:0.84rem; color:var(--ink-faint); margin:0;">Este arquiteto ainda não cadastrou materiais favoritos suficientes para gerar combinações.</p>`;
       box.style.display = 'block';
       comboBtn.textContent = 'Ocultar sugestões de materiais';
@@ -1059,6 +1139,42 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    const hireOpen = e.target.closest('[data-hire-open]');
+    if (hireOpen) {
+      const form = document.querySelector(`[data-hire-form="${hireOpen.dataset.hireOpen}"]`);
+      if (form) { form.hidden = false; hireOpen.hidden = true; form.querySelector('textarea')?.focus(); }
+      return;
+    }
+    const hireClose = e.target.closest('[data-hire-close]');
+    if (hireClose) {
+      const id = hireClose.dataset.hireClose;
+      document.querySelector(`[data-hire-form="${id}"]`).hidden = true;
+      document.querySelector(`[data-hire-open="${id}"]`).hidden = false;
+      return;
+    }
+    const hireSend = e.target.closest('[data-hire-send]');
+    if (hireSend) {
+      const archId = hireSend.dataset.hireSend;
+      const message = document.querySelector(`[data-hire-message="${archId}"]`)?.value || '';
+      hireSend.disabled = true;
+      hireSend.textContent = 'Enviando…';
+      MatchAPI.requestHire(currentMatchProjectId, archId, message)
+        .then(() => loadHires())
+        .then(() => { renderHireRows(); renderProjectsGrid(); })
+        .catch(err => { alert(err.message || 'Não foi possível enviar o pedido agora.'); hireSend.disabled = false; hireSend.textContent = 'Enviar pedido de contratação'; });
+      return;
+    }
+    const hireCancel = e.target.closest('[data-hire-cancel]');
+    if (hireCancel) {
+      if (!confirm('Cancelar o pedido de contratação? O arquiteto será avisado.')) return;
+      hireCancel.disabled = true;
+      MatchAPI.cancelHire(hireCancel.dataset.hireCancel)
+        .then(() => loadHires())
+        .then(() => { renderHireRows(); renderProjectsGrid(); })
+        .catch(err => { alert(err.message || 'Não foi possível cancelar agora.'); hireCancel.disabled = false; });
+      return;
+    }
+
     const favoriteBtn = e.target.closest('[data-toggle-favorite]');
     if (favoriteBtn) {
       const archId = favoriteBtn.dataset.toggleFavorite;
@@ -1148,11 +1264,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div style="display:flex; gap:12px; align-items:flex-start;">
             <img id="result-thumb-${r.architect.id}" style="display:none; width:56px; height:56px; border-radius:12px; object-fit:cover; flex-shrink:0;" alt="">
             <div>
-              <h4 style="margin:0;"><a href="arquiteto.html?id=${r.architect.id}" style="color:inherit;">${r.architect.name}</a></h4>
+              <h4 style="margin:0;"><a href="arquiteto.html?id=${r.architect.id}" style="color:inherit;">${escapeHtml(r.architect.name)}</a></h4>
               <div class="muted">${[r.architect.city, r.architect.state].filter(Boolean).join(' · ') || 'Localização não informada'}</div>
             </div>
           </div>
-          <p class="explanation">${r.explanation}</p>
+          <p class="explanation">${escapeHtml(r.explanation)}</p>
           <div class="tag-row">
             ${r.architect.sameCity ? '<span class="tag tag-samecity">Mesma cidade</span>' : ''}
             ${(r.architect.profile?.styles || []).slice(0, 4).map(s => `<span class="tag">${s}</span>`).join('')}
@@ -1164,7 +1280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-brief="${r.architect.id}">Gerar brief com IA</button>
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-casestudy="${r.architect.id}">Case de sucesso</button>
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-review="${r.architect.id}">★ Avaliar arquiteto</button>
-            <button type="button" class="btn btn-secondary btn-sm" data-open-chat="${r.architect.id}" data-open-chat-name="${r.architect.name}">Mensagem</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-open-chat="${r.architect.id}" data-open-chat-name="${escapeHtml(r.architect.name)}">Mensagem</button>
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-favorite="${r.architect.id}" aria-pressed="${favoriteIds.has(r.architect.id)}">${favoriteIds.has(r.architect.id) ? '★ Salvo' : '☆ Salvar para depois'}</button>
           </div>
           ${breakdownBlock(r.architect.id, r.breakdown)}
@@ -1177,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <textarea data-review-comment="${r.architect.id}" placeholder="Comentário (opcional)" style="width:100%; margin-top:8px; padding:8px; border:1px solid var(--line); border-radius:8px; font-family:inherit;"></textarea>
             <button type="button" class="btn btn-primary btn-sm" style="margin-top:8px;" data-submit-review="${r.architect.id}">Enviar avaliação</button>
           </div>
-          ${validationRow(r.architect.id)}
+          ${hireRow(r.architect.id)}
         </div>
         <div class="result-score"><strong>${r.score}</strong><span>pontos</span></div>`;
   }
@@ -1220,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const allExtraResults = categories.flatMap(cat => cat.results);
     allExtraResults.forEach(r => allResultsById.set(r.architect.id, r));
-    loadValidationStatuses(allExtraResults);
+    renderHireRows();
     loadResultThumbnails(allExtraResults);
   }
 
@@ -1333,6 +1449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const { results, extra, project } = await MatchAPI.runMatch(projectId);
       lastResults = results;
+      currentMatchProjectId = project?.id || projectId;
       allResultsById.clear();
       results.forEach(r => allResultsById.set(r.architect.id, r));
       contextLabel.textContent = project ? `Resultados para o projeto "${project.name}".` : '';
@@ -1345,7 +1462,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       ).join('');
       document.getElementById('compareBtn').style.display = results.length > 1 ? '' : 'none';
       document.getElementById('exportMatchPdfBtn').style.display = results.length ? '' : 'none';
-      loadValidationStatuses(results);
+      loadHires().then(renderHireRows);
       loadResultThumbnails(results);
       renderMatchTabs(results.length, extra || [], user);
       renderMatchHistory(user);
@@ -1685,11 +1802,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('printTitle').textContent = 'Resultados do match';
       document.getElementById('printDate').textContent = new Date().toLocaleDateString('pt-BR');
       document.getElementById('printableContent').innerHTML = lastResults.map((r, i) => `
-        <div class="summary-section-title">${i + 1}. ${r.architect.name} — ${r.score} pontos</div>
+        <div class="summary-section-title">${i + 1}. ${escapeHtml(r.architect.name)} — ${r.score} pontos</div>
         ${summaryLineHtml('Localização', [r.architect.city, r.architect.state].filter(Boolean).join(' / '))}
         ${summaryLineHtml('Estilos', (r.architect.profile?.styles || []).join(', '))}
         ${summaryLineHtml('Experiência', r.architect.profile?.yearsExperience ? `${r.architect.profile.yearsExperience} anos` : '')}
-        <div class="summary-line" style="display:block;"><span>Por que combinam</span><p style="margin:4px 0 0;">${r.explanation}</p></div>
+        <div class="summary-line" style="display:block;"><span>Por que combinam</span><p style="margin:4px 0 0;">${escapeHtml(r.explanation)}</p></div>
       `).join('');
       window.print();
     });
@@ -1742,8 +1859,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           keywords: meta.habits || [],
         });
         content.innerHTML = `
-          <img src="${photo.imageUrl}" alt="${photo.description}" style="width:100%; border-radius:12px; display:block;">
-          <p style="font-size:0.76rem; color:var(--ink-faint); margin-top:8px;">Foto: <a href="${photo.photographerUrl}" target="_blank" rel="noopener" style="color:inherit;">${photo.photographerName}</a> via <a href="${photo.unsplashUrl}" target="_blank" rel="noopener" style="color:inherit;">Unsplash</a></p>`;
+          <img src="${escapeHtml(photo.imageUrl)}" alt="${escapeHtml(photo.description)}" style="width:100%; border-radius:12px; display:block;">
+          <p style="font-size:0.76rem; color:var(--ink-faint); margin-top:8px;">Foto: <a href="${escapeHtml(photo.photographerUrl)}" target="_blank" rel="noopener" style="color:inherit;">${escapeHtml(photo.photographerName)}</a> via <a href="${photo.unsplashUrl}" target="_blank" rel="noopener" style="color:inherit;">Unsplash</a></p>`;
       } catch (err) {
         content.innerHTML = `<p style="font-size:0.86rem; color:var(--ink-faint);">${err.message || 'Não foi possível encontrar uma referência agora.'}</p>`;
       }
@@ -1760,17 +1877,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const visible = lastResults;
     return `
         <table class="compare-table">
-          <thead><tr><th>Arquiteto</th>${visible.map(r => `<th>${r.architect.name}</th>`).join('')}</tr></thead>
+          <thead><tr><th>Arquiteto</th>${visible.map(r => `<th>${escapeHtml(r.architect.name)}</th>`).join('')}</tr></thead>
           <tbody>
             <tr><th>Pontuação</th>${visible.map(r => `<td>${r.score} pontos</td>`).join('')}</tr>
             <tr><th>Localização</th>${visible.map(r => `<td>${[r.architect.city, r.architect.state].filter(Boolean).join(' · ') || '—'}</td>`).join('')}</tr>
             <tr><th>Experiência</th>${visible.map(r => `<td>${r.architect.profile?.yearsExperience || 0} anos</td>`).join('')}</tr>
             <tr><th>Estilos</th>${visible.map(r => `<td>${(r.architect.profile?.styles || []).join(', ') || '—'}</td>`).join('')}</tr>
             <tr><th>Disponibilidade</th>${visible.map(r => `<td>${translateAvailability(r.architect.profile?.availability)}</td>`).join('')}</tr>
-            <tr><th>Resumo validado</th>${visible.map(r => {
-              const v = validationCache[r.architect.id];
-              return `<td>${v?.clientConfirmed && v?.architectConfirmed ? '✓ Sim' : '—'}</td>`;
-            }).join('')}</tr>
+            <tr><th>Contratação</th>${visible.map(r => `<td>${hireStatusText(r.architect.id)}</td>`).join('')}</tr>
           </tbody>
         </table>`;
   }
@@ -1864,6 +1978,95 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // ---------------- Contratações (arquiteto) ----------------
+  const money = (n) => Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+  function budgetText(b) {
+    if (!b || (b.min == null && b.max == null)) return 'Orçamento não informado';
+    if (b.min != null && b.max != null) return `${money(b.min)} a ${money(b.max)}`;
+    return b.min != null ? `A partir de ${money(b.min)}` : `Até ${money(b.max)}`;
+  }
+  function hireProjectSummary(h) {
+    const p = h.project || {};
+    return `
+      <div class="hire-meta">${[p.propertyType, p.areaM2 ? `${p.areaM2} m²` : '', [p.city, p.state].filter(Boolean).join('/'), budgetText(p.budget)].filter(Boolean).map(escapeHtml).join(' · ')}</div>
+      ${(p.preferredStyles || []).length ? `<div class="tag-row">${p.preferredStyles.slice(0, 5).map(st => `<span class="tag">${escapeHtml(st)}</span>`).join('')}</div>` : ''}
+      ${p.projectGoals ? `<p class="hire-goals">${escapeHtml(p.projectGoals)}</p>` : ''}`;
+  }
+  function hireRequestCard(h) {
+    const where = [h.client.city, h.client.state].filter(Boolean).join(' · ');
+    return `
+      <article class="hire-card" data-hire-card="${h.id}">
+        <header><strong>${escapeHtml(h.project?.name || 'Projeto')}</strong><span>${escapeHtml(h.client.name)}${where ? ` · ${escapeHtml(where)}` : ''}</span></header>
+        ${hireProjectSummary(h)}
+        ${h.message ? `<blockquote class="hire-message">${escapeHtml(h.message)}</blockquote>` : ''}
+        <textarea data-hire-response="${h.id}" maxlength="1000" rows="2" placeholder="Resposta para o cliente (opcional)"></textarea>
+        <div class="hire-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-hire-accept="${h.id}">Aceitar e fechar projeto</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-hire-decline="${h.id}">Recusar</button>
+          <button type="button" class="btn btn-tertiary btn-sm" data-architect-chat="${h.client.id}" data-architect-chat-name="${escapeHtml(h.client.name)}">Conversar antes</button>
+        </div>
+      </article>`;
+  }
+  function closedProjectCard(h) {
+    const date = h.decidedAt ? new Date(h.decidedAt).toLocaleDateString('pt-BR') : '';
+    return `
+      <article class="hire-card is-closed">
+        <header><strong>${escapeHtml(h.project?.name || 'Projeto')}</strong><span>${escapeHtml(h.client.name)}${date ? ` · fechado em ${date}` : ''}</span></header>
+        ${hireProjectSummary(h)}
+        <div class="hire-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-architect-chat="${h.client.id}" data-architect-chat-name="${escapeHtml(h.client.name)}">Conversar com o cliente</button>
+          <button type="button" class="btn btn-tertiary btn-sm" data-hire-jump="assistente">Desenvolver com a IA</button>
+        </div>
+      </article>`;
+  }
+  async function renderHires(user) {
+    const reqList = document.getElementById('hireRequestsList');
+    const closedList = document.getElementById('closedProjectsList');
+    if (!reqList || !closedList) return;
+    let hires;
+    try { hires = await MatchAPI.hires(); } catch (err) {
+      reqList.innerHTML = closedList.innerHTML = `<p class="hire-empty">${escapeHtml(err.message || 'Não foi possível carregar as contratações agora.')}</p>`;
+      return;
+    }
+    const pending = hires.filter(h => h.status === 'pending');
+    const closed = hires.filter(h => h.status === 'accepted');
+    const overview = document.getElementById('overviewCommissionCount');
+    if (overview) overview.textContent = closed.length;
+    const badge = document.getElementById('hireRequestsBadge');
+    if (badge) { badge.textContent = pending.length; badge.style.display = pending.length ? 'inline-flex' : 'none'; }
+    reqList.innerHTML = pending.length ? pending.map(hireRequestCard).join('')
+      : '<p class="hire-empty">Nenhum pedido aguardando resposta. Quando um cliente quiser contratar você, ele aparece aqui (e você recebe uma notificação).</p>';
+    closedList.innerHTML = closed.length ? closed.map(closedProjectCard).join('')
+      : '<p class="hire-empty">Nenhum projeto fechado ainda.</p>';
+    if (reqList.dataset.bound) return;
+    reqList.dataset.bound = '1';
+    const tabs = document.getElementById('architectProfileTabs'), scope = document.getElementById('architectPanel');
+    reqList.closest('[data-profile-panel-content]').addEventListener('click', async (e) => {
+      const chat = e.target.closest('[data-architect-chat]');
+      if (chat) {
+        activateProfileTab(tabs, scope, 'mensagens');
+        openConversation(chat.dataset.architectChat, chat.dataset.architectChatName, 'architectChatShell', user);
+        return;
+      }
+      const jump = e.target.closest('[data-hire-jump]');
+      if (jump) { activateProfileTab(tabs, scope, jump.dataset.hireJump); return; }
+      const btn = e.target.closest('[data-hire-accept], [data-hire-decline]');
+      if (!btn) return;
+      const accept = Boolean(btn.dataset.hireAccept);
+      const id = btn.dataset.hireAccept || btn.dataset.hireDecline;
+      if (!accept && !confirm('Recusar este pedido? O cliente será avisado e poderá contratar outro arquiteto.')) return;
+      const response = document.querySelector(`[data-hire-response="${id}"]`)?.value || '';
+      btn.closest('.hire-card').querySelectorAll('button').forEach(b => { b.disabled = true; });
+      try {
+        await (accept ? MatchAPI.acceptHire(id, response) : MatchAPI.declineHire(id, response));
+        if (accept) renderCommissions();
+      } catch (err) {
+        alert(err.message || 'Não foi possível responder agora.');
+      }
+      await renderHires(user);
+    });
+  }
+
   // ---------------- Resumos para confirmar (arquiteto) ----------------
   async function renderPendingValidations() {
     const card = document.getElementById('pendingValidationsCard');
@@ -1874,7 +2077,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       card.style.display = 'block';
       list.innerHTML = pending.map(p => `
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line);">
-          <span style="font-size:0.9rem;">${p.client.name}</span>
+          <span style="font-size:0.9rem;">${escapeHtml(p.client.name)}</span>
           <button type="button" class="btn btn-sage btn-sm" data-confirm-validation="${p.client.id}">Confirmar resumo</button>
         </div>`).join('');
       list.querySelectorAll('[data-confirm-validation]').forEach(btn => {
@@ -1970,7 +2173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `
       <div class="dash-card" style="background:var(--bg); margin-bottom:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-          <strong style="font-size:0.92rem;">${client.name}</strong>
+          <strong style="font-size:0.92rem;">${escapeHtml(client.name)}</strong>
           ${statusText ? `<span class="status-pill ${published ? 'badge-validated' : 'badge-pending'}">${statusText}</span>` : ''}
         </div>
         <form class="case-study-form" data-case-client="${client.id}" style="margin-top:12px;">
@@ -1990,7 +2193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <button type="submit" class="btn btn-secondary btn-sm">${cs ? 'Atualizar case' : 'Propor case'}</button>
         </form>
-        ${cs?.testimonial ? `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);"><span class="mock-label">Testemunho do cliente</span><p style="margin:0; font-style:italic;">"${cs.testimonial}"</p></div>` : ''}
+        ${cs?.testimonial ? `<div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);"><span class="mock-label">Testemunho do cliente</span><p style="margin:0; font-style:italic;">"${escapeHtml(cs.testimonial)}"</p></div>` : ''}
       </div>`;
   }
 
@@ -2018,7 +2221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span class="review-name">${r.client?.name || 'Cliente'}</span>
               <span class="star-display">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
             </div>
-            ${r.comment ? `<p>${r.comment}</p>` : ''}
+            ${r.comment ? `<p>${escapeHtml(r.comment)}</p>` : ''}
           </div>`).join('')}
       `;
     } catch (err) {
@@ -2040,14 +2243,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { total, count, commissions } = await MatchAPI.myCommissions();
       document.getElementById('commissionTotal').textContent = `R$${total}`;
       document.getElementById('commissionCount').textContent = count;
-      const overviewCommissionCount = document.getElementById('overviewCommissionCount');
-      if (overviewCommissionCount) overviewCommissionCount.textContent = count;
+      // O atalho "projetos fechados" da Home conta as contratações aceitas (ver renderHires),
+      // não as comissões — a comissão simulada é uma por par cliente–arquiteto.
       list.innerHTML = commissions.length
         ? `<div class="tag-row" style="flex-direction:column; align-items:stretch; gap:8px;">${commissions.map(c => `
           <div class="material-card spotlight" style="padding:14px;">
             <div class="info" style="padding:0;">
               <span class="cat">${new Date(c.createdAt).toLocaleDateString('pt-BR')}</span>
-              <h4>${c.clientName || 'Cliente'}${c.projectName ? ` — ${c.projectName}` : ''}</h4>
+              <h4>${escapeHtml(c.clientName || 'Cliente')}${c.projectName ? ` — ${escapeHtml(c.projectName)}` : ''}</h4>
               <p style="font-size:0.82rem; color:var(--ink-faint); margin:4px 0;">R$${c.amount} simulado (${Math.round(c.rate * 100)}% de R$${c.estimatedValue})</p>
             </div>
           </div>`).join('')}</div>`
@@ -2116,7 +2319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="chat-timeline" id="${timelineId}"></div>
       <div class="chat-messages" id="${msgId}"><p style="text-align:center; color:var(--ink-faint); font-size:0.84rem;">Carregando...</p></div>
       <div class="chat-input-row">
-        <input type="text" id="chatInput-${shellId}" placeholder="Mensagem para ${otherName}...">
+        <input type="text" id="chatInput-${shellId}" placeholder="Mensagem para ${escapeHtml(otherName)}...">
         <button type="button" id="chatSend-${shellId}" aria-label="Enviar">➤</button>
       </div>`;
     loadChatTimeline(timelineId, otherId);

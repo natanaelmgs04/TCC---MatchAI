@@ -241,6 +241,7 @@
         <div class="profile-tabs dash-card" id="architectProfileTabs" role="tablist" aria-label="Menu do painel">
           <button type="button" class="profile-tab active" data-profile-panel="home" role="tab" aria-selected="true">Home</button>
           <button type="button" class="profile-tab" data-profile-panel="assistente" role="tab" aria-selected="false">Assistente</button>
+          <button type="button" class="profile-tab" data-profile-panel="contratacoes" role="tab" aria-selected="false">Contratações <span class="unread-badge" id="hireRequestsBadge" style="display:none;"></span></button>
           <button type="button" class="profile-tab" data-profile-panel="perfil" role="tab" aria-selected="false">Perfil</button>
           <button type="button" class="profile-tab" data-profile-panel="portfolio" role="tab" aria-selected="false">Portfólio</button>
           <button type="button" class="profile-tab" data-profile-panel="avaliacoes" role="tab" aria-selected="false">Avaliações</button>
@@ -254,7 +255,7 @@
           <div class="profile-panel" data-profile-panel-content="home" id="architectHomePanel">
             <!-- O hero (#dashHero) é movido pra cá via JS assim que o papel é identificado. -->
             <div class="dash-overview" id="architectOverview" data-stagger>
-              <button type="button" class="dash-overview-tile" data-jump-tab="comissoes">
+              <button type="button" class="dash-overview-tile" data-jump-tab="contratacoes">
                 <strong id="overviewCommissionCount">0</strong>
                 <span>projetos fechados</span>
               </button>
@@ -282,6 +283,19 @@
           <div class="profile-panel" data-profile-panel-content="assistente" id="architectAssistantPanel" hidden>
             <p class="card-lead">Escolha um projeto fechado com um cliente pela plataforma para conversar com a IA e receber sugestões de como desenvolvê-lo.</p>
             <div id="architectAssistantMount"></div>
+          </div>
+
+          <div class="profile-panel" data-profile-panel-content="contratacoes" hidden>
+            <div class="dash-card spotlight">
+              <h3>Pedidos de contratação</h3>
+              <p class="card-lead">Clientes que querem fechar um projeto com você. Ao aceitar, o projeto passa para "Projetos fechados", aparece no seu perfil público e conta no seu ranking.</p>
+              <div id="hireRequestsList" class="hire-list"><p class="hire-empty">Carregando…</p></div>
+            </div>
+            <div class="dash-card spotlight">
+              <h3>Projetos fechados</h3>
+              <p class="card-lead">Projetos que você aceitou pela plataforma. Use a aba Assistente para desenvolver cada um com a IA.</p>
+              <div id="closedProjectsList" class="hire-list"><p class="hire-empty">Carregando…</p></div>
+            </div>
           </div>
 
           <div class="profile-panel" data-profile-panel-content="perfil" hidden>

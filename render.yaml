@@ -1,0 +1,33 @@
+# Blueprint do Render (render.com): New → Blueprint → este repositório.
+# Um serviço só hospeda a API e o site (backend/src/server.js serve os dois).
+# Fica na raiz de propósito: assim qualquer mudança no site (não só em
+# backend/) dispara um novo deploy.
+services:
+  - type: web
+    name: matchia
+    runtime: node
+    plan: free
+    # `npm install` na raiz instala também o backend (postinstall do package.json),
+    # nas versões travadas do package-lock.
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: UNSPLASH_ACCESS_KEY
+        sync: false
+      # E-mail: o plano grátis do Render bloqueia SMTP, então o envio é pela
+      # API da Brevo. (Em plano pago dá para usar EMAIL_HOST/PORT/USER/PASS.)
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false

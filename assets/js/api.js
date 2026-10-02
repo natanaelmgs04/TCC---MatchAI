@@ -120,6 +120,13 @@ const MatchAPI = (() => {
     confirmValidation: (otherId) => request(`/validations/${encodeURIComponent(otherId)}/confirm`, { method: 'POST', auth: true }),
     pendingValidations: () => request('/validations/pending', { auth: true }),
     confirmedValidations: () => request('/validations/confirmed', { auth: true }),
+    // Contratação: cliente pede, arquiteto aceita/recusa (ver backend/src/controllers/hireController.js)
+    hires: () => request('/hires', { auth: true }),
+    requestHire: (projectId, architectId, message) => request('/hires', { method: 'POST', auth: true, body: { projectId, architectId, message } }),
+    acceptHire: (id, response) => request(`/hires/${encodeURIComponent(id)}/accept`, { method: 'POST', auth: true, body: { response } }),
+    declineHire: (id, response) => request(`/hires/${encodeURIComponent(id)}/decline`, { method: 'POST', auth: true, body: { response } }),
+    cancelHire: (id) => request(`/hires/${encodeURIComponent(id)}/cancel`, { method: 'POST', auth: true }),
+    closedProjects: (architectId) => request(`/architects/${encodeURIComponent(architectId)}/closed-projects`),
     favorites: () => request('/favorites', { auth: true }),
     addFavorite: (architectId) => request(`/favorites/${encodeURIComponent(architectId)}`, { method: 'POST', auth: true }),
     removeFavorite: (architectId) => request(`/favorites/${encodeURIComponent(architectId)}`, { method: 'DELETE', auth: true }),

@@ -7,8 +7,8 @@
 // pequenos (checks, tags, prévias) só ligam uma classe e a transição CSS faz
 // o resto, com as curvas do site.
 //
-// Com prefers-reduced-motion nada se move: tudo aparece pronto (estado
-// padrão do CSS) e só a interação dos critérios continua funcionando.
+// Com prefers-reduced-motion as cenas montam do mesmo jeito, só com fade
+// (.is-gentle); sem JS, tudo aparece pronto (estado padrão do CSS).
 (() => {
   const blocks = [...document.querySelectorAll('[data-scrub]')];
   if (!blocks.length) return;
@@ -107,9 +107,9 @@
     drawScore();
   }
 
-  if (reduce) return;   // estado padrão do CSS = tudo pronto
-
-  blocks.forEach((b) => b.classList.add('is-scrub'));
+  // Motion reduzido: as cenas montam pela rolagem do mesmo jeito, mas só com
+  // opacidade (.is-gentle no home-motion.css tira o deslocamento).
+  blocks.forEach((b) => b.classList.add('is-scrub', ...(reduce ? ['is-gentle'] : [])));
   let ticking = false;
   const update = () => { ticking = false; scenes.forEach((fn) => fn()); };
   const request = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };

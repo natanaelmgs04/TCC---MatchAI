@@ -202,7 +202,7 @@ const FounderModal = (() => {
   function photoHtml(founder) {
     return `
       <div class="founder-photo-ring">
-        <img class="founder-photo" src="${founder.photo || ''}" alt="${founder.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <img class="founder-photo" src="${founder.photo || ''}" alt="${founder.name}">
         <div class="founder-avatar-fallback" style="display:none;">${founder.initials}</div>
       </div>`;
   }
@@ -249,6 +249,13 @@ const FounderModal = (() => {
     build();
     lastFocused = document.activeElement;
     overlay.querySelector('#founderInner').innerHTML = founder.bio ? renderDetailed(founder) : renderPlaceholder(founder);
+    // Foto que não carrega vira as iniciais (listener em vez de onerror="" no
+    // HTML: a Content-Security-Policy do site bloqueia handlers embutidos).
+    overlay.querySelectorAll('.founder-photo').forEach((img) => {
+      const fallback = () => { img.style.display = 'none'; if (img.nextElementSibling) img.nextElementSibling.style.display = 'flex'; };
+      if (!img.getAttribute('src') || (img.complete && !img.naturalWidth)) fallback();
+      else img.addEventListener('error', fallback, { once: true });
+    });
     overlay.classList.add('open');
     document.body.classList.add('no-scroll');
     overlay.querySelector('.founder-close').focus();

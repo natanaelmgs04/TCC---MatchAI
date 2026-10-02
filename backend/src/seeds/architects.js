@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config({ path: "KEYS.env" });
+import "../config/env.js"; // carrega backend/KEYS.env de qualquer pasta
 import { connectDatabase } from "../config/database.js";
 import User from "../models/User.js";
 import mongoose from "mongoose";

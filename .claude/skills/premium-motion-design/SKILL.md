@@ -14,7 +14,7 @@ Motion aqui serve à leitura de um espaço arquitetônico: lento o bastante para
   - `--ease-spring: cubic-bezier(.34, 1.56, .64, 1)` → só microinterações pequenas (botões, chips, ícones).
 - **`assets/js/site.js`**: reveal com `IntersectionObserver` (`.reveal` e `[data-stagger]` com atraso por filho), parallax do hero e de fundos com `requestAnimationFrame`, seção com pin horizontal (só desktop, `pointer: fine`, sem motion reduzido) e contadores animados.
 - **View Transitions** entre páginas (`@view-transition { navigation: auto; }`), desligadas com motion reduzido.
-- **Motion reduzido** tratado globalmente em `style.css` e em cada efeito de `site.js` (`matchMedia('(prefers-reduced-motion: reduce)')`).
+- **Motion reduzido = modo suave, não "tudo parado".** O Windows liga "menos animação" sozinho em muitos PCs (laboratórios, acesso remoto, modo desempenho) e o site ficava morto neles. Regra atual: entradas e revelações continuam, só que como **fade puro** (sem deslocamento, zoom ou blur); para o que é movimento grande ou contínuo — parallax, inclinação com mouse, flutuação, loops (deriva do fundo, brilhos, bordas girando). Em `style.css` (bloco `prefers-reduced-motion`), `home-motion.css` (`.motion-gentle`, `.is-gentle`) e nos efeitos de `site.js`/`home-motion.js`. Efeito novo: defina o que ele vira no modo suave (normalmente: só opacidade).
 - `:active` com leve `scale` nos botões; hovers de card com `translateY(-1px)`.
 
 Se o efeito que você quer é um destes, use o existente (classe/atributo). GSAP não entra para fazer reveal de card.

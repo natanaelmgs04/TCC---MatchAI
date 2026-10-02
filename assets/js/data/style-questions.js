@@ -6,7 +6,9 @@
  * Fotos reais do Unsplash, com crédito obrigatório do fotógrafo.
  */
 window.MatchStyleQuestions = (() => {
-  const img = (path) => `https://images.unsplash.com/${path}?auto=format&fit=crop&w=900&h=640&q=72`;
+  // Cópias locais (900×640) em assets/img/photos: o site não depende do domínio do Unsplash,
+  // que é bloqueado em algumas redes. O crédito ao fotógrafo continua abaixo.
+  const img = (path) => `assets/img/photos/${path}-q.webp`;
   const opt = (id, label, path, styles, photographer, username) => ({
     id, label, styles, image: img(path),
     credit: { name: photographer, url: `https://unsplash.com/@${username}?utm_source=matchia&utm_medium=referral` },

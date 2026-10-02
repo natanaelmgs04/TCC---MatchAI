@@ -74,6 +74,13 @@ export async function deleteMyAccount(req, res) {
   res.json({ ok: true });
 }
 
+// Campos do perfil que a própria pessoa edita pelo painel (PATCH /me).
+const EDITABLE_PROFILE_FIELDS = {
+  client: ["preferredStyles", "preferredMaterials", "budget", "propertyType", "familySize", "projectGoals", "preferences"],
+  architect: ["styles", "specialties", "yearsExperience", "workingAreas", "priceRange", "favoriteMaterials", "bio", "website", "instagram", "availability"],
+  store: ["storeName", "description", "logoUrl", "city", "state", "categories"],
+};
+
 export async function updateMe(req, res) {
   const allowed = ["name", "phone", "city", "state"];
   for (const key of allowed)
@@ -82,18 +89,37 @@ export async function updateMe(req, res) {
   const wasUnavailable = req.user.role === "architect" && req.user.architectProfile?.availability === "unavailable";
 
   const profileKey = req.user.role + "Profile";
-  if (req.body[profileKey]) {
+  const incoming = req.body[profileKey];
+  if (incoming && typeof incoming === "object") {
     if (
       req.user.role === "architect" &&
-      req.body[profileKey].favoriteMaterials?.length > 5
+      incoming.favoriteMaterials?.length > 5
     )
       return res
         .status(400)
         .json({ error: "Architects can select at most five materials" });
 
+    // Só o que a própria pessoa pode editar. Plano Pro, selo de CAU
+    // verificado, contador de projetos fechados e bônus de indicação são do
+    // sistema — antes, um PATCH com { architectProfile: { closedProjectsCount: 999 } }
+    // ou { cauVerification: { status: "verified" } } passava direto.
+    const patch = {};
+    for (const key of EDITABLE_PROFILE_FIELDS[req.user.role] || []) {
+      if (incoming[key] !== undefined) patch[key] = incoming[key];
+    }
+    if (req.user.role === "architect" && incoming.cauVerification?.number !== undefined) {
+      const number = String(incoming.cauVerification.number || "").trim().slice(0, 30);
+      const current = req.user.architectProfile?.cauVerification;
+      // Número novo volta para "pendente" até a equipe verificar (scripts/approveCau.js).
+      patch.cauVerification = {
+        number,
+        status: !number ? "none" : current?.status === "verified" && current.number === number ? "verified" : "pending",
+      };
+    }
+
     req.user[profileKey] = {
-      ...req.user[profileKey].toObject(),
-      ...req.body[profileKey],
+      ...(req.user[profileKey]?.toObject?.() || {}),
+      ...patch,
     };
   }
 
