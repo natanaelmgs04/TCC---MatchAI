@@ -610,3 +610,17 @@ a.dv-prod:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 }
 .dv-import-clear { background: none; border: 0; padding: 6px 4px; font: inherit; font-size: .8rem; color: var(--ink-faint); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .dv-import-clear:hover { color: var(--terracotta-dark); }
+
+/* ---------- Resumo de cada projeto (dentro da gaveta "Meus projetos") ---------- */
+.dv-proj-summary { margin: 0 0 22px; padding: 0 0 22px; border-bottom: 1px solid var(--line); }
+.dv-proj-summary h3 { margin: 0 0 4px; font-size: 1.15rem; }
+.dv-proj-summary .card-lead { margin: 0 0 14px; font-size: .85rem; }
+.dv-proj-summary .summary-grid { margin-bottom: 14px; }
+.dv-proj-summary .summary-item.is-full { grid-column: 1 / -1; }
+.dv-proj-summary .summary-item strong { display: block; overflow-wrap: anywhere; line-height: 1.4; }
+.dv-proj-summary .card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dv-proj-summary-out { margin-top: 14px; }
+.dv-proj-summary-out:empty { display: none; }
+.dv-proj-summary-note { font-size: .8rem; color: var(--ink-faint); margin: 8px 0 0; }
+.dv-proj-edit-title { margin: 0 0 12px; font-family: var(--font-body); font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+.project-drawer .dv-proj-summary .summary-grid { grid-template-columns: 1fr; gap: 8px; }

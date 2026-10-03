@@ -159,35 +159,8 @@
               <div class="dash-projects-grid" id="clientProjectsGrid"></div>
             </div>
 
-            <div class="dash-card spotlight dv-summary-card">
-              <h3>Resumo do projeto</h3>
-              <p class="card-lead">Este é o resumo que os arquitetos veem no seu match — revise antes de validar.</p>
-              <div class="summary-grid">
-                <div class="summary-item"><span class="mock-label">Estilo desejado</span><strong id="ppStyle">—</strong></div>
-                <div class="summary-item"><span class="mock-label">Orçamento</span><strong id="ppBudget">—</strong></div>
-                <div class="summary-item"><span class="mock-label">Restrições</span><strong id="ppRestrictions">—</strong></div>
-                <div class="summary-item"><span class="mock-label">Prioridades</span><strong id="ppPriorities">—</strong></div>
-              </div>
-              <div class="card-actions">
-                <button id="validateSummaryBtn" class="btn btn-sage btn-sm">Validar resumo do projeto</button>
-                <button id="exportPdfBtn" class="btn btn-secondary btn-sm">Exportar PDF</button>
-                <button id="moodboardBtn" class="btn btn-secondary btn-sm">Gerar moodboard com IA</button>
-                <button id="referenceImageBtn" class="btn btn-secondary btn-sm">Ver referência visual</button>
-                <button id="styleShareBtn" class="btn btn-secondary btn-sm">Compartilhar meu perfil de estilo</button>
-              </div>
-            </div>
-
-            <div id="moodboardCard" class="dash-card spotlight" style="display:none;">
-              <h3>Moodboard do seu projeto</h3>
-              <p class="card-lead">Conceito gerado por IA a partir das suas respostas no questionário.</p>
-              <div id="moodboardContent"></div>
-            </div>
-
-            <div id="referenceImageCard" class="dash-card spotlight" style="display:none;">
-              <h3>É mais ou menos assim que você imagina?</h3>
-              <p class="card-lead">Uma foto real de arquitetura/interiores parecida com o estilo que você descreveu, pra ajudar a alinhar expectativas com o arquiteto.</p>
-              <div id="referenceImageContent"></div>
-            </div>
+            <!-- O resumo de cada projeto (validar, PDF, moodboard, referência)
+                 fica dentro do detalhe do projeto — clique num card acima. -->
           </div>
 
           <div class="profile-panel" data-profile-panel-content="match" hidden>

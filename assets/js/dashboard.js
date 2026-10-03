@@ -137,13 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('clientStatFav').style.display = '';
     await loadFavoriteIds(me);
     renderFavorites(me);
-    renderProjectSummary(me);
-    setupProjectSummary(me);
-    setupExportPdf(me);
     setupExportMatchPdf(me);
-    setupMoodboard(me);
-    setupReferenceImage(me);
-    setupStyleShare(me);
     setupCompare(me);
     setupChat(me, 'clientConversationList', 'clientChatShell');
     renderProjects(me);
@@ -472,27 +466,129 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ---------------- Resumo do projeto (cliente) ----------------
-  function renderProjectSummary(user) {
-    const p = user.clientProfile || {};
-    const meta = MatchExtras.getProjectMeta(uid(user));
-    document.getElementById('ppStyle').textContent = [(p.preferredStyles || []).join(', '), p.preferences].filter(Boolean).join(' — ') || 'não informado';
-    document.getElementById('ppBudget').textContent = formatBudget(p.budget);
-    document.getElementById('ppRestrictions').textContent = meta.restrictions || 'nenhuma informada';
-    document.getElementById('ppPriorities').textContent = meta.priorities || 'nenhuma informada';
-    updateValidateButton(user);
+  // ---------------- Resumo de cada projeto (cliente) ----------------
+  // Não existe mais um "projeto principal": o resumo que os arquitetos veem
+  // no match, a validação, o PDF, o moodboard e a referência visual são de
+  // cada projeto e ficam no detalhe dele (gaveta "Meus projetos").
+  const summaryOkKey = (project) => `matchia_summary_ok_${project._id}`;
+  const isSummaryValidated = (project) => {
+    try { return localStorage.getItem(summaryOkKey(project)) === '1'; } catch { return false; }
+  };
+
+  function projectSummaryFields(project) {
+    const where = [project.city, project.state].filter(Boolean).join(' / ');
+    return {
+      style: [(project.preferredStyles || []).join(', '), project.styleNotes || project.preferences].filter(Boolean).join(' — '),
+      budget: formatBudget(project.budget),
+      property: [project.propertyType, project.areaM2 ? `${project.areaM2} m²` : '', where].filter(Boolean).join(' · '),
+      materials: (project.preferredMaterials || []).join(', '),
+      goals: project.projectGoals || '',
+    };
   }
-  function updateValidateButton(user) {
-    const btn = document.getElementById('validateSummaryBtn');
-    const validated = localStorage.getItem(`matchia_summary_ok_${uid(user)}`) === '1';
-    btn.textContent = validated ? '✓ Resumo validado' : 'Validar resumo do projeto';
-    btn.classList.toggle('btn-sage', true);
-    btn.disabled = validated;
+
+  function projectSummaryHtml(project) {
+    const f = projectSummaryFields(project);
+    const item = (label, value, empty, full) =>
+      `<div class="summary-item${full ? ' is-full' : ''}"><span class="mock-label">${label}</span><strong>${escapeHtml(value && value !== '—' ? value : empty)}</strong></div>`;
+    const ok = isSummaryValidated(project);
+    return `
+      <section class="dv-summary-card dv-proj-summary" aria-labelledby="projSummaryTitle">
+        <h3 id="projSummaryTitle">Resumo do projeto</h3>
+        <p class="card-lead">É o que os arquitetos veem no match deste projeto. Revise antes de validar.</p>
+        <div class="summary-grid">
+          ${item('Estilo desejado', f.style, 'não informado')}
+          ${item('Orçamento', f.budget, 'não informado')}
+          ${item('Imóvel', f.property, 'não informado')}
+          ${item('Materiais', f.materials, 'nenhum informado')}
+          ${item('Objetivos e prioridades', f.goals, 'nenhum informado', true)}
+        </div>
+        <div class="card-actions">
+          <button type="button" class="btn btn-sage btn-sm" data-summary="validate" ${ok ? 'disabled' : ''}>${ok ? '✓ Resumo validado' : 'Validar resumo'}</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-summary="pdf">Exportar PDF</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-summary="moodboard">Gerar moodboard com IA</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-summary="reference">Ver referência visual</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-summary="share">Compartilhar perfil de estilo</button>
+        </div>
+        <div class="dv-proj-summary-out" aria-live="polite"></div>
+      </section>
+      <h4 class="dv-proj-edit-title">Editar dados do projeto</h4>`;
   }
-  function setupProjectSummary(user) {
-    document.getElementById('validateSummaryBtn').addEventListener('click', () => {
-      localStorage.setItem(`matchia_summary_ok_${uid(user)}`, '1');
-      updateValidateButton(user);
+
+  function wireProjectSummary(project, container, user) {
+    const section = container.querySelector('.dv-proj-summary');
+    if (!section) return;
+    const out = section.querySelector('.dv-proj-summary-out');
+    const loading = (text) => `<p class="dv-proj-summary-note"><span class="spinner"></span> ${text}</p>`;
+    const failed = (err, text) => `<p class="dv-proj-summary-note">${escapeHtml(err?.message || text)}</p>`;
+    const keywords = [project.styleNotes, project.projectGoals].filter(Boolean).join(' ').split(/[,.;\n]+/).map((s) => s.trim()).filter(Boolean).slice(0, 6);
+
+    section.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-summary]');
+      if (!btn) return;
+      const action = btn.dataset.summary;
+
+      if (action === 'validate') {
+        try { localStorage.setItem(summaryOkKey(project), '1'); } catch { /* aba anônima: só não fica lembrado */ }
+        btn.textContent = '✓ Resumo validado';
+        btn.disabled = true;
+      }
+
+      if (action === 'pdf') {
+        const f = projectSummaryFields(project);
+        document.getElementById('printTitle').textContent = `Resumo do projeto — ${project.name}`;
+        document.getElementById('printDate').textContent = new Date().toLocaleDateString('pt-BR');
+        document.getElementById('printableContent').innerHTML = `
+          <div class="summary-section-title">Cliente</div>
+          ${summaryLineHtml('Nome', escapeHtml(user.name))}
+          <div class="summary-section-title">Projeto</div>
+          ${summaryLineHtml('Nome', escapeHtml(project.name))}
+          ${summaryLineHtml('Imóvel', escapeHtml(f.property))}
+          ${summaryLineHtml('Estilo desejado', escapeHtml(f.style))}
+          ${summaryLineHtml('Orçamento', f.budget)}
+          ${summaryLineHtml('Materiais', escapeHtml(f.materials))}
+          ${summaryLineHtml('Objetivos e prioridades', escapeHtml(f.goals))}`;
+        window.print();
+      }
+
+      if (action === 'moodboard') {
+        out.innerHTML = loading('Gerando o conceito deste projeto…');
+        try {
+          const { concept } = await MatchAPI.moodboard({
+            styles: project.preferredStyles || [],
+            materials: project.preferredMaterials || [],
+            keywords,
+            colorTones: [],
+          });
+          out.innerHTML = `
+            <div class="moodboard-card">
+              <span class="mock-label">Moodboard com IA</span>
+              <p class="moodboard-concept">"${escapeHtml(concept)}"</p>
+            </div>`;
+        } catch (err) {
+          out.innerHTML = failed(err, 'Não foi possível gerar o moodboard agora.');
+        }
+      }
+
+      if (action === 'reference') {
+        out.innerHTML = loading('Buscando uma referência visual…');
+        try {
+          const photo = await MatchAPI.referenceImage({
+            styles: project.preferredStyles || [],
+            materials: project.preferredMaterials || [],
+            keywords,
+          });
+          out.innerHTML = `
+            <span class="mock-label">É mais ou menos assim que você imagina?</span>
+            <img src="${escapeHtml(photo.imageUrl)}" alt="${escapeHtml(photo.description || '')}" style="width:100%; border-radius:12px; display:block; margin-top:6px;">
+            <p class="dv-proj-summary-note">Foto: <a href="${escapeHtml(photo.photographerUrl)}" target="_blank" rel="noopener" style="color:inherit;">${escapeHtml(photo.photographerName)}</a> via <a href="${escapeHtml(photo.unsplashUrl)}" target="_blank" rel="noopener" style="color:inherit;">Unsplash</a></p>`;
+        } catch (err) {
+          out.innerHTML = failed(err, 'Não foi possível encontrar uma referência agora.');
+        }
+      }
+
+      if (action === 'share') {
+        StyleShare.open({ name: user.name, clientProfile: { preferredStyles: project.preferredStyles || [], budget: project.budget } });
+      }
     });
   }
 
@@ -625,6 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function renderProjectDetail(project, container, { back }, user) {
     container.innerHTML = `
+      ${project ? projectSummaryHtml(project) : ''}
       <form id="drawerProjectForm">
         <div class="form-grid">
           <div class="form-field full">
@@ -736,6 +833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           alert(err.message || 'Não foi possível excluir o projeto.');
         }
       });
+      wireProjectSummary(project, container, user);
       renderSuggestedProducts(project);
     }
   }
@@ -2078,26 +2176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   function summaryLineHtml(label, value) {
     return `<div class="summary-line"><span>${label}</span><strong>${value && String(value).trim() ? value : '—'}</strong></div>`;
   }
-  function setupExportPdf(user) {
-    document.getElementById('exportPdfBtn').addEventListener('click', () => {
-      const p = user.clientProfile || {};
-      const meta = MatchExtras.getProjectMeta(uid(user));
-      document.getElementById('printTitle').textContent = 'Resumo do projeto';
-      document.getElementById('printDate').textContent = new Date().toLocaleDateString('pt-BR');
-      document.getElementById('printableContent').innerHTML = `
-        <div class="summary-section-title">Cliente</div>
-        ${summaryLineHtml('Nome', user.name)}
-        ${summaryLineHtml('Cidade', [user.city, user.state].filter(Boolean).join(' / '))}
-        <div class="summary-section-title">Projeto</div>
-        ${summaryLineHtml('Estilo desejado', (p.preferredStyles || []).join(', '))}
-        ${summaryLineHtml('Orçamento', formatBudget(p.budget))}
-        ${summaryLineHtml('Restrições', meta.restrictions)}
-        ${summaryLineHtml('Prioridades', meta.priorities)}
-      `;
-      window.print();
-    });
-  }
-
   function setupExportMatchPdf(user) {
     document.getElementById('exportMatchPdfBtn').addEventListener('click', () => {
       if (!lastResults.length) return;
@@ -2112,66 +2190,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `).join('');
       window.print();
     });
-  }
-
-  // ---------------- Moodboard com IA ----------------
-  function setupMoodboard(user) {
-    document.getElementById('moodboardBtn').addEventListener('click', async () => {
-      const card = document.getElementById('moodboardCard');
-      const content = document.getElementById('moodboardContent');
-      card.style.display = 'block';
-      card.scrollIntoView({ behavior: SCROLL_BEHAVIOR, block: 'nearest' });
-      content.innerHTML = '<p style="font-size:0.86rem; color:var(--ink-faint);"><span class="spinner"></span> Gerando conceito...</p>';
-      const p = user.clientProfile || {};
-      const meta = MatchExtras.getProjectMeta(uid(user));
-      const swatchColors = { 'Claras': '#EDE6DC', 'Escuras': '#3A342C', 'Contraste': '#1A1A1A', 'Tons pastéis': '#E8D6D0', 'Coloridas': '#C68868', 'Branco': '#FFFFFF', 'Preto': '#111111', 'Neutras': '#D8D2C4', 'Cinza': '#A6A6A6', 'Marrom': '#6B4A30' };
-      try {
-        const { concept } = await MatchAPI.moodboard({
-          styles: p.preferredStyles || [],
-          materials: p.preferredMaterials || [],
-          keywords: meta.habits || [],
-          colorTones: meta.colorTones || [],
-        });
-        content.innerHTML = `
-          <div class="moodboard-card">
-            <p class="moodboard-concept">"${concept}"</p>
-            <span class="mock-label">Paleta sugerida</span>
-            <div class="moodboard-swatches">${(meta.colorTones || []).map(c => `<span class="dot" style="background:${swatchColors[c] || '#ccc'}" title="${c}"></span>`).join('') || '<span style="font-size:0.82rem; color:var(--ink-faint);">Nenhum tom de cor informado no questionário.</span>'}</div>
-          </div>`;
-      } catch (err) {
-        content.innerHTML = `<p style="font-size:0.86rem; color:var(--ink-faint);">${err.message || 'Não foi possível gerar o moodboard agora.'}</p>`;
-      }
-    });
-  }
-
-  // ---------------- Referência visual (foto real via Unsplash) ----------------
-  function setupReferenceImage(user) {
-    document.getElementById('referenceImageBtn').addEventListener('click', async () => {
-      const card = document.getElementById('referenceImageCard');
-      const content = document.getElementById('referenceImageContent');
-      card.style.display = 'block';
-      card.scrollIntoView({ behavior: SCROLL_BEHAVIOR, block: 'nearest' });
-      content.innerHTML = '<p style="font-size:0.86rem; color:var(--ink-faint);"><span class="spinner"></span> Buscando uma referência visual...</p>';
-      const p = user.clientProfile || {};
-      const meta = MatchExtras.getProjectMeta(uid(user));
-      try {
-        const photo = await MatchAPI.referenceImage({
-          styles: p.preferredStyles || [],
-          materials: p.preferredMaterials || [],
-          keywords: meta.habits || [],
-        });
-        content.innerHTML = `
-          <img src="${escapeHtml(photo.imageUrl)}" alt="${escapeHtml(photo.description)}" style="width:100%; border-radius:12px; display:block;">
-          <p style="font-size:0.76rem; color:var(--ink-faint); margin-top:8px;">Foto: <a href="${escapeHtml(photo.photographerUrl)}" target="_blank" rel="noopener" style="color:inherit;">${escapeHtml(photo.photographerName)}</a> via <a href="${photo.unsplashUrl}" target="_blank" rel="noopener" style="color:inherit;">Unsplash</a></p>`;
-      } catch (err) {
-        content.innerHTML = `<p style="font-size:0.86rem; color:var(--ink-faint);">${err.message || 'Não foi possível encontrar uma referência agora.'}</p>`;
-      }
-    });
-  }
-
-  // ---------------- Compartilhar perfil de estilo ----------------
-  function setupStyleShare(user) {
-    document.getElementById('styleShareBtn').addEventListener('click', () => StyleShare.open(user));
   }
 
   // ---------------- Comparador lado a lado ----------------

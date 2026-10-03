@@ -65,7 +65,7 @@ window.MatchStyleQuestions = (() => {
       hint: 'Materiais de banheiro costumam guiar o resto da casa.',
       options: [
         opt('banheiro-luxo', 'Mármore e pedra escura', 'photo-1667550177753-52b318cd4d40', ['Alto padrão', 'Contemporâneo'], 'Medea Dzagnidze', 'medeadza'),
-        opt('banheiro-minimalista', 'Metrô branco e preto', 'photo-1635247049694-0269c357ab69', ['Minimalista', 'Industrial'], 'Hemant Kanojiya', 'thehk1'),
+        opt('banheiro-minimalista', 'Azulejo metrô branco e preto', 'photo-1635247049694-0269c357ab69', ['Minimalista', 'Industrial'], 'Hemant Kanojiya', 'thehk1'),
         opt('banheiro-rustico', 'Ardósia e banheira de cobre', 'photo-1584346651592-3aacc3c99075', ['Rústico'], 'Shawn', 'shawnanggg'),
         opt('banheiro-biofilico', 'Concreto, banheira e plantas', 'photo-1688786219616-598ed96aa19d', ['Biofílico', 'Brutalista'], 'Rebecca Chandler', 'rebecca_luckyducks'),
       ],

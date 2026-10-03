@@ -128,8 +128,21 @@
 @media (max-width: 640px) {
   .np-shell { padding: 24px 16px 96px; }
   .np-stepper li { font-size: 0.66rem; }
-  .np-choices { gap: 12px; }
-  .np-choice-label { left: 8px; right: 8px; bottom: 8px; padding: 7px 9px; font-size: 0.78rem; }
+  /* No celular o rótulo sai de cima da foto e vira legenda embaixo dela —
+     a foto fica inteira à vista e quadrada (mais área útil numa tela estreita). */
+  .np-choices { gap: 12px 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .np-choice { gap: 4px; }
+  .np-choice-btn { aspect-ratio: auto; display: flex; flex-direction: column; background: var(--white); }
+  .np-choice-btn img { aspect-ratio: 1 / 1; height: auto; }
+  .np-choice-label {
+    position: static; padding: 8px 10px 9px; border-radius: 0; font-size: 0.8rem; line-height: 1.3;
+    color: var(--ink); background: var(--white); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none !important;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(2 * 1.3em + 17px);
+  }
+  .np-choice.is-selected .np-choice-label { color: var(--terracotta-dark); }
+  .np-choice-check { top: 8px; right: 8px; width: 26px; height: 26px; }
+  .np-choice-check::after { left: 9px; top: 6px; width: 6px; height: 11px; }
+  .np-choice-credit { font-size: 0.62rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
   .np-actions .btn { flex: 1; }
 }
 @media (max-width: 420px) {
