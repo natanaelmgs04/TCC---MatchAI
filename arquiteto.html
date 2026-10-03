@@ -22,10 +22,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/architect-profile.css">
 </head>
-<body>
-<a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+<body class="ap-page">
+<a href="#sobre" class="skip-link">Pular para o conteúdo principal</a>
 
+<!-- A barra do site aparece só depois do hero (o hero tem a própria navegação). -->
 <header class="site-header">
   <nav class="nav">
     <a href="index.html" class="logo">
@@ -51,64 +53,120 @@
   </nav>
 </header>
 
-<main id="main-content" class="dash-shell">
+<main id="main-content">
   <div class="container">
-
     <div id="apiBanner" class="api-banner" role="alert" aria-live="polite">
       Não foi possível conectar à API em <code id="apiBaseLabel"></code>.
     </div>
-
-    <div id="noId" class="empty-state" style="display:none;">
+    <div id="noId" class="empty-state ap-empty" style="display:none;">
       <h2>Nenhum arquiteto selecionado</h2>
       <p>Acesse este perfil a partir dos resultados de match no seu painel.</p>
       <a href="index.html" class="btn btn-secondary">Voltar ao início</a>
     </div>
+  </div>
 
-    <div id="profileState" style="display:none;">
-      <!-- Mesmo hero em vidro fosco do painel (.dash-hero) -- fundo é a
-           referência visual real do arquiteto (gerada a partir do estilo/
-           materiais dele, MatchAPI.architectReferenceImage) quando existe;
-           senão cai numa foto ilustrativa por enquanto (ver architect.js). -->
-      <div class="dash-hero" data-stagger>
-        <div class="dash-hero-bg" id="archHeroBg"></div>
-        <div class="dash-hero-scrim"></div>
-        <div class="dash-hero-content">
-          <div class="dash-hero-left">
-            <div class="dash-avatar" id="avatar" style="width:88px; height:88px; font-size:1.9rem; margin-bottom:0;">—</div>
-            <div class="profile-header-info" style="max-width:420px;">
-              <h1 id="archName" style="font-size:1.8rem; margin-bottom:4px; display:inline;">—</h1>
-              <span id="archVerifiedBadge"></span>
-              <span id="archValidatedBadge"></span>
-              <p class="profile-location" id="archLocation" style="margin:4px 0 0;">—</p>
-              <p id="archHeroBio" style="margin:12px 0 0; font-size:0.92rem; line-height:1.6; color:rgba(255,255,255,.85);">—</p>
-            </div>
-          </div>
-          <div class="dash-hero-rail" style="min-width:0;">
-            <div id="archAvailability" class="tag">—</div>
-          </div>
+  <div id="profileState" style="display:none;">
+
+    <!-- ============ HERO EDITORIAL (assets/css/architect-profile.css) ============
+         Camadas: foto do estúdio → nome rolando → linha e rodapé → pessoa
+         recortada (por cima do nome) → navegação → gaveta do celular. -->
+    <section class="ap-hero" id="apHero" aria-labelledby="archName">
+      <img class="ap-img ap-bg anim-fade-in" id="apBg" alt="">
+
+      <div class="ap-marquee anim-fade-up" style="--d:500ms" aria-hidden="true">
+        <div class="ap-track" id="apTrack"></div>
+      </div>
+
+      <div class="ap-rule anim-line" style="--d:1200ms" aria-hidden="true"></div>
+
+      <div class="ap-foot">
+        <div class="anim-fade-up" style="--d:1400ms">
+          <span id="apFootRole">Arquitetura</span>
+          <span id="apFootStyles">&nbsp;</span>
+          <span id="apFootPlace">&nbsp;</span>
+        </div>
+        <div class="ap-foot-right anim-fade-up" style="--d:1550ms">
+          <span id="apFootLabel">Disponibilidade</span>
+          <span id="apFootValue">—</span>
         </div>
       </div>
 
-      <div class="dash-grid" style="margin-top:24px;">
-        <div>
-          <div class="dash-card spotlight">
-            <h3>Contato</h3>
-            <div class="dash-meta-row"><span>E-mail</span><span id="archEmail">—</span></div>
-            <div class="dash-meta-row"><span>Telefone</span><span id="archPhone">—</span></div>
-            <div class="dash-meta-row"><span>Experiência</span><span id="archYears">—</span></div>
-            <div class="dash-meta-row"><span>Site</span><span id="archWebsite">—</span></div>
-            <div class="dash-meta-row"><span>Instagram</span><span id="archInstagram">—</span></div>
-            <div class="dash-subhead">Estilos</div>
-            <div class="tag-row" id="archStyles"></div>
-            <div class="dash-subhead">Especialidades</div>
-            <div class="tag-row" id="archSpecialties"></div>
-            <div class="dash-subhead">Materiais favoritos</div>
-            <div class="tag-row" id="archMaterials"></div>
-            <div class="dash-subhead">Bio</div>
-            <p id="archBio" style="margin:0;">—</p>
-          </div>
+      <img class="ap-img ap-cut anim-rise-in" id="apCut" alt="" style="--d:300ms">
+
+      <div class="ap-chrome">
+        <a href="index.html" class="ap-brand anim-fade-up" style="--d:800ms" aria-label="match.IA — início">
+          <img src="assets/img/mark.png" alt="" width="30" height="27"><span>match<span class="ia">.IA</span></span>
+        </a>
+        <div class="ap-cols">
+          <span class="ap-year anim-fade-up" style="--d:900ms" id="apSince">match.IA</span>
+          <nav class="ap-col" aria-label="Neste perfil">
+            <a href="#sobre" class="anim-fade-up" style="--d:1000ms">Sobre</a>
+            <a href="#portfolio" class="anim-fade-up" style="--d:1080ms">Portfólio</a>
+            <a href="#contratar" class="anim-fade-up" style="--d:1160ms">Contratar</a>
+          </nav>
+          <nav class="ap-col" aria-label="Contato" id="apSocial"></nav>
         </div>
-        <div>
+      </div>
+
+      <h1 class="ap-sr" id="archName">—</h1>
+
+      <a href="#sobre" class="ap-scroll anim-fade-up" style="--d:1700ms" aria-label="Rolar para conhecer o perfil">
+        <span>Role para conhecer</span><i aria-hidden="true"></i>
+      </a>
+
+      <!-- celular: botão de menu + gaveta -->
+      <button type="button" class="ap-burger anim-fade-up" style="--d:900ms" id="apBurger" aria-label="Abrir menu" aria-expanded="false" aria-controls="apDrawer">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="ap-scrim" id="apScrim" aria-hidden="true"></div>
+      <aside class="ap-drawer" id="apDrawer" aria-label="Menu do perfil" aria-hidden="true">
+        <button type="button" class="ap-drawer-x" id="apDrawerX" aria-label="Fechar menu">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        <p class="ap-drawer-label" style="--d:250ms">Neste perfil</p>
+        <nav class="ap-drawer-nav">
+          <a href="#sobre" style="--d:300ms">Sobre</a>
+          <a href="#portfolio" style="--d:380ms">Portfólio</a>
+          <a href="#contratar" style="--d:460ms">Contratar</a>
+          <a href="destaques.html" style="--d:540ms">Arquitetos</a>
+        </nav>
+        <p class="ap-drawer-label" style="--d:500ms">Contato</p>
+        <nav class="ap-drawer-social" id="apDrawerSocial"></nav>
+      </aside>
+    </section>
+
+    <!-- ============ CONTEÚDO (aparece ao rolar) ============ -->
+    <section class="ap-sec" id="sobre">
+      <div class="container ap-about">
+        <div class="ap-about-text reveal">
+          <span class="eyebrow">Sobre</span>
+          <h2 class="ap-title"><span id="apAboutName">—</span> <span id="archVerifiedBadge"></span> <span id="archValidatedBadge"></span></h2>
+          <p class="ap-bio" id="archBio">—</p>
+        </div>
+        <div class="ap-facts dash-card reveal">
+          <div class="dash-meta-row"><span>Localização</span><span id="archLocation">—</span></div>
+          <div class="dash-meta-row"><span>Disponibilidade</span><span id="archAvailability">—</span></div>
+          <div class="dash-meta-row"><span>Experiência</span><span id="archYears">—</span></div>
+          <div class="dash-meta-row"><span>E-mail</span><span id="archEmail">—</span></div>
+          <div class="dash-meta-row"><span>Telefone</span><span id="archPhone">—</span></div>
+          <div class="dash-meta-row"><span>Site</span><span id="archWebsite">—</span></div>
+          <div class="dash-meta-row"><span>Instagram</span><span id="archInstagram">—</span></div>
+        </div>
+      </div>
+      <div class="container ap-tags" data-stagger>
+        <div><span class="ap-label">Estilos</span><div class="tag-row" id="archStyles"></div></div>
+        <div><span class="ap-label">Especialidades</span><div class="tag-row" id="archSpecialties"></div></div>
+        <div><span class="ap-label">Materiais favoritos</span><div class="tag-row" id="archMaterials"></div></div>
+      </div>
+    </section>
+
+    <section class="ap-sec" id="contratar">
+      <div class="container">
+        <div class="ap-sec-head reveal">
+          <span class="eyebrow">Vamos conversar</span>
+          <h2 class="ap-title">Contrate ou mande uma <em>mensagem</em></h2>
+        </div>
+        <div class="ap-grid-2" data-stagger>
           <!-- Contratação: o cliente escolhe um projeto e pede; o arquiteto aceita
                ou recusa no painel (assets/js/architect.js + hireController no back-end). -->
           <div class="dash-card spotlight hire-cta-card" id="hireCard">
@@ -130,28 +188,18 @@
               <p id="messageSentNote" style="display:none; color:var(--sage-dark); font-size:0.86rem; margin-top:10px;">✓ Mensagem enviada! Acompanhe a conversa no seu painel.</p>
             </div>
           </div>
-          <div class="dash-card style-profile-card" id="stylePaletteCard" style="display:none;">
-            <h3>Perfil de estilo</h3>
-            <p class="card-lead">Paleta e palavras-chave que guiam as sugestões de IA deste arquiteto.</p>
-            <span class="mock-label">Paleta de cores</span>
-            <div class="mock-palette" id="archPalette"></div>
-            <span class="mock-label">Palavras-chave</span>
-            <div class="tag-row" id="archKeywords"></div>
-          </div>
-          <div class="dash-card spotlight" id="archReferenceImageCard" style="display:none;">
-            <h3>Referência visual</h3>
-            <p class="card-lead">Uma foto real parecida com o estilo deste arquiteto, pra ajudar a visualizar antes de conversar.</p>
-            <div id="archReferenceImageContent"></div>
-          </div>
-          <div class="dash-card spotlight">
-            <h3>Sugestões de materiais</h3>
-            <p class="card-lead">Combinações geradas só a partir dos materiais favoritos deste arquiteto.</p>
-            <div id="archCombos"></div>
-          </div>
-          <div class="dash-card spotlight">
-            <h3>Portfólio</h3>
-            <div id="archPortfolio"></div>
-          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ap-sec" id="portfolio">
+      <div class="container">
+        <div class="ap-sec-head reveal">
+          <span class="eyebrow">Portfólio</span>
+          <h2 class="ap-title">Projetos que <em>assinam</em> o estilo</h2>
+        </div>
+        <div class="reveal" id="archPortfolio"></div>
+        <div class="ap-grid-2 ap-gap-top" data-stagger>
           <div class="dash-card spotlight" id="archClosedCard" style="display:none;">
             <h3>Projetos fechados pela plataforma</h3>
             <p class="card-lead">Contratações aceitas pelo match.IA. Os dados do cliente ficam privados.</p>
@@ -162,14 +210,48 @@
             <p class="card-lead">Projetos reais, validados com o cliente que contratou.</p>
             <div id="archCaseStudiesContent"></div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ap-sec" id="estilo">
+      <div class="container">
+        <div class="ap-sec-head reveal">
+          <span class="eyebrow">Linguagem</span>
+          <h2 class="ap-title">Estilo, <em>materiais</em> e referências</h2>
+        </div>
+        <div class="ap-grid-3" data-stagger>
+          <div class="dash-card spotlight" id="archReferenceImageCard" style="display:none;">
+            <h3>Referência visual</h3>
+            <p class="card-lead">Uma foto real parecida com o estilo deste arquiteto, pra ajudar a visualizar antes de conversar.</p>
+            <div id="archReferenceImageContent"></div>
+          </div>
+          <div class="dash-card style-profile-card" id="stylePaletteCard" style="display:none;">
+            <h3>Perfil de estilo</h3>
+            <p class="card-lead">Paleta e palavras-chave que guiam as sugestões de IA deste arquiteto.</p>
+            <span class="mock-label">Paleta de cores</span>
+            <div class="mock-palette" id="archPalette"></div>
+            <span class="mock-label">Palavras-chave</span>
+            <div class="tag-row" id="archKeywords"></div>
+          </div>
           <div class="dash-card spotlight">
-            <h3>Avaliações</h3>
-            <div id="archReviews"></div>
+            <h3>Sugestões de materiais</h3>
+            <p class="card-lead">Combinações geradas só a partir dos materiais favoritos deste arquiteto.</p>
+            <div id="archCombos"></div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
+    <section class="ap-sec" id="avaliacoes">
+      <div class="container">
+        <div class="ap-sec-head reveal">
+          <span class="eyebrow">Quem contratou</span>
+          <h2 class="ap-title">Avaliações</h2>
+        </div>
+        <div class="dash-card spotlight reveal" id="archReviews"></div>
+      </div>
+    </section>
   </div>
 </main>
 
@@ -184,6 +266,7 @@
 
 <script src="assets/js/api.js"></script>
 <script src="assets/js/extras.js"></script>
+<script src="assets/js/portraits.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/site.js"></script>
 <script src="assets/js/architect.js"></script>

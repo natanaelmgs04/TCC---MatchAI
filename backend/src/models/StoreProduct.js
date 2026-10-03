@@ -1,9 +1,12 @@
 import mongoose from "mongoose";
 
 /**
- * Produto cadastrado pela própria loja parceira (nunca por scraping do site
- * dela) — é isso que a IA casa contra o estilo/materiais de um projeto em
- * storeMatchService.suggestProductsForProject.
+ * Produto de uma loja parceira — é isso que a IA casa contra o estilo/materiais
+ * de um projeto em storeMatchService.suggestProductsForProject. Entra de dois
+ * jeitos: cadastrado à mão no painel (`source: "manual"`) ou importado do
+ * catálogo público que a própria loja indicou (`source: "import"`, ver
+ * services/catalogImporter.js), identificado por `externalId` para que uma nova
+ * sincronização atualize em vez de duplicar.
  */
 const storeProductSchema = new mongoose.Schema(
   {
@@ -12,10 +15,15 @@ const storeProductSchema = new mongoose.Schema(
     photo: String,
     category: String,
     styles: [String],
+    tags: [String],
     price: Number,
     purchaseUrl: String,
+    source: { type: String, enum: ["manual", "import"], default: "manual" },
+    externalId: String,
   },
   { timestamps: true },
 );
+
+storeProductSchema.index({ store: 1, externalId: 1 });
 
 export default mongoose.model("StoreProduct", storeProductSchema);

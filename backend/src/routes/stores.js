@@ -9,6 +9,9 @@ import {
   getStoreProfile,
   createReferral,
   listMyReferrals,
+  getCatalogStatus,
+  importProducts,
+  clearImportedProducts,
 } from "../controllers/storeController.js";
 
 const router = Router();
@@ -16,6 +19,9 @@ router.get("/me/products", requireAuth, requireRole("store"), asyncHandler(listM
 router.post("/me/products", requireAuth, requireRole("store"), asyncHandler(createProduct));
 router.patch("/me/products/:id", requireAuth, requireRole("store"), asyncHandler(updateProduct));
 router.delete("/me/products/:id", requireAuth, requireRole("store"), asyncHandler(deleteProduct));
+router.get("/me/catalog", requireAuth, requireRole("store"), asyncHandler(getCatalogStatus));
+router.post("/me/catalog/import", requireAuth, requireRole("store"), asyncHandler(importProducts));
+router.delete("/me/catalog", requireAuth, requireRole("store"), asyncHandler(clearImportedProducts));
 router.get("/me/referrals", requireAuth, requireRole("store"), asyncHandler(listMyReferrals));
 router.post("/referrals", requireAuth, requireRole("client"), asyncHandler(createReferral));
 router.get("/:id", asyncHandler(getStoreProfile));

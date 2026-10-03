@@ -335,3 +335,123 @@
 @media (prefers-reduced-motion: reduce) {
   .ai-status i, .ai-cursor-hint span { animation: none; }
 }
+
+/* =========================================================
+   Pílula do compositor + orbe que pensa (assets/js/morph-orb.js)
+   Adaptação do MorphOrb nas cores, tipografia e vidro líquido da marca.
+   ========================================================= */
+@property --mo-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes mo-spin { to { --mo-angle: 360deg; } }
+@keyframes mo-drift { from { transform: translateX(-14%); } to { transform: translateX(14%); } }
+@keyframes mo-dot { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+@keyframes mo-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes mo-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-6px); } }
+
+.ai-compose { padding: 8px 14px 14px; }
+.ai-hint { display: block; margin: 8px 8px 0; text-align: right; }
+
+.mo-pill {
+  position: relative; isolation: isolate; display: flex; align-items: flex-end; gap: 2px;
+  min-height: 56px; padding: 6px 6px 6px 14px; border-radius: 28px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--white) 70%, transparent), color-mix(in srgb, var(--white) 30%, transparent) 60%);
+  backdrop-filter: blur(18px) saturate(170%); -webkit-backdrop-filter: blur(18px) saturate(170%);
+  box-shadow: 0 10px 28px rgba(51, 51, 51, .10), inset 1px 1px 1px -.5px rgba(255, 255, 255, .95), inset -1px -1px 1px -.5px rgba(0, 0, 0, .10);
+  transition: box-shadow .3s var(--ease-out);
+}
+/* anel de vidro líquido que gira em terracota → sálvia → areia (acende com o foco) */
+.mo-pill::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.4px; pointer-events: none; z-index: 2;
+  background: conic-gradient(from var(--mo-angle), var(--terracotta), var(--sage), #C9B9A6, var(--terracotta));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: .45; animation: mo-spin 7s linear infinite; transition: opacity .3s ease;
+}
+.mo-pill:focus-within::before { opacity: 1; }
+.mo-pill:focus-within { box-shadow: 0 14px 36px rgba(176, 117, 90, .18), inset 1px 1px 1px -.5px rgba(255, 255, 255, .95), inset -1px -1px 1px -.5px rgba(0, 0, 0, .10); }
+.mo-pill-aurora { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; z-index: -1; pointer-events: none; }
+.mo-pill-aurora i { position: absolute; top: -40%; width: 46%; height: 180%; border-radius: 50%; filter: blur(22px); opacity: .22; animation: mo-drift 9s ease-in-out infinite alternate; }
+.mo-pill-aurora i:nth-child(1) { left: -6%; background: var(--terracotta); }
+.mo-pill-aurora i:nth-child(2) { left: 30%; background: var(--sage); animation-duration: 11s; animation-delay: -3s; }
+.mo-pill-aurora i:nth-child(3) { left: 62%; background: #C9B9A6; animation-duration: 13s; animation-delay: -6s; }
+.mo-pill-glow { position: absolute; left: 12%; right: 12%; bottom: -10px; height: 60%; border-radius: 50%; z-index: -2; pointer-events: none; background: var(--terracotta); filter: blur(20px); opacity: .14; transition: opacity .3s ease; }
+.mo-pill:focus-within .mo-pill-glow { opacity: .3; }
+.mo-spark { flex: none; align-self: center; color: var(--terracotta); margin-right: 4px; }
+.mo-pill .ai-tools { align-self: center; }
+.mo-pill .ai-input { flex: 1; min-width: 0; min-height: 44px; max-height: 160px; padding: 11px 6px; }
+.mo-pill .ai-send { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; border-radius: 50%; }
+.mo-pill .ai-send svg { width: 18px; height: 18px; }
+.mo-pill .ai-send.is-busy svg { animation: none; }
+
+/* ---------- camada do orbe (por cima do card) ---------- */
+.ai-card > .mo-layer { position: absolute; inset: 0; z-index: 8; pointer-events: none; }
+.mo-layer:not(.is-active) { visibility: hidden; }
+.mo-actor { --w: 56px; --h: 56px; --r: 28px; --oPill: 0; --oBall: 0; --oDot: 0; --ds: .55; --oCard: 0; position: absolute; left: 0; top: 0; width: var(--w); height: var(--h); border-radius: var(--r); will-change: transform, width, height; }
+.mo-surface, .mo-ball, .mo-card { position: absolute; inset: 0; border-radius: inherit; }
+.mo-surface {
+  opacity: var(--oPill); overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--white) 70%, transparent), color-mix(in srgb, var(--white) 30%, transparent) 60%);
+  box-shadow: 0 10px 28px rgba(51, 51, 51, .10), inset 0 0 0 1.4px color-mix(in srgb, var(--terracotta) 45%, transparent);
+}
+.mo-surface i { position: absolute; top: -40%; width: 46%; height: 180%; border-radius: 50%; filter: blur(22px); opacity: .22; }
+.mo-surface i:nth-child(1) { left: -6%; background: var(--terracotta); }
+.mo-surface i:nth-child(2) { left: 30%; background: var(--sage); }
+.mo-surface i:nth-child(3) { left: 62%; background: #C9B9A6; }
+/* bola de vidro (o que voa) — reflexo de vidro sobre o degradê da marca */
+.mo-ball {
+  opacity: var(--oBall);
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, .95), rgba(255, 255, 255, .25) 32%, rgba(255, 255, 255, 0) 55%), linear-gradient(140deg, var(--sage), var(--terracotta));
+  box-shadow: 0 14px 34px rgba(176, 117, 90, .35), inset -6px -8px 16px rgba(0, 0, 0, .12), inset 2px 2px 2px -1px rgba(255, 255, 255, .9);
+}
+/* o ponto em que a esfera se condensa */
+.mo-dot {
+  position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; border-radius: 50%;
+  translate: -50% -50%; scale: var(--ds); opacity: var(--oDot);
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0) 45%), linear-gradient(140deg, var(--sage), var(--terracotta));
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--terracotta) 14%, transparent), 0 16px 38px rgba(176, 117, 90, .4);
+}
+/* o card em que o ponto se desdobra — mesmo material do balão do assistente */
+.mo-card {
+  opacity: var(--oCard);
+  background: color-mix(in srgb, var(--white) 70%, transparent); border: 1px solid var(--line);
+  box-shadow: 0 12px 30px rgba(51, 51, 51, .10);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.mo-orb { position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; translate: -50% -50%; pointer-events: none; }
+.mo-pulse { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--terracotta); opacity: 0; }
+/* halo: vidro fosco redondo atrás do orbe (a conversa fica legível em volta) */
+.mo-halo {
+  position: absolute; left: 0; top: 0; width: 290px; height: 290px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, color-mix(in srgb, var(--terracotta) 16%, transparent), color-mix(in srgb, var(--bg) 40%, transparent) 45%, transparent 70%);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  -webkit-mask-image: radial-gradient(circle, #000 42%, transparent 70%); mask-image: radial-gradient(circle, #000 42%, transparent 70%);
+}
+.mo-trail { position: absolute; left: 0; top: 0; width: 100px; height: 100px; border-radius: 50%; opacity: 0; background: linear-gradient(140deg, var(--sage), var(--terracotta)); filter: blur(1px); }
+
+.mo-status { position: absolute; left: 0; top: 0; display: grid; justify-items: center; opacity: var(--sOp, 0); }
+.mo-lab {
+  grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 7px 15px; border-radius: 999px; translate: 0 var(--sTy, 0px);
+  font: 600 .78rem/1 var(--font-body); letter-spacing: .02em; color: var(--ink-soft);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--white) 75%, transparent), color-mix(in srgb, var(--white) 35%, transparent));
+  backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: 0 6px 18px rgba(51, 51, 51, .10), inset 1px 1px 1px -.5px rgba(255, 255, 255, .95);
+}
+.mo-lab.is-in { animation: mo-in .3s var(--ease-out) both; }
+.mo-lab.is-out { animation: mo-out .3s var(--ease-out) both; }
+.mo-lab b { font-weight: 700; color: var(--terracotta-dark); }
+.mo-dots { display: inline-flex; gap: 3px; }
+.mo-dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: mo-dot 1s infinite ease-in-out; }
+.mo-dots i:nth-child(2) { animation-delay: .15s; }
+.mo-dots i:nth-child(3) { animation-delay: .3s; }
+
+/* resposta: o balão espera invisível, depois as palavras entram em cascata */
+.ai-msg.mo-pending { visibility: hidden; }
+.mo-w { display: inline; opacity: 0; filter: blur(4px); transition: opacity .32s var(--ease-out), filter .32s var(--ease-out); }
+.mo-w.is-in { opacity: 1; filter: none; }
+.mo-extra { opacity: 0; }
+.mo-extra.mo-extra-in { animation: ai-msg-in .45s var(--ease-out) .25s both; }
+.mo-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-pill::before, .mo-pill-aurora i, .mo-dots i { animation: none; }
+  .mo-w { filter: none; transition-duration: .01ms; }
+}

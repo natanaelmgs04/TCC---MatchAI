@@ -31,3 +31,6 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # Painel da equipe (admin.html): e-mails com acesso, separados por vírgula.
+      - key: ADMIN_EMAILS
+        sync: false

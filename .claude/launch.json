@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev", "--prefix", "backend"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "remotion-studio",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "video"],
+      "port": 3123
     }
   ]
 }

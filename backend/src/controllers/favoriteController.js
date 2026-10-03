@@ -1,15 +1,17 @@
 import Favorite from "../models/Favorite.js";
+import { avatarPath } from "../services/avatar.js";
 
 export async function listFavorites(req, res) {
   const favorites = await Favorite.find({ client: req.user.id })
-    .populate("architect", "name city state architectProfile")
+    .populate("architect", "name city state architectProfile avatarVersion status")
     .sort("-createdAt");
   res.json(
     favorites
-      .filter((f) => f.architect)
+      .filter((f) => f.architect && f.architect.status !== "suspended")
       .map((f) => ({
         id: f.architect.id,
         name: f.architect.name,
+        avatar: avatarPath(f.architect),
         city: f.architect.city,
         state: f.architect.state,
         profile: f.architect.architectProfile,

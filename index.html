@@ -238,7 +238,7 @@
 
       <div class="xv reveal" data-xv tabindex="0" role="region" aria-label="Vídeo: o que o match.IA faz por clientes e arquitetos">
         <div class="xv-stage" data-xv-stage>
-          <div class="xv-bg" aria-hidden="true"><i class="xv-blob xv-blob--a"></i><i class="xv-blob xv-blob--b"></i><i class="xv-grain"></i></div>
+          <div class="xv-bg" aria-hidden="true"><i class="xv-blob xv-blob--a"></i><i class="xv-blob xv-blob--b"></i><i class="xv-light"></i><i class="xv-grain"></i></div>
 
           <!-- 0 · abertura -->
           <div class="xv-scene xv-scene--intro" data-scene="intro" aria-hidden="true">
@@ -249,13 +249,13 @@
             <div class="xv-visual">
               <div class="xv-duo">
                 <div class="xv-person xv-glass fx fx-left" data-at=".5">
-                  <span class="xv-avatar xv-avatar--t">C</span>
+                  <span class="xv-avatar xv-avatar--t"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.9"/><path d="M4.6 20.6a7.4 7.4 0 0 1 14.8 0"/></svg></span>
                   <b>Você, cliente</b><small>quer construir ou reformar</small>
                 </div>
                 <svg class="xv-link" viewBox="0 0 440 300" aria-hidden="true"><path class="fx fx-draw" data-at="1.1" data-d="1.2" pathLength="1" d="M150 66 C 230 66, 220 110, 220 150 C 220 190, 210 234, 290 234"/></svg>
                 <div class="xv-core fx fx-pop" data-at="1.7"><img src="assets/img/mark.png" alt="" width="40" height="40"></div>
                 <div class="xv-person xv-person--s xv-glass fx fx-right" data-at=".8">
-                  <span class="xv-avatar xv-avatar--s">A</span>
+                  <span class="xv-avatar xv-avatar--s"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.9"/><path d="M4.6 20.6a7.4 7.4 0 0 1 14.8 0"/></svg></span>
                   <b>Você, arquiteto</b><small>quer projetos que combinam</small>
                 </div>
               </div>
@@ -264,7 +264,7 @@
           </div>
 
           <!-- 1 · cliente 01 -->
-          <div class="xv-scene" data-scene="c1" data-act="0" aria-hidden="true">
+          <div class="xv-scene" data-scene="c1" data-act="0" data-in="iris" data-from=".xv-core" aria-hidden="true">
             <div class="xv-head">
               <span class="xv-kicker fx" data-at=".1">Para você, cliente · 01</span>
               <h3 class="xv-title fx" data-at=".2">Encontre seu <em>arquiteto ideal</em></h3>
@@ -272,16 +272,16 @@
             <div class="xv-visual">
               <div class="xv-match">
                 <div class="xv-chips">
-                  <span class="xv-chip fx fx-left" data-at=".6">Contemporâneo</span>
-                  <span class="xv-chip fx fx-left" data-at=".8">Orçamento médio-alto</span>
-                  <span class="xv-chip fx fx-left" data-at="1">Família com 2 filhos</span>
-                  <span class="xv-chip fx fx-left" data-at="1.2">Muita luz natural</span>
+                  <span class="xv-chip fx fx-left" data-on="estilo">Contemporâneo</span>
+                  <span class="xv-chip fx fx-left" data-on="orcamento">Orçamento médio-alto</span>
+                  <span class="xv-chip fx fx-left" data-on="familia">Família com 2 filhos</span>
+                  <span class="xv-chip fx fx-left" data-on="familia+0.45">Muita luz natural</span>
                 </div>
-                <div class="xv-ring fx fx-pop" data-at="1.8" data-s="2" data-sd="1.6">
+                <div class="xv-ring fx fx-pop" data-on="calculo-0.35" data-son="calculo" data-sd="1.6">
                   <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44"/><circle class="xv-ring-fill" cx="50" cy="50" r="44" pathLength="100"/></svg>
-                  <strong><span data-count="95" data-at="2" data-d="1.6">0</span>%</strong><small>compatível</small>
+                  <strong><span data-count="95" data-on="calculo" data-d="1.6">0</span>%</strong><small>compatível</small>
                 </div>
-                <div class="xv-archcard xv-glass fx" data-at="3.4">
+                <div class="xv-archcard xv-glass fx fx-right" data-on="combinam">
                   <span class="xv-avatar xv-avatar--photo">TY</span>
                   <div><b>Teresa Younes</b><small>Contemporâneo · concreto, madeira e vidro</small></div>
                 </div>
@@ -298,14 +298,14 @@
             </div>
             <div class="xv-visual">
               <div class="xv-panel xv-glass fx fx-pop" data-at=".4">
-                <div class="xv-panel-row"><small>Score de compatibilidade</small><b><span data-count="95" data-at=".9" data-d="1.4">0</span>%</b></div>
-                <div class="xv-meter"><i class="fx-grow" data-s=".9" data-sd="1.4" style="--w:.95"></i></div>
-                <div class="xv-panel-row xv-sug fx fx-left" data-at="1.8"><span class="xv-dot"></span>Integrar cozinha e sala</div>
-                <div class="xv-panel-row xv-sug fx fx-left" data-at="2.1"><span class="xv-dot"></span>Brises de madeira na fachada oeste</div>
+                <div class="xv-panel-row"><small>Score de compatibilidade</small><b>95%</b></div>
+                <div class="xv-meter"><i class="fx-grow" data-son="score" data-sd="1.2" style="--w:.95"></i></div>
+                <div class="xv-panel-row xv-sug fx fx-left" data-on="sugestoes"><span class="xv-dot"></span>Integrar cozinha e sala</div>
+                <div class="xv-panel-row xv-sug fx fx-left" data-on="sugestoes+0.25"><span class="xv-dot"></span>Brises de madeira na fachada oeste</div>
                 <div class="xv-refs">
-                  <span class="fx fx-pop" data-at="2.6" style="background-image:url('assets/img/photos/photo-1600566753190-17f0baa2a6c3.webp')"></span>
-                  <span class="fx fx-pop" data-at="2.8" style="background-image:url('assets/img/photos/photo-1600210492486-724fe5c67fb0.webp')"></span>
-                  <span class="fx fx-pop" data-at="3" style="background-image:url('assets/img/photos/photo-1586023492125-27b2c045efd7.webp')"></span>
+                  <span class="fx fx-pop" data-on="referencias" style="background-image:url('assets/img/photos/photo-1600566753190-17f0baa2a6c3.webp')"></span>
+                  <span class="fx fx-pop" data-on="referencias+0.15" style="background-image:url('assets/img/photos/photo-1600210492486-724fe5c67fb0.webp')"></span>
+                  <span class="fx fx-pop" data-on="referencias+0.3" style="background-image:url('assets/img/photos/photo-1586023492125-27b2c045efd7.webp')"></span>
                 </div>
               </div>
             </div>
@@ -326,12 +326,12 @@
                   <li class="fx fx-left" data-at="1.4"><i class="xv-tick"></i>Home office silencioso</li>
                   <li class="fx fx-left" data-at="1.7"><i class="xv-tick"></i>Madeira e tons terrosos</li>
                 </ul>
-                <svg class="xv-arrow" viewBox="0 0 60 20" aria-hidden="true"><path class="fx fx-draw" data-at="2.2" data-d=".6" pathLength="1" d="M2 10 H52 M44 3 L54 10 L44 17"/></svg>
+                <svg class="xv-arrow" viewBox="0 0 60 20" aria-hidden="true"><path class="fx fx-draw" data-on="vira-0.25" data-d=".6" pathLength="1" d="M2 10 H52 M44 3 L54 10 L44 17"/></svg>
                 <div class="xv-board">
-                  <span class="fx fx-pop" data-at="2.7" style="background-image:url('assets/img/photos/photo-1600585154340-be6161a56a0c.webp')"></span>
-                  <span class="fx fx-pop" data-at="2.9" style="background-image:url('assets/3d/textures/carvalho-mel/color.webp')"></span>
-                  <span class="fx fx-pop" data-at="3.1" style="background-image:url('assets/3d/textures/terracota/color.webp')"></span>
-                  <span class="fx fx-pop" data-at="3.3" style="background-image:url('assets/img/photos/photo-1600607687920-4e2a09cf159d.webp')"></span>
+                  <span class="fx fx-pop" data-on="vira" style="background-image:url('assets/img/photos/photo-1600585154340-be6161a56a0c.webp')"></span>
+                  <span class="fx fx-pop" data-on="vira+0.12" style="background-image:url('assets/img/photos/photo-1600607687939-ce8a6c25118c.webp')"></span>
+                  <span class="fx fx-pop" data-on="vira+0.24" style="background-image:url('assets/img/photos/photo-1600566753086-00f18fb6b3ea.webp')"></span>
+                  <span class="fx fx-pop" data-on="vira+0.36" style="background-image:url('assets/img/photos/photo-1600607687920-4e2a09cf159d.webp')"></span>
                 </div>
               </div>
             </div>
@@ -348,14 +348,11 @@
               <div class="xv-week xv-glass fx fx-pop" data-at=".4">
                 <div class="xv-week-head"><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span></div>
                 <div class="xv-week-grid">
-                  <i class="fx" data-at=".8" data-out="2.4" style="--c:1;--r:1">Alinhamento</i>
-                  <i class="fx" data-at=".9" data-out="2.6" style="--c:2;--r:2">Alinhamento</i>
-                  <i class="fx" data-at="1" style="--c:3;--r:1">Reunião com a arquiteta</i>
-                  <i class="fx" data-at="1.1" data-out="2.8" style="--c:4;--r:3">Alinhamento</i>
-                  <i class="fx" data-at="1.2" data-out="3" style="--c:5;--r:2">Alinhamento</i>
-                  <i class="xv-free fx fx-pop" data-at="3.4" style="--c:1;--r:2">Tempo livre</i>
-                  <i class="xv-free fx fx-pop" data-at="3.6" style="--c:4;--r:1">Tempo livre</i>
-                  <i class="xv-free fx fx-pop" data-at="3.8" style="--c:5;--r:3">Tempo livre</i>
+                  <i class="xv-slot fx" data-at=".7" data-son="menos" style="--c:1;--r:1"><span>Alinhamento</span><span>Tempo livre</span></i>
+                  <i class="xv-slot fx" data-at=".8" data-son="menos+0.12" style="--c:2;--r:2"><span>Alinhamento</span><span>Tempo livre</span></i>
+                  <i class="xv-meet fx" data-at=".9" style="--c:3;--r:1">Reunião com a arquiteta</i>
+                  <i class="xv-slot fx" data-at="1" data-son="menos+0.24" style="--c:4;--r:3"><span>Alinhamento</span><span>Tempo livre</span></i>
+                  <i class="xv-slot fx" data-at="1.1" data-son="menos+0.36" style="--c:5;--r:2"><span>Alinhamento</span><span>Tempo livre</span></i>
                 </div>
               </div>
             </div>
@@ -363,37 +360,31 @@
           </div>
 
           <!-- 5 · cliente 05 -->
-          <div class="xv-scene" data-scene="c5" data-act="0" aria-hidden="true">
+          <div class="xv-scene xv-scene--wide" data-scene="c5" data-act="0" aria-hidden="true">
             <div class="xv-head">
               <span class="xv-kicker fx" data-at=".1">Para você, cliente · 05</span>
               <h3 class="xv-title fx" data-at=".2">Personalizado <em>do início ao fim</em></h3>
             </div>
             <div class="xv-visual">
               <div class="xv-journey">
-                <svg viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true"><path class="fx fx-draw" data-at=".6" data-d="3" pathLength="1" d="M20 20 H380"/></svg>
-                <div class="xv-step fx fx-pop" data-at=".6" style="--x:5%"><i>1</i><span>Questionário</span></div>
-                <div class="xv-step fx fx-pop" data-at="1.6" style="--x:35%"><i>2</i><span>Match</span></div>
-                <div class="xv-step fx fx-pop" data-at="2.6" style="--x:65%"><i>3</i><span>Projeto</span></div>
-                <div class="xv-step fx fx-pop" data-at="3.6" style="--x:95%"><i>4</i><span>Acompanhamento</span></div>
+                <svg viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true"><path class="fx fx-draw" data-at=".6" data-d="3" data-ease="linear" pathLength="1" d="M20 20 H380"/></svg>
+                <div class="xv-step fx fx-pop" data-at=".6" style="--sx:5%"><i>1</i><span>Questionário</span></div>
+                <div class="xv-step fx fx-pop" data-at="1.6" style="--sx:35%"><i>2</i><span>Match</span></div>
+                <div class="xv-step fx fx-pop" data-at="2.6" style="--sx:65%"><i>3</i><span>Projeto</span></div>
+                <div class="xv-step fx fx-pop" data-at="3.6" style="--sx:95%"><i>4</i><span>Acompanhamento</span></div>
               </div>
             </div>
             <div class="xv-chat" data-chat></div>
           </div>
 
           <!-- 6 · ponte para o arquiteto -->
-          <div class="xv-scene xv-scene--bridge" data-scene="bridge" data-act="1" aria-hidden="true">
+          <div class="xv-scene xv-scene--bridge xv-scene--photo" data-scene="bridge" data-act="1" data-in="wipe" aria-hidden="true">
+            <div class="xv-photo" aria-hidden="true" style="background-image:url('assets/img/photos/photo-1503387762-592deb58ef4e.webp')"></div>
             <div class="xv-head">
               <span class="xv-kicker fx" data-at=".1">Para você, arquiteto</span>
               <h3 class="xv-title fx" data-at=".3">IA como sua <em>parceira-chave</em></h3>
             </div>
-            <div class="xv-visual">
-              <div class="xv-compass fx fx-pop" data-at=".5">
-                <svg viewBox="0 0 120 120" aria-hidden="true">
-                  <path class="fx fx-draw" data-at=".7" data-d="1.4" pathLength="1" d="M60 14 L30 106 M60 14 L90 106 M40 76 A 30 30 0 0 0 80 76"/>
-                  <circle class="fx fx-pop" data-at=".6" cx="60" cy="14" r="6"/>
-                </svg>
-              </div>
-            </div>
+            <div class="xv-visual"></div>
             <div class="xv-chat" data-chat></div>
           </div>
 
@@ -404,8 +395,8 @@
               <h3 class="xv-title fx" data-at=".2">Preserve sua <em>identidade autoral</em></h3>
             </div>
             <div class="xv-visual">
-              <div class="xv-sign xv-glass fx fx-pop" data-at=".4">
-                <svg viewBox="0 0 300 110" aria-hidden="true"><path class="fx fx-draw" data-at=".9" data-d="2.2" pathLength="1" d="M14 78 C 30 20, 52 18, 46 66 C 42 92, 70 40, 82 52 C 92 62, 96 76, 110 54 C 122 34, 128 70, 142 62 C 156 54, 160 34, 176 48 C 190 60, 196 82, 214 58 C 228 40, 240 46, 252 60 C 262 72, 276 64, 290 50"/><path class="fx fx-draw" data-at="3" data-d=".5" pathLength="1" d="M40 96 H262"/></svg>
+              <div class="xv-sign xv-paper fx fx-pop" data-at=".4">
+                <svg viewBox="0 0 300 110" aria-hidden="true"><path class="fx fx-draw" data-at=".9" data-d="2.2" data-pen="xvPen" pathLength="1" d="M14 78 C 30 20, 52 18, 46 66 C 42 92, 70 40, 82 52 C 92 62, 96 76, 110 54 C 122 34, 128 70, 142 62 C 156 54, 160 34, 176 48 C 190 60, 196 82, 214 58 C 228 40, 240 46, 252 60 C 262 72, 276 64, 290 50"/><path class="fx fx-draw" data-at="3" data-d=".5" pathLength="1" d="M40 96 H262"/><circle id="xvPen" class="xv-pen" r="3.4" cx="14" cy="78"/></svg>
                 <div class="xv-tags">
                   <span class="fx" data-at="3.2">estilo aprendido</span>
                   <span class="fx" data-at="3.4">assinatura sua</span>
@@ -423,10 +414,10 @@
             </div>
             <div class="xv-visual">
               <div class="xv-fan">
-                <div class="xv-card xv-glass fx" data-at=".6" style="--rot:-7deg"><small>Conceito</small><b>Casa pátio com luz zenital</b></div>
-                <div class="xv-card xv-glass fx" data-at="1" style="--rot:0deg"><small>Materiais</small>
+                <div class="xv-card xv-glass fx fx-mb" data-on="conceitos" data-ease="spring" style="--rot:-7deg"><small>Conceito</small><b>Casa pátio com luz zenital</b></div>
+                <div class="xv-card xv-glass fx fx-mb" data-on="materiais" data-ease="spring" style="--rot:0deg"><small>Materiais</small>
                   <span class="xv-sw"><i style="background-image:url('assets/3d/textures/travertino/swatch.webp')"></i><i style="background-image:url('assets/3d/textures/carvalho-claro/swatch.webp')"></i><i style="background-image:url('assets/3d/textures/linho/swatch.webp')"></i></span></div>
-                <div class="xv-card xv-glass fx" data-at="1.4" style="--rot:7deg"><small>Referências</small><span class="xv-ph" style="background-image:url('assets/img/photos/photo-1545324418-cc1a3fa10c00.webp')"></span></div>
+                <div class="xv-card xv-glass fx fx-mb" data-on="referencias" data-ease="spring" style="--rot:7deg"><small>Referências</small><span class="xv-ph" style="background-image:url('assets/img/photos/photo-1545324418-cc1a3fa10c00.webp')"></span></div>
               </div>
             </div>
             <div class="xv-chat" data-chat></div>
@@ -439,11 +430,11 @@
               <h3 class="xv-title fx" data-at=".2">Entenda melhor <em>o cliente</em></h3>
             </div>
             <div class="xv-visual">
-              <dl class="xv-brief xv-glass fx fx-pop" data-at=".4">
-                <div class="fx fx-left" data-at=".9"><dt>Estilo</dt><dd>Contemporâneo</dd></div>
-                <div class="fx fx-left" data-at="1.2"><dt>Orçamento</dt><dd>Médio-alto</dd></div>
-                <div class="fx fx-left" data-at="1.5"><dt>Família</dt><dd>Casal e 2 filhos</dd></div>
-                <div class="fx fx-left" data-at="1.8"><dt>Prioridades</dt><dd>Integração e luz natural</dd></div>
+              <dl class="xv-brief xv-paper fx fx-pop" data-at=".4">
+                <div class="fx fx-left" data-on="estilo"><dt>Estilo</dt><dd>Contemporâneo</dd></div>
+                <div class="fx fx-left" data-on="orcamento"><dt>Orçamento</dt><dd>Médio-alto</dd></div>
+                <div class="fx fx-left" data-on="familia"><dt>Família</dt><dd>Casal e 2 filhos</dd></div>
+                <div class="fx fx-left" data-on="tudo"><dt>Prioridades</dt><dd>Integração e luz natural</dd></div>
               </dl>
             </div>
             <div class="xv-chat" data-chat></div>
@@ -458,15 +449,15 @@
             <div class="xv-visual">
               <div class="xv-lib">
                 <div class="xv-mats">
-                  <figure class="fx fx-pop" data-at=".5"><i style="background-image:url('assets/3d/textures/travertino/swatch.webp')"></i><figcaption>Travertino</figcaption></figure>
-                  <figure class="fx fx-pop" data-at=".65"><i style="background-image:url('assets/3d/textures/carvalho-mel/swatch.webp')"></i><figcaption>Carvalho</figcaption></figure>
-                  <figure class="fx fx-pop" data-at=".8"><i style="background-image:url('assets/3d/textures/cimento-queimado/swatch.webp')"></i><figcaption>Cimento</figcaption></figure>
-                  <figure class="fx fx-pop" data-at=".95"><i style="background-image:url('assets/3d/textures/linho-salvia/swatch.webp')"></i><figcaption>Linho</figcaption></figure>
-                  <figure class="fx fx-pop" data-at="1.1"><i style="background-image:url('assets/3d/textures/terracota/swatch.webp')"></i><figcaption>Terracota</figcaption></figure>
-                  <figure class="fx fx-pop" data-at="1.25"><i style="background-image:url('assets/3d/textures/marmore-branco/swatch.webp')"></i><figcaption>Mármore</figcaption></figure>
+                  <figure class="fx fx-pop" data-on="materiais"><i style="background-image:url('assets/3d/textures/travertino/swatch.webp')"></i><figcaption>Travertino</figcaption></figure>
+                  <figure class="fx fx-pop" data-on="materiais+0.12"><i style="background-image:url('assets/3d/textures/carvalho-mel/swatch.webp')"></i><figcaption>Carvalho</figcaption></figure>
+                  <figure class="fx fx-pop" data-on="materiais+0.24"><i style="background-image:url('assets/3d/textures/cimento-queimado/swatch.webp')"></i><figcaption>Cimento</figcaption></figure>
+                  <figure class="fx fx-pop" data-on="materiais+0.36"><i style="background-image:url('assets/3d/textures/linho-salvia/swatch.webp')"></i><figcaption>Linho</figcaption></figure>
+                  <figure class="fx fx-pop" data-on="materiais+0.48"><i style="background-image:url('assets/3d/textures/terracota/swatch.webp')"></i><figcaption>Terracota</figcaption></figure>
+                  <figure class="fx fx-pop" data-on="materiais+0.6"><i style="background-image:url('assets/3d/textures/marmore-branco/swatch.webp')"></i><figcaption>Mármore</figcaption></figure>
                 </div>
-                <div class="xv-plan xv-glass fx" data-at="1.6">
-                  <svg viewBox="0 0 160 110" aria-hidden="true"><path class="fx fx-draw" data-at="1.9" data-d="2" pathLength="1" d="M8 8 H152 V102 H8 Z M8 56 H70 M70 8 V40 M70 72 V102 M104 56 H152 M104 56 V78"/><path class="xv-plan-door fx fx-draw" data-at="3.6" data-d=".6" pathLength="1" d="M70 40 A 16 16 0 0 1 86 56"/></svg>
+                <div class="xv-plan xv-paper fx" data-on="layouts-0.5">
+                  <svg viewBox="0 0 160 110" aria-hidden="true"><path class="fx fx-draw" data-on="layouts-0.2" data-d="1.8" pathLength="1" d="M8 8 H152 V102 H8 Z M8 56 H70 M70 8 V40 M70 72 V102 M104 56 H152 M104 56 V78"/><path class="xv-plan-door fx fx-draw" data-on="conceito" data-d=".6" pathLength="1" d="M70 40 A 16 16 0 0 1 86 56"/></svg>
                 </div>
               </div>
             </div>
@@ -484,7 +475,7 @@
                 <small>Antes</small>
                 <div class="xv-split-bar fx" data-at=".7"><i style="flex:3">Briefing</i><i style="flex:2">Projeto</i></div>
                 <small>Com o match.IA</small>
-                <div class="xv-split-bar xv-split-bar--now fx" data-at="1.6" data-s="1.9" data-sd="1.4"><i class="xv-shrink">Briefing</i><i class="xv-grow">Projeto</i></div>
+                <div class="xv-split-bar xv-split-bar--now fx" data-at="1.2" data-son="mais" data-sd="1.2"><i class="xv-shrink">Briefing</i><i class="xv-grow">Projeto</i></div>
               </div>
             </div>
             <div class="xv-chat" data-chat></div>
@@ -497,10 +488,10 @@
               <h3 class="xv-title fx" data-at=".2">Mais <em>projetos fechados</em></h3>
             </div>
             <div class="xv-visual">
-              <ol class="xv-rank xv-glass fx fx-pop" data-at=".4" data-s="1.6" data-sd="1.1">
+              <ol class="xv-rank xv-glass fx fx-pop" data-at=".4" data-son="prioridade" data-sd="1.1">
                 <li style="--from:0;--to:1"><span>Estúdio A</span><b>81%</b></li>
                 <li style="--from:1;--to:2"><span>Estúdio B</span><b>78%</b></li>
-                <li class="xv-me" style="--from:3;--to:0"><span>Você</span><b>94%</b><em class="fx fx-pop" data-at="3">Projeto fechado</em></li>
+                <li class="xv-me" style="--from:3;--to:0"><span>Você</span><b>94%</b><em class="fx fx-pop" data-on="projetos" data-sound>Projeto fechado</em></li>
                 <li style="--from:2;--to:3"><span>Estúdio C</span><b>74%</b></li>
               </ol>
             </div>
@@ -508,20 +499,21 @@
           </div>
 
           <!-- 13 · fechamento -->
-          <div class="xv-scene xv-scene--outro" data-scene="outro" aria-hidden="true">
+          <div class="xv-scene xv-scene--outro xv-scene--photo xv-scene--night" data-scene="outro" data-in="iris" data-from=".xv-me em" aria-hidden="true">
+            <div class="xv-photo" aria-hidden="true" style="background-image:url('assets/img/photos/photo-1600585154340-be6161a56a0c.webp')"></div>
             <div class="xv-head">
-              <span class="xv-kicker fx" data-at=".1">match.IA</span>
-              <h3 class="xv-title fx" data-at=".2">Bora dar <em>o match?</em></h3>
+              <h3 class="xv-title fx" data-at=".5">Bora dar <em>o match?</em></h3>
             </div>
             <div class="xv-visual">
-              <div class="xv-cta fx fx-pop" data-at=".6">
-                <img src="assets/img/mark.png" alt="" width="56" height="56">
-                <p>A inteligência que conecta você ao arquiteto ideal.</p>
-                <div class="xv-cta-actions">
+              <div class="xv-cta">
+                <img class="xv-mark-img fx fx-pop fx-mb" data-at=".6" data-d=".9" data-sound src="assets/img/mark-light.png" alt="" width="512" height="468">
+                <b class="xv-wordmark fx fx-wipe" data-at="2.5" data-d=".7">match<span>.IA</span></b>
+                <p class="fx" data-at="2.9">A inteligência que conecta você ao arquiteto ideal.</p>
+                <div class="xv-cta-actions fx" data-at="3.2">
                   <a href="cadastro.html?tipo=cliente" class="btn btn-primary btn-sm" tabindex="-1">Sou cliente</a>
                   <a href="cadastro.html?tipo=arquiteto" class="btn btn-sage btn-sm" tabindex="-1">Sou arquiteto</a>
                 </div>
-                <button type="button" class="xv-replay" data-xv-replay tabindex="-1">Assistir de novo</button>
+                <button type="button" class="xv-replay fx" data-at="3.4" data-xv-replay tabindex="-1">Assistir de novo</button>
               </div>
             </div>
             <div class="xv-chat" data-chat></div>

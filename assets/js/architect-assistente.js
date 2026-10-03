@@ -19,6 +19,7 @@ const ArchitectAssistant = (() => {
   const ICONS = {
     back: SVG('<path d="m15 18-6-6 6-6"/>', 14),
     send: SVG('<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>', 17),
+    arrowUp: SVG('<path d="M12 19V5"/><path d="M5.5 11.5L12 5l6.5 6.5"/>', 18),
     arrow: SVG('<path d="m9 18 6-6-6-6"/>', 18),
   };
   const plain = (t) => String(t || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/^\s*\*\s+/gm, '- ').replace(/^#+\s*/gm, '');
@@ -48,13 +49,16 @@ const ArchitectAssistant = (() => {
         </div>
         <div class="ai-thread" data-ref="thread" role="log" aria-live="polite" aria-label="Conversa"></div>
         <div class="ai-compose">
-          <textarea class="ai-input" data-ref="input" rows="1" maxlength="1500"
-                    placeholder="Pergunte como desenvolver este projeto…" aria-label="Mensagem para o assistente"></textarea>
           <p class="ai-error" data-ref="error" role="alert"></p>
-          <div class="ai-toolbar">
-            <span class="ai-hint">Enter envia · Shift+Enter quebra a linha</span>
-            <button type="button" class="ai-send" data-ref="send" disabled>${ICONS.send}<span>Enviar</span></button>
+          <div class="mo-pill" data-ref="pill">
+            <span class="mo-pill-glow" aria-hidden="true"></span>
+            <span class="mo-pill-aurora" aria-hidden="true"><i></i><i></i><i></i></span>
+            <svg class="mo-spark" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z"/><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"/></svg>
+            <textarea class="ai-input" data-ref="input" rows="1" maxlength="1500"
+                      placeholder="Pergunte como desenvolver este projeto…" aria-label="Mensagem para o assistente"></textarea>
+            <button type="button" class="ai-send" data-ref="send" aria-label="Enviar" disabled>${ICONS.arrowUp}</button>
           </div>
+          <span class="ai-hint">Enter envia · Shift+Enter quebra a linha</span>
         </div>
       </div>
     </div>`;
@@ -64,9 +68,11 @@ const ArchitectAssistant = (() => {
     const card = host.querySelector('.ai-card');
     const $ = (ref) => card.querySelector(`[data-ref="${ref}"]`);
     const refs = Object.fromEntries(
-      ['pickerList', 'back', 'resetBtn', 'thread', 'input', 'error', 'send'].map((r) => [r, $(r)]),
+      ['pickerList', 'back', 'resetBtn', 'thread', 'input', 'error', 'send', 'pill'].map((r) => [r, $(r)]),
     );
     const views = { picker: card.querySelector('[data-view="picker"]'), chat: card.querySelector('[data-view="chat"]') };
+    // orbe que pensa (assets/js/morph-orb.js); sem o script, cai no "digitando…"
+    const orb = typeof MorphOrb !== 'undefined' ? MorphOrb.attach(card, { compose: refs.pill, thread: refs.thread }) : null;
 
     let projects = [];
     let project = null;
@@ -117,8 +123,8 @@ const ArchitectAssistant = (() => {
       refs.thread.append(m); scrollDown();
       return m;
     }
-    function addBot(text) {
-      const m = el('div', 'ai-msg ai-msg--bot');
+    function addBot(text, pending) {
+      const m = el('div', 'ai-msg ai-msg--bot' + (pending ? ' mo-pending' : ''));
       const av = el('img', 'ai-avatar'); av.src = 'assets/img/mark.png'; av.alt = '';
       const body = el('div', 'ai-msg-body');
       if (text) body.append(el('div', 'ai-bubble', plain(text)));
@@ -156,16 +162,25 @@ const ArchitectAssistant = (() => {
       setBusy(true);
       const userEl = addUser(text);
       refs.input.value = '';
-      const typing = addTyping();
+      const request = MatchAPI.architectAssistantSend(project._id, { text });
+      const myProject = project;
       try {
-        const res = await MatchAPI.architectAssistantSend(project._id, { text });
-        typing.remove();
-        addBot(res.reply);
+        if (orb) {
+          const res = await orb.think(request);
+          if (!res || project !== myProject) return;
+          const { body } = addBot(res.reply, true);
+          await orb.unfold(body.querySelector('.ai-bubble'));
+        } else {
+          const typing = addTyping();
+          try { const res = await request; typing.remove(); addBot(res.reply); }
+          catch (e) { typing.remove(); throw e; }
+        }
       } catch (err) {
-        typing.remove(); userEl.remove();
+        orb?.cancel();
+        userEl.remove();
         refs.input.value = text;
         showError(err.message || 'Não foi possível enviar agora.');
-      } finally { setBusy(false); refs.input.focus(); }
+      } finally { setBusy(false); refs.input.focus({ preventScroll: true }); }
     }
     refs.send.addEventListener('click', send);
 

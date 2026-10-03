@@ -62,8 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Foto de perfil — vira data URI (mesmo mecanismo já usado nas fotos de
   // portfólio), sem exigir um serviço de upload dedicado. Opcional.
+  // A foto é reduzida no navegador (≈ 320 px) antes de ir para o servidor.
   let avatarDataUri = '';
-  MatchExtras.setupFileInput('avatarFile', 'avatarPreview', (uri) => { avatarDataUri = uri; }, { isImage: true });
+  let avatarReady = Promise.resolve();
+  MatchExtras.setupFileInput('avatarFile', 'avatarPreview', (uri) => {
+    avatarDataUri = '';
+    const file = document.getElementById('avatarFile').files[0];
+    if (!uri || !file) { avatarReady = Promise.resolve(); return; }
+    avatarReady = MatchAPI.prepareAvatar(file).then((d) => { avatarDataUri = d; }).catch(() => { avatarDataUri = ''; });
+  }, { isImage: true });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -79,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    await avatarReady;
     const payload = {
       name: val('name'),
       email: val('email'),

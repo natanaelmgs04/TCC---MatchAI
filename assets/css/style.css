@@ -2911,3 +2911,25 @@ body::before {
 .closed-item div { display: grid; gap: 2px; }
 .closed-item strong { font-size: 0.94rem; }
 .closed-item span:not(.hire-chip) { font-size: 0.8rem; color: var(--ink-faint); }
+
+/* ---- Faixa de aviso da equipe (painel de gestão → Marca e site) ---- */
+.mi-announce {
+  position: fixed; left: 50%; bottom: 18px; z-index: 80; max-width: min(640px, calc(100vw - 32px));
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border-radius: 999px;
+  font-size: .84rem; color: var(--ink);
+  background: color-mix(in srgb, var(--white) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 16px 40px rgba(51, 51, 51, .16), inset 0 0 0 1px color-mix(in srgb, var(--terracotta) 30%, transparent);
+  translate: -50% 30px; opacity: 0; transition: opacity .4s var(--ease-out), translate .5s var(--ease-out);
+}
+.mi-announce.is-in { translate: -50% 0; opacity: 1; }
+.mi-announce.is-static { position: static; translate: none; opacity: 1; max-width: none; }
+.mi-announce-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--terracotta); box-shadow: 0 0 0 4px color-mix(in srgb, var(--terracotta) 22%, transparent); }
+.mi-announce[data-tone="success"] { box-shadow: 0 16px 40px rgba(51, 51, 51, .16), inset 0 0 0 1px color-mix(in srgb, var(--sage) 45%, transparent); }
+.mi-announce[data-tone="success"] .mi-announce-dot { background: var(--sage); box-shadow: 0 0 0 4px color-mix(in srgb, var(--sage) 25%, transparent); }
+.mi-announce[data-tone="warning"] { background: color-mix(in srgb, var(--bg-alt) 92%, transparent); }
+.mi-announce[data-tone="warning"] .mi-announce-dot { background: #c9963a; box-shadow: 0 0 0 4px rgba(201, 150, 58, .25); }
+.mi-announce a, .mi-announce b { font-weight: 700; color: var(--terracotta-dark); white-space: nowrap; }
+.mi-announce button { flex: none; width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--ink-soft); background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.mi-announce button:hover { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .mi-announce { transition: none; } }

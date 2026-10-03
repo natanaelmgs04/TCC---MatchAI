@@ -268,6 +268,7 @@ const MatchAssistant = (() => {
     paperclip: SVG('<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>', 18),
     command: SVG('<path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>', 18),
     send: SVG('<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>', 17),
+    arrowUp: SVG('<path d="M12 19V5"/><path d="M5.5 11.5L12 5l6.5 6.5"/>', 18),
   };
   const COMMANDS = [
     { prefix: '/estilo',    label: 'Descobrir meu estilo', icon: ICONS.style,     fill: 'Quero descobrir meu estilo de decoração. ' },
@@ -346,19 +347,23 @@ const MatchAssistant = (() => {
               <div class="ai-thread" data-ref="thread" role="log" aria-live="polite" aria-label="Conversa"></div>
               <div class="ai-compose">
                 <div class="ai-palette" data-ref="palette" role="listbox" aria-label="Comandos" hidden></div>
-                <textarea class="ai-input" data-ref="input" rows="1" maxlength="1500"
-                          placeholder="Conte o que você imagina para este projeto…" aria-label="Mensagem para o assistente"></textarea>
                 <p class="ai-error" data-ref="error" role="alert"></p>
                 <div class="ai-attachments" data-ref="attachments" aria-label="Fotos anexadas"></div>
-                <div class="ai-toolbar">
+                <!-- pílula do compositor: é ela que vira o orbe ao enviar (assets/js/morph-orb.js) -->
+                <div class="mo-pill" data-ref="pill">
+                  <span class="mo-pill-glow" aria-hidden="true"></span>
+                  <span class="mo-pill-aurora" aria-hidden="true"><i></i><i></i><i></i></span>
+                  <svg class="mo-spark" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5l1.7 4.8 4.8 1.7-4.8 1.7L10 16.5l-1.7-4.8L3.5 10l4.8-1.7L10 3.5z"/><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z"/></svg>
                   <div class="ai-tools">
                     <button type="button" class="ai-tool" data-ref="attach" aria-label="Anexar fotos do espaço" title="Anexar fotos do espaço">${ICONS.paperclip}</button>
                     <button type="button" class="ai-tool" data-ref="commands" aria-label="Abrir comandos" aria-expanded="false" title="Comandos (digite /)">${ICONS.command}</button>
                     <input type="file" data-ref="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
                   </div>
-                  <span class="ai-hint">Enter envia · Shift+Enter quebra a linha</span>
-                  <button type="button" class="ai-send" data-ref="send" disabled>${ICONS.send}<span>Enviar</span></button>
+                  <textarea class="ai-input" data-ref="input" rows="1" maxlength="1500"
+                            placeholder="Pergunte qualquer coisa sobre o projeto…" aria-label="Mensagem para o assistente"></textarea>
+                  <button type="button" class="ai-send" data-ref="send" aria-label="Enviar" disabled>${ICONS.arrowUp}</button>
                 </div>
+                <span class="ai-hint">Enter envia · Shift+Enter quebra a linha</span>
               </div>
 
               <!-- Escolha dos arquitetos que recebem o briefing -->
@@ -384,7 +389,7 @@ const MatchAssistant = (() => {
     const stage = host.querySelector('.ai-stage');
     const $ = (ref) => stage.querySelector(`[data-ref="${ref}"]`);
     const refs = Object.fromEntries(
-      ['pickerList', 'back', 'briefBtn', 'resetBtn', 'thread', 'palette', 'input', 'error', 'attachments', 'attach', 'commands', 'file', 'send', 'sheet', 'chips']
+      ['pickerList', 'back', 'briefBtn', 'resetBtn', 'thread', 'palette', 'input', 'error', 'attachments', 'attach', 'commands', 'file', 'send', 'sheet', 'chips', 'pill']
         .map((r) => [r, $(r)]),
     );
     const title = stage.querySelector('.ai-title');
@@ -403,6 +408,9 @@ const MatchAssistant = (() => {
     let loadToken = 0;
 
     // ---------- Vistas ----------
+    // orbe que pensa (assets/js/morph-orb.js); sem o script, cai no "digitando…"
+    const orb = typeof MorphOrb !== 'undefined' ? MorphOrb.attach(stage.querySelector('.ai-card'), { compose: refs.pill, thread: refs.thread }) : null;
+
     function setView(name) {
       Object.entries(views).forEach(([k, v]) => { v.hidden = k !== name; });
       stage.dataset.view = name; // o CSS do desktop muda o layout conforme a vista
@@ -485,14 +493,15 @@ const MatchAssistant = (() => {
       return card;
     }
 
-    function addBot(text, products) {
-      const m = el('div', 'ai-msg ai-msg--bot');
+    function addBot(text, products, pending) {
+      const m = el('div', 'ai-msg ai-msg--bot' + (pending ? ' mo-pending' : ''));
       const av = el('img', 'ai-avatar'); av.src = 'assets/img/mark.png'; av.alt = '';
       const body = el('div', 'ai-msg-body');
       if (text) body.append(el('div', 'ai-bubble', plain(text)));
       if (products && products.length) {
         const list = el('div', 'ai-products');
         products.forEach((p) => list.append(productCard(p)));
+        if (pending) list.classList.add('mo-extra');
         body.append(list);
       }
       m.append(av, body);
@@ -669,7 +678,7 @@ const MatchAssistant = (() => {
     }
 
     // ---------- Compositor ----------
-    const MIN_H = 60, MAX_H = 200;
+    const MIN_H = 44, MAX_H = 160;
     function autosize() {
       const input = refs.input;
       input.style.height = MIN_H + 'px';
@@ -769,21 +778,31 @@ const MatchAssistant = (() => {
       setBusy(true);
       const userEl = addUser(text, sending.map((p) => p.thumb));
       refs.input.value = ''; photos = []; renderPhotos(); autosize();
-      const typing = addTyping();
+      const request = MatchAPI.assistantSend(project._id, {
+        text,
+        images: sending.map(({ mime, data, thumb }) => ({ mime, data, thumb })),
+      });
+      const myProject = project;
       try {
-        const res = await MatchAPI.assistantSend(project._id, {
-          text,
-          images: sending.map(({ mime, data, thumb }) => ({ mime, data, thumb })),
-        });
-        typing.remove();
-        addBot(res.reply, res.products);
+        if (orb) {
+          // a pílula vira o orbe que pensa e se desdobra no balão da resposta
+          const res = await orb.think(request);
+          if (!res || project !== myProject) return;
+          const { body } = addBot(res.reply, res.products, true);
+          await orb.unfold(body.querySelector('.ai-bubble'), [...body.querySelectorAll('.mo-extra')]);
+        } else {
+          const typing = addTyping();
+          try { const res = await request; typing.remove(); addBot(res.reply, res.products); }
+          catch (e) { typing.remove(); throw e; }
+        }
         userTurns += 1;
       } catch (err) {
         // Falhou: devolve o texto e as fotos pro campo pra tentar de novo sem perder nada.
-        typing.remove(); userEl.remove();
+        orb?.cancel();
+        userEl.remove();
         refs.input.value = text; photos = sending; renderPhotos();
         showError(err.message || 'Não foi possível enviar agora.');
-      } finally { setBusy(false); refs.input.focus(); }
+      } finally { setBusy(false); refresh(); refs.input.focus({ preventScroll: true }); }
     }
     refs.send.addEventListener('click', send);
 
@@ -799,6 +818,7 @@ const MatchAssistant = (() => {
 
     // ---------- Abrir um projeto ----------
     async function openProject(p) {
+      if (busy) orb?.cancel();
       project = p; chat = null; photos = []; userTurns = 0;
       const token = ++loadToken;
       refs.thread.textContent = '';

@@ -26,7 +26,7 @@ export async function createReview(req, res) {
 
 export async function listReviewsForArchitect(req, res) {
   const reviews = await Review.find({ architect: req.params.architectId })
-    .populate("client", "name")
+    .populate("client", "name avatarVersion")
     .sort("-createdAt");
   const average = reviews.length
     ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) / 10

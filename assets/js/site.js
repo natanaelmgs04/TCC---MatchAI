@@ -413,6 +413,36 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(() => { heroStat.textContent = '95%'; });
   }
 
+  // Faixa de aviso da equipe (painel de gestão → "Marca e site"): um aviso
+  // discreto flutuando embaixo, que a pessoa pode fechar (lembra por aviso).
+  if (typeof MatchAPI !== 'undefined' && location.protocol.startsWith('http')) {
+    fetch(`${MatchAPI.base()}/site/config`).then((r) => (r.ok ? r.json() : null)).then((cfg) => {
+      const a = cfg?.announcement;
+      if (!a) return;
+      const key = `matchia_announce_${a.id}`;
+      try { if (localStorage.getItem(key)) return; } catch { /* sem armazenamento: mostra mesmo assim */ }
+      const bar = document.createElement('div');
+      bar.className = 'mi-announce';
+      bar.dataset.tone = a.tone;
+      bar.setAttribute('role', 'status');
+      const dot = document.createElement('span'); dot.className = 'mi-announce-dot';
+      const text = document.createElement('span'); text.textContent = a.text;
+      bar.append(dot, text);
+      if (a.link && /^(https:\/\/|\/|[\w-]+\.html)/.test(a.link)) {
+        const link = document.createElement('a'); link.href = a.link; link.textContent = 'Saiba mais →';
+        if (/^https:/.test(a.link)) { link.target = '_blank'; link.rel = 'noopener'; }
+        bar.append(link);
+      }
+      const close = document.createElement('button');
+      close.type = 'button'; close.setAttribute('aria-label', 'Fechar aviso'); close.textContent = '×';
+      close.addEventListener('click', () => { bar.classList.remove('is-in'); try { localStorage.setItem(key, '1'); } catch { /* ok */ } setTimeout(() => bar.remove(), 400); });
+      bar.append(close);
+      document.body.append(bar);
+      requestAnimationFrame(() => requestAnimationFrame(() => bar.classList.add('is-in')));
+      setTimeout(() => bar.classList.add('is-in'), 200);
+    }).catch(() => { /* aviso é opcional */ });
+  }
+
   // PWA: registra o service worker (só em http/https — 'file://' não suporta).
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('/sw.js').catch(() => { /* offline não é crítico */ });

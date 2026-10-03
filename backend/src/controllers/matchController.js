@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { avatarPath } from "../services/avatar.js";
 import Project from "../models/Project.js";
 import MatchHistory from "../models/MatchHistory.js";
 import Review from "../models/Review.js";
@@ -38,6 +39,7 @@ function shapeArchitect(architect, sameCity) {
   return {
     id: architect.id,
     name: architect.name,
+    avatar: avatarPath(architect),
     email: architect.email,
     phone: architect.phone,
     city: architect.city,
@@ -58,7 +60,7 @@ export async function runMatch(req, res) {
   // Antes essa query já excluía quem estava indisponível — o que impedia
   // qualquer categoria de "indisponível, mas compatível" existir. Agora
   // busca todo mundo e deixa a categorização decidir o que fazer com cada um.
-  const architects = await User.find({ role: "architect" });
+  const architects = await User.find({ role: "architect", status: { $ne: "suspended" } });
   const { main, unavailable, outOfRegion, outOfBudget, uncategorized } =
     categorizeProjectMatches(project, req.user, architects);
 
@@ -142,7 +144,7 @@ async function buildWellRatedBonus(uncategorized) {
 export async function listMatchHistory(req, res) {
   const history = await MatchHistory.find({ client: req.user.id })
     .populate("project", "name")
-    .populate("results.architect", "name city state")
+    .populate("results.architect", "name city state avatarVersion")
     .sort("-createdAt")
     .limit(20);
   res.json(history);

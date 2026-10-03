@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import User from "../models/User.js";
 import { welcomeEmail, passwordResetEmail, publicBaseUrl } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
+import { parseAvatar } from "../services/avatar.js";
 
 const hashToken = (raw) => crypto.createHash("sha256").update(raw).digest("hex");
 
@@ -11,13 +12,25 @@ const tokenFor = (user) =>
     expiresIn: "7d",
   });
 
-const common = (body) => ({
-  name: body.name,
-  email: body.email,
-  avatarUrl: body.avatarUrl,
-  bio: body.bio,
-  passwordHash: body.password,
-});
+// Foto opcional no cadastro: data URI reduzido no navegador (ou URL https,
+// usada pelo servidor MCP). Foto inválida é ignorada, sem travar o cadastro.
+function signupAvatar(raw) {
+  if (typeof raw === "string" && /^https:\/\/\S{1,500}$/.test(raw)) return raw;
+  const { value } = parseAvatar(raw ?? "");
+  return value || undefined;
+}
+
+const common = (body) => {
+  const avatarUrl = signupAvatar(body.avatarUrl);
+  return {
+    name: body.name,
+    email: body.email,
+    avatarUrl,
+    avatarVersion: avatarUrl ? Date.now() : undefined,
+    bio: body.bio,
+    passwordHash: body.password,
+  };
+};
 
 export async function register(req, res) {
   const role = req.params.role;
@@ -39,7 +52,7 @@ export async function register(req, res) {
     role === "architect"
       ? { bio: req.body.bio }
       : role === "store"
-        ? { storeName: req.body.storeName, description: req.body.bio, logoUrl: req.body.avatarUrl }
+        ? { storeName: req.body.storeName, description: req.body.bio }
         : {};
 
   let referrer = null;
@@ -74,6 +87,8 @@ export async function login(req, res) {
   }).select("+passwordHash");
   if (!user || !(await user.verifyPassword(req.body.password || "")))
     return res.status(401).json({ error: "Invalid email or password" });
+  if (user.status === "suspended")
+    return res.status(403).json({ error: "Sua conta está suspensa. Fale com a equipe match.IA." });
 
   res.json({
     token: tokenFor(user),

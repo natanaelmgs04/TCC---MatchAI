@@ -102,6 +102,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   pickHeroBackground();
   renderProfile(me);
   renderPlanCard(me);
+  // Ícones dos cabeçalhos de página/configurações declarados no HTML (data-dv-icon)
+  document.querySelectorAll('[data-dv-icon]').forEach((el) => { el.innerHTML = DashUI.icon(el.dataset.dvIcon, el.classList.contains('dv-head-ico') ? 22 : 18); });
+  // Home em bento: cada fonte de dados avisa quando chega (ver DashHome.collector)
+  const setHome = me.role === 'client'
+    ? DashHome.collector(document.getElementById('clientOverview'), ['projects', 'history', 'favorites', 'conversations', 'hires'], (root, d) => DashHome.client(root, d))
+    : me.role === 'architect'
+      ? DashHome.collector(document.getElementById('architectOverview'), ['hires', 'reviews', 'conversations'], (root, d) => DashHome.architect(root, d, me))
+      : () => {};
+  // Atalhos do bento (data-jump-tab) e dos estados vazios, em qualquer papel
+  document.querySelectorAll('.dash-app').forEach((app) => app.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-jump-tab]');
+    const tabsBar = app.querySelector('.profile-tabs');
+    if (btn && tabsBar?.querySelector(`[data-profile-panel="${btn.dataset.jumpTab}"]`)) activateProfileTab(tabsBar, app, btn.dataset.jumpTab);
+  }));
+  renderAccountCard(me);
+  setupAvatarUpload(me);
 
   if (me.role === 'client') {
     document.getElementById('clientPanel').style.display = '';
@@ -109,12 +125,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('roleLabel').textContent = 'Painel do cliente';
     document.getElementById('matchResults').addEventListener('click', (e) => handleResultClick(e, me));
     document.getElementById('matchExtraPanels').addEventListener('click', (e) => handleResultClick(e, me));
+    // Estado vazio da Compatibilidade: um botão "Rodar match" por projeto
+    document.getElementById('matchEmpty').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-run-match]');
+      if (btn) runMatch(me, btn.dataset.runMatch, btn);
+    });
     setupMatchTabs();
     setupProfileTabs('clientProfileTabs', 'clientPanel');
-    document.getElementById('clientOverview').addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-jump-tab]');
-      if (btn) activateProfileTab(document.getElementById('clientProfileTabs'), document.getElementById('clientPanel'), btn.dataset.jumpTab);
-    });
+    DashUI.decorateTabs(document.getElementById('clientProfileTabs'));
     document.getElementById('clientStatMatch').style.display = '';
     document.getElementById('clientStatFav').style.display = '';
     await loadFavoriteIds(me);
@@ -130,7 +148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupChat(me, 'clientConversationList', 'clientChatShell');
     renderProjects(me);
     setupProjects(me);
-    loadHires().then(() => renderProjectsGrid());
+    loadHires().then((hires) => { renderProjectsGrid(); setHome('hires', hires); });
     const clientTabs = document.getElementById('clientProfileTabs'), clientScope = document.getElementById('clientPanel');
     assistant = MatchAssistant.mount(document.getElementById('assistantMount'), {
       user: me,
@@ -153,12 +171,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     moveHeroIntoHome('architectHomePanel');
     document.getElementById('roleLabel').textContent = 'Painel do arquiteto';
     setupProfileTabs('architectProfileTabs', 'architectPanel');
+    DashUI.decorateTabs(document.getElementById('architectProfileTabs'));
+    DashUI.autoHeads(document.getElementById('architectPanel'), 'Painel do arquiteto');
     document.getElementById('architectStatRating').style.display = '';
     document.getElementById('architectStatPortfolio').style.display = '';
-    document.getElementById('architectOverview').addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-jump-tab]');
-      if (btn) activateProfileTab(document.getElementById('architectProfileTabs'), document.getElementById('architectPanel'), btn.dataset.jumpTab);
-    });
     renderOnboardingChecklist(me);
     renderPortfolio(me);
     setupPortfolioForm(me);
@@ -174,13 +190,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderCommissions();
     setupCaseStudies(me);
     renderCaseStudies(me);
-    renderArchitectStatsChart();
     ArchitectAssistant.mount(document.getElementById('architectAssistantMount'));
   } else {
     document.getElementById('storePanel').style.display = '';
     moveHeroIntoHome('storeHomePanel');
     document.getElementById('roleLabel').textContent = 'Painel da loja parceira';
     setupProfileTabs('storeProfileTabs', 'storePanel');
+    DashUI.decorateTabs(document.getElementById('storeProfileTabs'));
+    DashUI.autoHeads(document.getElementById('storePanel'), 'Painel da loja parceira');
     setupStoreProducts(me);
     renderStoreReferrals();
   }
@@ -215,7 +232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('profileEmail').textContent = user.email;
     document.getElementById('profileCity').textContent = user.city || '—';
     document.getElementById('profileState').textContent = user.state || '—';
-    document.getElementById('avatarInitials').textContent = user.name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase();
+    paintAvatar(document.getElementById('avatarInitials'), user);
 
     const row1 = document.getElementById('profileExtraRow1');
     const row2 = document.getElementById('profileExtraRow2');
@@ -287,15 +304,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   function setupProfileEdit(user) {
     const editBtn = document.getElementById('editProfileBtn');
     const editCard = document.getElementById('editCard');
+    const note = document.getElementById('saveProfileNote');
+    const fill = (u) => {
+      document.getElementById('editName').value = u.name;
+      document.getElementById('editCity').value = u.city || '';
+      document.getElementById('editState').value = u.state || '';
+    };
+    fill(user);
     editBtn.addEventListener('click', () => {
       goToAccountTab(user);
-      editCard.style.display = 'block';
-      document.getElementById('editName').value = user.name;
-      document.getElementById('editCity').value = user.city || '';
-      document.getElementById('editState').value = user.state || '';
       editCard.scrollIntoView({ behavior: SCROLL_BEHAVIOR, block: 'start' });
+      document.getElementById('editName').focus({ preventScroll: true });
     });
-    document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    document.getElementById('saveProfileBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      note.textContent = '';
       try {
         const updated = await MatchAPI.updateMe({
           name: document.getElementById('editName').value.trim(),
@@ -303,12 +327,90 @@ document.addEventListener('DOMContentLoaded', async () => {
           state: document.getElementById('editState').value.trim().toUpperCase(),
         });
         MatchAPI.setSession(MatchAPI.token(), { id: updated.id || updated._id, name: updated.name, role: updated.role });
+        Object.assign(user, { name: updated.name, city: updated.city, state: updated.state });
         renderProfile(updated);
-        editCard.style.display = 'none';
+        renderAccountCard(user);
+        fill(updated);
+        note.textContent = '✓ Alterações salvas';
+        setTimeout(() => { note.textContent = ''; }, 2400);
       } catch (err) {
         alert(err.message || 'Não foi possível salvar as alterações.');
+      } finally {
+        btn.disabled = false;
       }
     });
+  }
+
+  /** Foto da pessoa (ou as iniciais, sem foto) dentro de um círculo de avatar. */
+  function paintAvatar(el, user) {
+    if (!el) return;
+    if (user.avatar) {
+      el.innerHTML = `<img src="${escapeHtml(MatchAPI.avatarSrc(user.avatar))}" alt="">`;
+      el.classList.add('has-photo');
+    } else {
+      el.textContent = DashUI.initials(user.name);
+      el.classList.remove('has-photo');
+    }
+  }
+
+  // Trocar/remover a foto de perfil (reduzida no navegador antes de enviar)
+  function setupAvatarUpload(user) {
+    const input = document.getElementById('avatarInput');
+    const remove = document.getElementById('removeAvatarBtn');
+    const note = document.getElementById('avatarNote');
+    const apply = (updated) => {
+      user.avatar = updated.avatar;
+      paintAvatar(document.getElementById('avatarInitials'), user);
+      paintAvatar(document.getElementById('accountAvatar'), user);
+      remove.hidden = !user.avatar;
+    };
+    remove.hidden = !user.avatar;
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      input.value = '';
+      if (!file) return;
+      note.textContent = 'Enviando foto…';
+      try {
+        const avatarUrl = await MatchAPI.prepareAvatar(file);
+        apply(await MatchAPI.updateMe({ avatarUrl }));
+        note.textContent = '✓ Foto atualizada';
+      } catch (err) {
+        note.textContent = err.message || 'Não foi possível enviar a foto.';
+      }
+    });
+    remove.addEventListener('click', async () => {
+      if (!confirm('Remover sua foto de perfil?')) return;
+      try {
+        apply(await MatchAPI.updateMe({ avatarUrl: '' }));
+        note.textContent = 'Foto removida';
+      } catch (err) {
+        note.textContent = err.message || 'Não foi possível remover a foto.';
+      }
+    });
+  }
+
+  /** Cartão de identidade da aba Conta (avatar, papel e fatos do perfil). */
+  function renderAccountCard(user) {
+    const roleLabel = { client: 'Cliente', architect: 'Arquiteto', store: 'Loja parceira' }[user.role] || 'Conta';
+    paintAvatar(document.getElementById('accountAvatar'), user);
+    document.getElementById('accountName').textContent = user.name;
+    document.getElementById('accountEmail').textContent = user.email;
+    document.getElementById('accountRole').textContent = roleLabel;
+    document.getElementById('contaEyebrow').textContent = `Painel do ${roleLabel.toLowerCase()}`.replace('do loja parceira', 'da loja parceira');
+    const place = [user.city, user.state].filter(Boolean).join(' / ') || 'Não informado';
+    const since = user.createdAt ? new Date(user.createdAt).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) : '';
+    const facts = [{ icon: 'pin', label: 'Local', value: place }];
+    if (since) facts.push({ icon: 'clock', label: 'Membro desde', value: since });
+    if (user.role === 'client') {
+      facts.push({ icon: 'wallet', label: 'Orçamento', value: formatBudget(user.clientProfile?.budget) });
+      facts.push({ icon: 'bolt', label: 'Buscas bônus', value: String(user.clientProfile?.bonusMatches || 0) });
+    } else if (user.role === 'architect') {
+      const tier = user.architectProfile?.subscriptionTier === 'pro' ? 'Pro' : 'Gratuito';
+      facts.push({ icon: 'bolt', label: 'Plano', value: tier });
+      facts.push({ icon: 'portfolio', label: 'Portfólio', value: String((user.architectProfile?.portfolio || []).length) });
+    }
+    document.getElementById('accountFacts').innerHTML = facts.map((f) =>
+      `<li>${DashUI.icon(f.icon, 16)}<span>${f.label}</span><b>${escapeHtml(f.value)}</b></li>`).join('');
   }
 
   // ---------------- Privacidade / LGPD ----------------
@@ -421,63 +523,85 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     renderHeroProjects();
     renderProjectsGrid(user);
-    renderStatusChart('clientStatsChart', myProjects);
+    setHome('projects', myProjects);
+    renderMatchEmpty();
+  }
+
+  function renderMatchEmpty() {
+    const empty = document.getElementById('matchEmpty');
+    if (!empty || lastResults.length) return;
+    empty.className = 'dash-card dv-match-empty';
+    empty.innerHTML = myProjects.length
+      ? `<span class="dv-empty-rule"></span>
+         <h3>Escolha um projeto para rodar o match</h3>
+         <p>A IA compara o projeto com o portfólio dos arquitetos e explica a pontuação de cada um.</p>
+         <div class="dv-run-list">${myProjects.map((p) => `<button type="button" class="dv-run" data-run-match="${p._id}">${DashUI.icon('match', 16)}<span><strong>${escapeHtml(p.name)}</strong><em>${escapeHtml([p.propertyType, (p.preferredStyles || []).slice(0, 2).join(', ')].filter(Boolean).join(' · ') || 'Projeto')}</em></span>${DashUI.icon('arrow', 14)}</button>`).join('')}</div>`
+      : `<span class="dv-empty-rule"></span><h3>Crie um projeto primeiro</h3><p>O match é feito a partir de um projeto: estilo, metragem, orçamento e local.</p><a class="btn btn-primary btn-sm" href="novo-projeto.html">+ Novo projeto</a>`;
   }
 
   // Grade "Seus projetos" dentro da própria aba (além da gaveta de sempre) —
   // mostra TODOS os projetos de uma vez, não só os 3 da estante do hero, e é
   // daqui que o match é rodado para um projeto específico (não existe mais
   // um botão genérico de "rodar match" fora daqui).
+  // Grade com foto (miniatura do primeiro estilo do projeto), status,
+  // metragem/orçamento/local e a trilha de etapas; o último card cria um novo.
+  const STATUS_ORDER = ['draft', 'matching', 'in_progress', 'completed'];
   function renderProjectsGrid() {
     const grid = document.getElementById('clientProjectsGrid');
     if (!grid) return;
-    if (!myProjects.length) {
-      grid.innerHTML = '';
-      return;
-    }
-    grid.innerHTML = myProjects.map((p) => `
-      <div class="dash-project-card" role="button" tabindex="0" data-project-id="${p._id}">
-        <strong>${p.name}</strong>
-        <span>${[STATUS_LABEL_PT[p.status] || 'Rascunho', p.propertyType].filter(Boolean).join(' · ')}</span>
-        <span class="tag">${p.areaM2 ? `${p.areaM2} m²` : 'Metragem não informada'}</span>
-        ${hireLabelForProject(p._id)}
-        <button type="button" class="dash-project-card-run" data-run-match="${p._id}">Rodar match com IA</button>
-      </div>`).join('');
+    renderProjectsKpis();
+    const newCard = `
+      <a class="dash-project-card dv-proj-new" href="novo-projeto.html">
+        <span><span class="dv-plus">${DashUI.icon('plus', 22)}</span><strong>Novo projeto</strong><br><span style="font-size:.8rem;color:var(--ink-faint);">Estilo, metragem e prioridades em poucos passos</span></span>
+      </a>`;
+    if (!myProjects.length) { grid.innerHTML = newCard; return; }
+    grid.innerHTML = myProjects.map((p) => {
+      const status = DashHome.STATUS.find((st) => st.key === (p.status || 'draft')) || DashHome.STATUS[0];
+      const step = STATUS_ORDER.indexOf(status.key);
+      const thumb = PROJECT_STYLE_THUMBS[(p.preferredStyles || [])[0]] || HERO_BACKGROUNDS[0];
+      const budget = formatBudget(p.budget);
+      const where = [p.city, p.state].filter(Boolean).join(' / ');
+      return `
+      <div class="dash-project-card dv-proj" role="button" tabindex="0" data-project-id="${p._id}">
+        <div class="dv-proj-media">
+          <img src="${thumb}" alt="" loading="lazy">
+          <span class="dv-status" style="--c:${status.color}"><i></i>${status.label}</span>
+          <span class="dv-proj-styles">${(p.preferredStyles || []).slice(0, 3).map((st) => `<span>${escapeHtml(st)}</span>`).join('')}</span>
+        </div>
+        <div class="dv-proj-body">
+          <strong class="dv-proj-name">${escapeHtml(p.name)}</strong>
+          <div class="dv-proj-meta">
+            <span>${DashUI.icon('building', 14)}<em>${escapeHtml(p.propertyType || 'Tipo não informado')}</em></span>
+            <span>${DashUI.icon('ruler', 14)}<em>${p.areaM2 ? `${p.areaM2} m²` : 'Metragem —'}</em></span>
+            <span>${DashUI.icon('wallet', 14)}<em>${budget !== '—' ? budget : 'Orçamento —'}</em></span>
+            <span>${DashUI.icon('pin', 14)}<em>${escapeHtml(where || 'Local —')}</em></span>
+          </div>
+          <div class="dv-track" aria-hidden="true">${STATUS_ORDER.map((_, i) => `<span class="${i <= step ? 'is-on' : ''}"></span>`).join('')}</div>
+          <span class="dv-track-label">Etapa ${step + 1} de 4 · ${status.label}</span>
+          ${hireLabelForProject(p._id)}
+          <div class="dv-proj-foot">
+            <button type="button" class="dash-project-card-run" data-run-match="${p._id}">${DashUI.icon('match', 14)} Rodar match</button>
+            <span class="dv-proj-open">Abrir ${DashUI.icon('arrow', 13)}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('') + newCard;
   }
 
-  const STATUS_LABEL_PT = { draft: 'Rascunho', matching: 'Buscando arquiteto', in_progress: 'Em andamento', completed: 'Concluído' };
-  const STATUS_CHART_COLORS = { draft: '#C9BBA8', matching: '#B0755A', in_progress: '#7B8E7E', completed: '#5B6B5D' };
-  const chartInstances = {};
-
-  // Gráfico simples (doughnut) de projetos por status — mesmos dados que já
-  // carregam a estante/gaveta de projetos, sem precisar de outra chamada à API.
-  function renderStatusChart(canvasId, projects) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas || typeof Chart === 'undefined') return;
-    const counts = {};
-    projects.forEach((p) => { counts[p.status || 'draft'] = (counts[p.status || 'draft'] || 0) + 1; });
-    const labels = Object.keys(counts);
-    const empty = document.getElementById(canvasId.replace('Chart', 'Empty'));
-    chartInstances[canvasId]?.destroy();
-    if (empty) empty.hidden = Boolean(labels.length);
-    canvas.style.display = labels.length ? '' : 'none';
-    if (!labels.length) return;
-    chartInstances[canvasId] = new Chart(canvas, {
-      type: 'doughnut',
-      data: {
-        labels: labels.map((k) => STATUS_LABEL_PT[k] || k),
-        datasets: [{
-          data: labels.map((k) => counts[k]),
-          backgroundColor: labels.map((k) => STATUS_CHART_COLORS[k] || '#B0755A'),
-          borderWidth: 0,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
-      },
-    });
+  function renderProjectsKpis() {
+    const el = document.getElementById('projectsKpis');
+    if (!el) return;
+    const area = myProjects.reduce((sum, p) => sum + (Number(p.areaM2) || 0), 0);
+    const active = myProjects.filter((p) => ['matching', 'in_progress'].includes(p.status)).length;
+    const budgets = myProjects.map((p) => p.budget).filter((b) => b && (b.min || b.max)).map((b) => ((b.min || b.max) + (b.max || b.min)) / 2);
+    const avgBudget = budgets.length ? budgets.reduce((a, b) => a + b, 0) / budgets.length : 0;
+    el.innerHTML = DashUI.kpiStrip([
+      { icon: 'projeto', label: 'projetos', value: myProjects.length, count: myProjects.length },
+      { icon: 'bolt', label: 'ativos agora', value: active, count: active },
+      { icon: 'ruler', label: 'm² somados', value: area, count: area },
+      { icon: 'wallet', label: 'orçamento médio', value: avgBudget ? DashUI.compactMoney(avgBudget) : '—' },
+    ]);
+    DashUI.animateNumbers(el);
   }
 
   // "Meus projetos" na estante do hero -- sempre visível ao carregar o
@@ -634,12 +758,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="tag-row" style="flex-direction:column; align-items:stretch; gap:8px;">
             ${products.map(p => `
               <div class="material-card spotlight" style="padding:12px; display:flex; gap:10px; align-items:center;">
-                ${p.photo ? `<img src="${p.photo}" alt="" style="width:48px; height:48px; object-fit:cover; border-radius:8px; flex-shrink:0;">` : ''}
+                ${/^https?:\/\//i.test(p.photo || '') ? `<img src="${escapeHtml(p.photo)}" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:48px; height:48px; object-fit:cover; border-radius:8px; flex-shrink:0;">` : ''}
                 <div style="flex:1; min-width:0;">
-                  <strong style="font-size:0.86rem;">${p.name}</strong>
-                  <p style="font-size:0.76rem; color:var(--ink-faint); margin:2px 0;">${p.storeName || 'Loja parceira'}${p.price ? ` — R$${p.price}` : ''}</p>
+                  <strong style="font-size:0.86rem;">${escapeHtml(p.name)}</strong>
+                  <p style="font-size:0.76rem; color:var(--ink-faint); margin:2px 0;">${escapeHtml(p.storeName || 'Loja parceira')}${p.price ? ` — ${Number(p.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}</p>
                 </div>
-                <button type="button" class="btn btn-secondary btn-sm" data-simulate-buy="${p.id}">Simular compra</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-simulate-buy="${escapeHtml(p.id)}">Simular compra</button>
               </div>`).join('')}
           </div>
         </div>`;
@@ -783,27 +907,79 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch { /* offline: só não pré-marca os botões de salvar, sem travar o painel */ }
   }
 
+  /** KPIs e "estilos mais salvos" da aba Favoritos. */
+  function renderFavoritesInsights(favorites) {
+    const kpis = document.getElementById('favoritesKpis');
+    const aside = document.getElementById('favoritesInsights');
+    const styleCount = new Map(), cityCount = new Map();
+    favorites.forEach((f) => {
+      (f.profile?.styles || []).forEach((st) => styleCount.set(st, (styleCount.get(st) || 0) + 1));
+      if (f.city) cityCount.set(f.city, (cityCount.get(f.city) || 0) + 1);
+    });
+    const topStyles = [...styleCount].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topCities = [...cityCount].sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const thisMonth = favorites.filter((f) => f.favoritedAt && Date.now() - new Date(f.favoritedAt) < 30 * 864e5).length;
+    if (kpis) {
+      kpis.innerHTML = DashUI.kpiStrip([
+        { icon: 'favoritos', label: 'arquitetos salvos', value: favorites.length, count: favorites.length },
+        { icon: 'pin', label: 'cidades diferentes', value: cityCount.size, count: cityCount.size },
+        { icon: 'assistente', label: 'estilo mais salvo', value: topStyles[0]?.[0] || '—' },
+        { icon: 'clock', label: 'salvos nos últimos 30 dias', value: thisMonth, count: thisMonth },
+      ]);
+      DashUI.animateNumbers(kpis);
+    }
+    if (!aside) return;
+    aside.hidden = !favorites.length;
+    if (!favorites.length) return;
+    aside.innerHTML = `
+      <h3>O que você mais salva</h3>
+      <p class="card-lead">Os estilos e as cidades que se repetem nos seus favoritos.</p>
+      <div class="dv-aside-sub">Estilos</div>
+      ${topStyles.length ? DashUI.hbars(topStyles.map(([label, value]) => ({ label, value }))) : '<p class="card-lead">Sem estilos informados.</p>'}
+      <div class="dv-aside-sub">Cidades</div>
+      ${topCities.length ? DashUI.hbars(topCities.map(([label, value]) => ({ label, value }))) : '<p class="card-lead">Sem cidades informadas.</p>'}`;
+    requestAnimationFrame(() => aside.classList.add('is-in'));
+  }
+
   async function renderFavorites(user) {
     const list = document.getElementById('favoritesList');
     if (!list) return;
     try {
       const favorites = await MatchAPI.favorites();
+      setHome('favorites', favorites);
       document.getElementById('statFavCount').textContent = favorites.length;
       const overviewFavCount = document.getElementById('overviewFavCount');
       if (overviewFavCount) overviewFavCount.textContent = favorites.length;
+      renderFavoritesInsights(favorites);
       if (!favorites.length) {
-        list.innerHTML = emptyStateHtml('Nenhum arquiteto salvo ainda. Use o botão "Salvar para depois" nos resultados do match.');
+        list.innerHTML = `<div class="dash-card">${emptyStateHtml('Nenhum arquiteto salvo ainda. Use o botão "Salvar para depois" nos resultados do match.', '<button type="button" class="btn btn-primary btn-sm" data-jump-tab="match">Ver compatibilidade</button>')}</div>`;
         return;
       }
-      list.innerHTML = favorites.map(a => `
-        <div class="favorite-item">
-          <div>
-            <h4 style="margin:0;"><a href="arquiteto.html?id=${a.id}" style="color:inherit;">${escapeHtml(a.name)}</a></h4>
-            <div class="muted">${[a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada'}</div>
-            <div class="tag-row" style="margin-top:6px;">${(a.profile?.styles || []).slice(0, 4).map(s => `<span class="tag">${s}</span>`).join('')}</div>
+      list.innerHTML = `<div class="dv-fav-grid">${favorites.map(a => `
+        <article class="dv-fav">
+          <div class="dv-fav-photo">
+            <img src="${a.avatar ? MatchAPI.avatarSrc(a.avatar) : typeof MatchPortraits !== 'undefined' ? MatchPortraits.pick(a.id, a.name).photo : HERO_BACKGROUNDS[0]}" alt="" loading="lazy">
+            <button type="button" class="dv-fav-heart" data-remove-favorite="${a.id}" aria-label="Remover ${escapeHtml(a.name)} dos favoritos" title="Remover dos favoritos">${DashUI.icon('favoritos', 17)}</button>
+            <div class="dv-fav-name"><strong>${escapeHtml(a.name)}</strong><span>${DashUI.icon('pin', 12)}${escapeHtml([a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada')}</span></div>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" data-remove-favorite="${a.id}">Remover</button>
-        </div>`).join('');
+          <div class="dv-fav-body">
+            <div class="tag-row">${(a.profile?.styles || []).slice(0, 3).map(st => `<span class="tag">${escapeHtml(st)}</span>`).join('') || '<span class="tag">Estilos não informados</span>'}</div>
+            ${a.favoritedAt ? `<span style="font-size:.72rem;color:var(--ink-faint);">Salvo ${DashUI.timeAgo(a.favoritedAt)}</span>` : ''}
+            <div class="dv-fav-actions">
+              <a class="btn btn-secondary btn-sm" href="arquiteto.html?id=${a.id}">Ver perfil</a>
+              <button type="button" class="btn btn-primary btn-sm" data-fav-chat="${a.id}" data-fav-chat-name="${escapeHtml(a.name)}">Mensagem</button>
+            </div>
+          </div>
+        </article>`).join('')}</div>`;
+      if (!list.dataset.chatBound) {
+        list.dataset.chatBound = '1';
+        list.addEventListener('click', (e) => {
+          const chat = e.target.closest('[data-fav-chat]');
+          if (!chat) return;
+          activateProfileTab(document.getElementById('clientProfileTabs'), document.getElementById('clientPanel'), 'mensagens');
+          openConversation(chat.dataset.favChat, chat.dataset.favChatName, 'clientChatShell', user);
+        });
+      }
       list.querySelectorAll('[data-remove-favorite]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const archId = btn.dataset.removeFavorite;
@@ -823,6 +999,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       });
     } catch (err) {
+      setHome('favorites', []);
       list.innerHTML = `<p style="font-size:0.86rem; color:var(--ink-faint);">${err.message || 'Não foi possível carregar seus favoritos agora.'}</p>`;
     }
   }
@@ -1295,7 +1472,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           ${hireRow(r.architect.id)}
         </div>
-        <div class="result-score"><strong>${r.score}</strong><span>pontos</span></div>`;
+        <div class="result-score">${DashUI.scoreRing(r.score)}<span>compatível</span></div>`;
   }
 
   /** Categorias extras (indisponível/fora da região/fora do orçamento/bem
@@ -1368,7 +1545,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     scope.querySelectorAll('[data-profile-panel-content]').forEach(panel => {
       panel.hidden = panel.dataset.profilePanelContent !== key;
     });
-    document.getElementById('contaPanel').hidden = key !== 'conta';
+    // "Conta" é um bloco só, compartilhado pelos papéis: entra na coluna de
+    // conteúdo do papel atual (ao lado do menu), não abaixo dele.
+    const conta = document.getElementById('contaPanel');
+    const main = scope.querySelector('.dash-main');
+    if (main && conta.parentElement !== main) main.appendChild(conta);
+    conta.hidden = key !== 'conta';
   }
 
   /** Troca pra aba "Conta" (compartilhada) de qualquer papel e mostra o
@@ -1460,6 +1642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       list.innerHTML = results.map((r, i) =>
         `<div class="result-card" style="grid-template-columns:auto 1fr auto; align-items:start;">${resultCardHtml(r, i, user)}</div>`
       ).join('');
+      renderMatchKpis(results, matchHistoryCache.length + 1);
       document.getElementById('compareBtn').style.display = results.length > 1 ? '' : 'none';
       document.getElementById('exportMatchPdfBtn').style.display = results.length ? '' : 'none';
       loadHires().then(renderHireRows);
@@ -1643,10 +1826,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------------- Produtos da loja parceira (drawer) ----------------
   let myStoreProducts = [];
 
+  // Nomes, fotos e links podem vir do site da loja (importação): sempre escapados.
+  const brl = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const safeHttp = (u) => (/^https?:\/\//i.test(String(u || '')) ? String(u) : '');
+
   function productDrawerCardHtml(p) {
     return `
-      <h4>${p.name}</h4>
-      <div class="drawer-item-meta">${[p.category, (p.styles || []).join(', '), p.price ? `R$${p.price}` : ''].filter(Boolean).join(' · ')}</div>`;
+      <h4>${escapeHtml(p.name)}</h4>
+      <div class="drawer-item-meta">${[p.source === 'import' ? 'Importado' : '', p.category, (p.styles || []).join(', '), p.price ? brl(p.price) : ''].filter(Boolean).map(escapeHtml).join(' · ')}</div>`;
+  }
+
+  function productTileHtml(p) {
+    const photo = safeHttp(p.photo);
+    const url = safeHttp(p.purchaseUrl);
+    const tag = url ? 'a' : 'div';
+    const attrs = url ? ` href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer"` : '';
+    return `
+      <${tag} class="dv-prod"${attrs}>
+        <span class="dv-prod-img">${photo ? `<img src="${escapeHtml(photo)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : DashUI.icon('produtos', 22)}</span>
+        <span class="dv-prod-body">
+          <span class="dv-prod-name">${escapeHtml(p.name)}</span>
+          ${p.category ? `<span class="dv-prod-meta">${escapeHtml(p.category)}</span>` : ''}
+          ${p.price ? `<span class="dv-prod-price">${brl(p.price)}</span>` : ''}
+        </span>
+      </${tag}>`;
   }
 
   async function renderStoreProducts() {
@@ -1655,6 +1858,104 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch {
       myStoreProducts = [];
     }
+    const grid = document.getElementById('storeProductsGrid');
+    const lead = document.getElementById('storeProductsLead');
+    if (!grid) return;
+    const total = myStoreProducts.length;
+    if (lead) {
+      lead.textContent = total
+        ? `${total} ${total === 1 ? 'produto' : 'produtos'} no catálogo. Edite estilos, preço e foto, ou cadastre um produto à mão.`
+        : 'Nenhum produto ainda. Importe do seu site acima ou cadastre à mão.';
+    }
+    const shown = myStoreProducts.slice(0, 12);
+    grid.innerHTML = shown.map(productTileHtml).join('')
+      + (total > shown.length ? `<p class="dv-products-more">+ ${total - shown.length} produtos. Abra "Ver e editar produtos" para ver todos.</p>` : '');
+  }
+
+  // ---------------- Importar catálogo do site da loja ----------------
+  function setupCatalogImport() {
+    const form = document.getElementById('catalogImportForm');
+    if (!form) return;
+    const input = document.getElementById('catalogUrl');
+    const btn = document.getElementById('catalogImportBtn');
+    const status = document.getElementById('catalogStatus');
+    const sample = document.getElementById('catalogSample');
+    let current = null;
+
+    const when = (d) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+    function paintStatus(info, result) {
+      current = info;
+      status.className = 'dv-import-status';
+      if (!info?.catalogUrl) { status.innerHTML = ''; return; }
+      status.classList.add('is-ok');
+      const label = result ? result.platformLabel : info.platformLabel;
+      const count = result ? result.total : info.imported;
+      const detail = result
+        ? `${result.created} novos · ${result.updated} atualizados${result.removed ? ` · ${result.removed} saíram do site e foram removidos` : ''}`
+        : `Última sincronização: ${info.syncedAt ? when(info.syncedAt) : '—'}`;
+      status.innerHTML = `
+        <span class="dv-import-msg"><strong>${count} ${count === 1 ? 'produto importado' : 'produtos importados'}</strong>${label ? ` via ${escapeHtml(label)}` : ''}.<small>${escapeHtml(detail)} · ${escapeHtml(info.catalogUrl)}</small></span>
+        <span class="dv-import-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-catalog="sync">Sincronizar de novo</button>
+          <button type="button" class="dv-import-clear" data-catalog="clear">Remover importados</button>
+        </span>`;
+    }
+
+    async function run(url) {
+      btn.disabled = true;
+      input.disabled = true;
+      btn.textContent = 'Importando…';
+      sample.innerHTML = '';
+      status.className = 'dv-import-status';
+      status.innerHTML = '<span class="dv-import-msg"><strong>Lendo o catálogo da sua loja…</strong><small>Identificamos a plataforma e trazemos os produtos. Pode levar até um minuto.</small></span><span class="dv-import-progress" aria-hidden="true"></span>';
+      try {
+        const result = await MatchAPI.importStoreCatalog(url);
+        const catalogUrl = result.catalogUrl || url;
+        input.value = catalogUrl;
+        paintStatus({ catalogUrl, imported: result.total, platformLabel: result.platformLabel, syncedAt: new Date() }, result);
+        sample.innerHTML = (result.sample || []).map(productTileHtml).join('');
+        await renderStoreProducts();
+      } catch (err) {
+        status.className = 'dv-import-status is-error';
+        status.innerHTML = `<span class="dv-import-msg">${escapeHtml(err.message || 'Não foi possível importar agora.')}</span>`;
+      } finally {
+        btn.disabled = false;
+        input.disabled = false;
+        btn.textContent = 'Importar produtos';
+      }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const url = input.value.trim();
+      if (!url) { input.focus(); return; }
+      run(url);
+    });
+
+    status.addEventListener('click', async (e) => {
+      const action = e.target.closest('[data-catalog]')?.dataset.catalog;
+      if (!action || !current) return;
+      if (action === 'sync') run(current.catalogUrl);
+      if (action === 'clear') {
+        if (!confirm('Remover todos os produtos importados do site? Os cadastrados à mão continuam.')) return;
+        try {
+          await MatchAPI.clearStoreCatalog();
+          paintStatus(null);
+          sample.innerHTML = '';
+          await renderStoreProducts();
+        } catch (err) {
+          alert(err.message || 'Não foi possível remover agora.');
+        }
+      }
+    });
+
+    MatchAPI.storeCatalog()
+      .then((info) => {
+        if (info?.catalogUrl) input.value = info.catalogUrl;
+        paintStatus(info);
+      })
+      .catch(() => {});
   }
 
   function renderProductDetail(product, container, { back }) {
@@ -1737,11 +2038,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function setupStoreProducts(user) {
     renderStoreProducts();
+    setupCatalogImport();
     document.getElementById('openProductsDrawerBtn').addEventListener('click', () => {
       ProjectDrawer.open({
         title: 'Meus produtos',
         newLabel: '+ Novo produto',
-        emptyLabel: 'Você ainda não cadastrou nenhum produto.',
+        emptyLabel: 'Você ainda não tem produtos. Importe do seu site ou cadastre um à mão.',
         items: () => myStoreProducts,
         idOf: (p) => p._id,
         cardHtml: productDrawerCardHtml,
@@ -1909,28 +2211,51 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ---------------- Histórico de buscas ----------------
+  let matchHistoryCache = [];
+  /** Faixa de números da aba Compatibilidade (último match rodado). */
+  function renderMatchKpis(results, searches) {
+    const el = document.getElementById('matchKpis');
+    if (!el) return;
+    const scores = results.map((r) => Math.min(100, r.score));
+    const best = scores.length ? Math.max(...scores) : 0;
+    const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    el.innerHTML = DashUI.kpiStrip([
+      { icon: 'building', label: 'arquitetos no último match', value: results.length, count: results.length },
+      { icon: 'match', label: 'melhor compatibilidade', value: scores.length ? `${Math.round(best)}%` : '—', count: scores.length ? Math.round(best) : null, suffix: '%' },
+      { icon: 'metricas', label: 'compatibilidade média', value: scores.length ? `${Math.round(avg)}%` : '—', count: scores.length ? Math.round(avg) : null, suffix: '%' },
+      { icon: 'clock', label: 'buscas feitas', value: searches ?? matchHistoryCache.length, count: searches ?? matchHistoryCache.length },
+    ]);
+    DashUI.animateNumbers(el);
+  }
+
   async function renderMatchHistory(user) {
     const container = document.getElementById('matchHistoryList');
     try {
       const history = await MatchAPI.matchHistory();
+      matchHistoryCache = history;
+      setHome('history', history);
       document.getElementById('statMatchCount').textContent = history.length;
       const overviewMatchCount = document.getElementById('overviewMatchCount');
       if (overviewMatchCount) overviewMatchCount.textContent = history.length;
+      if (!lastResults.length) renderMatchKpis(history[0]?.results || [], history.length);
       if (!history.length) {
-        container.innerHTML = emptyStateHtml('Nenhuma busca registrada ainda — clique em "Rodar match com IA" no topo da página.');
+        container.innerHTML = emptyStateHtml('Nenhuma busca registrada ainda. Em "Seus projetos", clique em "Rodar match" num projeto.');
         return;
       }
-      container.innerHTML = history.map(h => `
-        <div style="padding:12px 0; border-bottom:1px dashed var(--line);">
-          <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-            <strong style="font-size:0.9rem;">${h.project ? h.project.name : 'Perfil principal'}</strong>
-            <span style="font-size:0.78rem; color:var(--ink-faint);">${new Date(h.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+      container.innerHTML = `<ol class="dv-hist is-in">${history.map(h => {
+        const results = h.results.slice().sort((a, b) => b.score - a.score).slice(0, 4);
+        return `
+        <li>
+          <div class="dv-hist-top">
+            <strong>${escapeHtml(h.project ? h.project.name : 'Perfil principal')}</strong>
+            <time datetime="${h.createdAt}">${DashUI.timeAgo(h.createdAt)} · ${h.results.length} resultado${h.results.length === 1 ? '' : 's'}</time>
           </div>
-          <div class="tag-row" style="margin-top:6px;">
-            ${h.results.map(r => `<span class="tag">${r.architect?.name || 'Arquiteto removido'} · ${r.score}pts</span>`).join('') || '<span style="font-size:0.8rem; color:var(--ink-faint);">Nenhum resultado nessa busca.</span>'}
-          </div>
-        </div>`).join('');
+          ${results.length ? DashUI.hbars(results.map(r => ({ label: r.architect?.name || 'Arquiteto removido', value: Math.min(100, r.score), display: `${Math.min(100, Math.round(r.score))}%` })), { max: 100 })
+            : '<span style="font-size:0.8rem; color:var(--ink-faint);">Nenhum resultado nessa busca.</span>'}
+        </li>`;
+      }).join('')}</ol>`;
     } catch (err) {
+      setHome('history', []);
       container.innerHTML = `<p style="font-size:0.86rem; color:var(--ink-faint);">${err.message || 'Não foi possível carregar o histórico.'}</p>`;
     }
   }
@@ -2025,9 +2350,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!reqList || !closedList) return;
     let hires;
     try { hires = await MatchAPI.hires(); } catch (err) {
+      setHome('hires', []);
       reqList.innerHTML = closedList.innerHTML = `<p class="hire-empty">${escapeHtml(err.message || 'Não foi possível carregar as contratações agora.')}</p>`;
       return;
     }
+    setHome('hires', hires);
     const pending = hires.filter(h => h.status === 'pending');
     const closed = hires.filter(h => h.status === 'accepted');
     const overview = document.getElementById('overviewCommissionCount');
@@ -2202,6 +2529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('architectReviews');
     try {
       const { reviews, average, count } = await MatchAPI.reviews(uid(user));
+      setHome('reviews', { reviews, average, count });
       document.getElementById('statRatingValue').textContent = count ? `★ ${average}` : '—';
       document.getElementById('statReviewCount').textContent = count ? `${count} avaliaç${count > 1 ? 'ões' : 'ão'}` : 'sem avaliações';
       const overviewRating = document.getElementById('overviewRatingValue');
@@ -2225,16 +2553,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>`).join('')}
       `;
     } catch (err) {
+      setHome('reviews', { reviews: [], average: 0, count: 0 });
       container.innerHTML = `<p style="font-size:0.86rem; color:var(--ink-faint);">${err.message || 'Não foi possível carregar as avaliações.'}</p>`;
     }
   }
 
   // ---------------- Estatísticas dos projetos contratados (arquiteto) ----------------
-  async function renderArchitectStatsChart() {
-    let projects = [];
-    try { projects = await MatchAPI.architectProjects(); } catch { projects = []; }
-    renderStatusChart('architectStatsChart', projects);
-  }
 
   // ---------------- Comissões (arquiteto) ----------------
   async function renderCommissions() {
@@ -2283,30 +2607,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch { el.innerHTML = ''; }
   }
 
+  const conversationRoles = new Map();
+  const conversationAvatars = new Map();
+  function renderChatStats(shellId, conversations) {
+    const el = document.getElementById(shellId === 'clientChatShell' ? 'clientChatStats' : '');
+    if (!el) return;
+    const unread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+    el.innerHTML = `<span class="dv-pill-stat"><b>${conversations.length}</b> conversa${conversations.length === 1 ? '' : 's'}</span>
+      <span class="dv-pill-stat"><b>${unread}</b> não lida${unread === 1 ? '' : 's'}</span>`;
+  }
+  // Busca de conversa por nome (no próprio navegador, sem chamar a API)
+  function bindConversationFilter(listEl) {
+    const input = document.querySelector(`[data-conv-filter="${listEl.id}"]`);
+    if (!input || input.dataset.bound) return;
+    input.dataset.bound = '1';
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      listEl.querySelectorAll('.conversation-list-item').forEach((item) => {
+        item.hidden = Boolean(q) && !item.dataset.convName.toLowerCase().includes(q);
+      });
+    });
+  }
+
   async function loadConversations(user, listId, shellId) {
     const listEl = document.getElementById(listId);
     try {
       const conversations = await MatchAPI.conversations();
+      setHome('conversations', conversations);
+      conversations.forEach((c) => { conversationRoles.set(String(c.userId), c.role); if (c.avatar) conversationAvatars.set(String(c.userId), c.avatar); });
+      renderChatStats(shellId, conversations);
       if (!conversations.length) {
         listEl.innerHTML = emptyStateHtml('Nenhuma conversa ainda.');
         return;
       }
       listEl.innerHTML = conversations.map(c => `
-        <div class="conversation-list-item" data-conv-user="${escapeHtml(c.userId)}" data-conv-name="${escapeHtml(c.name)}">
-          <div class="conv-avatar">${(c.name || '?').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()}</div>
+        <div class="conversation-list-item${c.unreadCount ? ' has-unread' : ''}" data-conv-user="${escapeHtml(c.userId)}" data-conv-name="${escapeHtml(c.name)}" tabindex="0" role="button">
+          ${DashUI.avatar({ id: c.userId, name: c.name, avatar: c.avatar }, { size: 42, role: c.role })}
           <div class="conv-info">
-            <div class="conv-name">${escapeHtml(c.name)}</div>
-            <div class="conv-preview">${escapeHtml(c.lastMessage)}</div>
+            <div class="conv-top"><span class="conv-name">${escapeHtml(c.name)}</span>${c.lastMessageAt ? `<time>${DashUI.timeAgo(c.lastMessageAt)}</time>` : ''}</div>
+            <div class="conv-top"><span class="conv-preview" style="flex:1;min-width:0;">${escapeHtml(c.lastMessage)}</span>${c.unreadCount ? `<span class="conv-unread">${c.unreadCount}</span>` : ''}</div>
           </div>
         </div>`).join('');
+      bindConversationFilter(listEl);
       listEl.querySelectorAll('[data-conv-user]').forEach(item => {
-        item.addEventListener('click', () => {
+        const open = () => {
           listEl.querySelectorAll('.conversation-list-item').forEach(i => i.classList.remove('active'));
-          item.classList.add('active');
+          item.classList.add('active', 'is-read');
+          item.classList.remove('has-unread');
+          item.querySelector('.conv-unread')?.remove();
           openConversation(item.dataset.convUser, item.dataset.convName, shellId, user);
-        });
+        };
+        item.addEventListener('click', open);
+        item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
       });
     } catch (err) {
+      setHome('conversations', []);
       listEl.innerHTML = `<p style="font-size:0.8rem; color:var(--ink-faint); padding:10px;">${err.message || 'Não foi possível carregar as conversas.'}</p>`;
     }
   }
@@ -2315,7 +2670,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shell = document.getElementById(shellId);
     const msgId = `chatMessages-${shellId}`;
     const timelineId = `chatTimeline-${shellId}`;
+    const role = conversationRoles.get(String(otherId)) || (user.role === 'client' ? 'architect' : 'client');
     shell.innerHTML = `
+      <div class="dv-chat-head">
+        ${DashUI.avatar({ id: otherId, name: otherName, avatar: conversationAvatars.get(String(otherId)) }, { size: 38, role })}
+        <div><strong>${escapeHtml(otherName)}</strong><span>${role === 'architect' ? 'Arquiteto' : role === 'store' ? 'Loja parceira' : 'Cliente'}</span></div>
+        ${role === 'architect' ? `<a href="arquiteto.html?id=${encodeURIComponent(otherId)}">Ver perfil ${DashUI.icon('arrow', 13)}</a>` : ''}
+      </div>
       <div class="chat-timeline" id="${timelineId}"></div>
       <div class="chat-messages" id="${msgId}"><p style="text-align:center; color:var(--ink-faint); font-size:0.84rem;">Carregando...</p></div>
       <div class="chat-input-row">

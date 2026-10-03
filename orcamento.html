@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/orcamento.css">
 </head>
 <body>
 <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
@@ -60,85 +61,113 @@
     </div>
   </section>
 
-  <section class="section" style="padding-top:10px;">
-    <div class="container" style="max-width:700px;">
-      <form id="budgetForm" class="budget-tool reveal" novalidate>
-        <div class="form-grid budget-inputs">
-          <div class="form-field">
-            <label for="bTipo">Tipo de projeto</label>
-            <select id="bTipo">
-              <option value="unifamiliar">Residencial unifamiliar (construção nova)</option>
-              <option value="apartamento">Apartamento (reforma)</option>
-              <option value="reforma">Reforma geral</option>
-              <option value="interiores">Só interiores / marcenaria</option>
-              <option value="comercial">Comercial</option>
-              <option value="paisagismo">Paisagismo / área externa</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="bArea">Área (m²)</label>
-            <input type="number" id="bArea" min="1" step="1" value="100" required>
-          </div>
-          <div class="form-field">
-            <label for="bRegiao">Região</label>
-            <select id="bRegiao">
-              <option value="capital">Capital / região metropolitana</option>
-              <option value="media">Cidade média</option>
-              <option value="pequena">Interior / cidade pequena</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="bAcabamento">Padrão de acabamento</label>
-            <select id="bAcabamento">
-              <option value="economico">Econômico</option>
-              <option value="medio" selected>Médio</option>
-              <option value="alto">Alto padrão</option>
-            </select>
-          </div>
-          <div class="form-field full">
-            <label for="bEstilo">Estilo desejado <span class="hint">(influencia um pouco o custo)</span></label>
-            <select id="bEstilo">
-              <option value="Moderno">Moderno</option>
-              <option value="Contemporâneo">Contemporâneo</option>
-              <option value="Minimalista">Minimalista</option>
-              <option value="Industrial">Industrial</option>
-              <option value="Clássico">Clássico</option>
-              <option value="Rústico">Rústico</option>
-              <option value="Escandinavo">Escandinavo</option>
-              <option value="Biofílico">Biofílico</option>
-              <option value="Brutalista">Brutalista</option>
-              <option value="Alto padrão">Alto padrão</option>
-            </select>
-          </div>
+  <section class="section bq-section" style="padding-top:10px;">
+    <div class="container bq-container">
+      <form id="budgetForm" class="bq" novalidate>
+        <!-- Configuração em 5 passos (cartões, controle deslizante, segmentados e chips) -->
+        <div class="bq-config reveal">
+          <fieldset class="bq-step">
+            <legend><span class="bq-n">01</span>Tipo de projeto</legend>
+            <div class="bq-tiles">
+              <label class="bq-tile"><input type="radio" name="tipo" value="unifamiliar" checked><span class="bq-tile-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg></span><strong>Casa nova</strong><em>Construção do zero</em></label>
+              <label class="bq-tile"><input type="radio" name="tipo" value="apartamento"><span class="bq-tile-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M16 9h2a2 2 0 0 1 2 2v10"/><path d="M8 7h4M8 11h4M8 15h4M3 21h18"/></svg></span><strong>Apartamento</strong><em>Reforma de apê</em></label>
+              <label class="bq-tile"><input type="radio" name="tipo" value="reforma"><span class="bq-tile-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 6l4 4"/><path d="M4 20l9.5-9.5"/><path d="M12 4l2-2 8 8-2 2z"/></svg></span><strong>Reforma geral</strong><em>Imóvel existente</em></label>
+              <label class="bq-tile"><input type="radio" name="tipo" value="interiores"><span class="bq-tile-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M3 12h18v5H3z"/><path d="M5 17v3M19 17v3"/></svg></span><strong>Interiores</strong><em>Marcenaria e decoração</em></label>
+              <label class="bq-tile"><input type="radio" name="tipo" value="comercial"><span class="bq-tile-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8M10 21v-5h4v5"/></svg></span><strong>Comercial</strong><em>Loja, escritório</em></label>
+              <label class="bq-tile"><input type="radio" name="tipo" value="paisagismo"><span class="bq-tile-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"/><path d="M12 11c0-4 3-7 8-7 0 5-3 8-8 7z"/><path d="M12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 6 7 5.5z"/></svg></span><strong>Paisagismo</strong><em>Área externa</em></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="bq-step">
+            <legend><span class="bq-n">02</span>Área</legend>
+            <div class="bq-area">
+              <div class="bq-area-read"><input type="number" id="bArea" name="area" min="10" max="5000" step="1" value="100" aria-label="Área em metros quadrados"><span>m²</span></div>
+              <input type="range" id="bAreaRange" min="20" max="800" step="5" value="100" aria-label="Ajustar área">
+              <div class="bq-quick" role="group" aria-label="Áreas comuns">
+                <button type="button" data-area="50">50 m²</button><button type="button" data-area="100">100 m²</button><button type="button" data-area="200">200 m²</button><button type="button" data-area="400">400 m²</button>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="bq-step">
+            <legend><span class="bq-n">03</span>Região</legend>
+            <div class="bq-seg">
+              <label><input type="radio" name="regiao" value="capital" checked><span>Capital / metrópole</span></label>
+              <label><input type="radio" name="regiao" value="media"><span>Cidade média</span></label>
+              <label><input type="radio" name="regiao" value="pequena"><span>Interior</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="bq-step">
+            <legend><span class="bq-n">04</span>Padrão de acabamento</legend>
+            <div class="bq-seg">
+              <label><input type="radio" name="acabamento" value="economico"><span>Econômico</span></label>
+              <label><input type="radio" name="acabamento" value="medio" checked><span>Médio</span></label>
+              <label><input type="radio" name="acabamento" value="alto"><span>Alto padrão</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="bq-step">
+            <legend><span class="bq-n">05</span>Estilo desejado <span class="hint">(influencia um pouco o custo)</span></legend>
+            <div class="bq-chips">
+              <label class="bq-chip"><input type="radio" name="estilo" value="Moderno" checked><span>Moderno</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Contemporâneo"><span>Contemporâneo</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Minimalista"><span>Minimalista</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Industrial"><span>Industrial</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Clássico"><span>Clássico</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Rústico"><span>Rústico</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Escandinavo"><span>Escandinavo</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Biofílico"><span>Biofílico</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Brutalista"><span>Brutalista</span></label>
+              <label class="bq-chip"><input type="radio" name="estilo" value="Alto padrão"><span>Alto padrão</span></label>
+            </div>
+          </fieldset>
         </div>
 
-        <div class="budget-divider" aria-hidden="true"></div>
-
-        <div class="budget-result">
+        <!-- Resultado ao vivo (fica fixo ao lado no desktop) -->
+        <aside class="bq-result reveal" style="--reveal-delay:90ms;" aria-live="polite">
+          <div class="bq-result-glow" aria-hidden="true"></div>
           <span class="eyebrow">Faixa estimada pro seu projeto</span>
           <div class="budget-range" id="budgetRangeValue">—</div>
           <p class="budget-per-m2" id="budgetPerM2"></p>
-          <p class="budget-facts" id="budgetBreakdown"></p>
 
-          <div class="budget-compare">
-            <div class="budget-compare-card">
-              <strong class="bcc-title">Pesquisando sozinho</strong>
-              <span class="bcc-note">Semanas comparando portfólios sem saber se o estilo bate</span>
-            </div>
-            <div class="budget-compare-card">
-              <strong class="bcc-title">Fechando com o primeiro orçamento</strong>
-              <span class="bcc-note">Risco de descobrir o descompasso de estilo no meio do projeto</span>
-            </div>
-            <div class="budget-compare-card featured">
-              <strong class="bcc-title">Com match.IA</strong>
-              <span class="bcc-note">Arquiteto pré-filtrado por estilo, orçamento e prazo compatíveis desde a primeira conversa</span>
-            </div>
+          <div class="bq-span" aria-hidden="true">
+            <div class="bq-span-track"><span class="bq-span-fill"></span><i class="bq-span-mid"></i></div>
+            <div class="bq-span-labels"><span id="bqLow">—</span><span id="bqMid">—</span><span id="bqHigh">—</span></div>
           </div>
 
+          <div class="bq-block">
+            <div class="bq-block-head"><strong>Por padrão de acabamento</strong><span>R$/m²</span></div>
+            <div class="bq-bars" id="bqFinishBars"></div>
+          </div>
+          <div class="bq-block">
+            <div class="bq-block-head"><strong>Por região</strong><span>total médio</span></div>
+            <ul class="bq-hbars" id="bqRegionBars"></ul>
+          </div>
+
+          <p class="budget-facts" id="budgetBreakdown"></p>
+          <a href="cadastro.html?tipo=cliente" class="btn btn-primary bq-cta">Encontrar meu arquiteto</a>
           <p class="budget-disclaimer">Estimativa educativa a partir de faixas aproximadas de mercado — varia por projeto, terreno e fornecedores. Não substitui um orçamento profissional; use como ponto de partida pra conversar com seus arquitetos compatíveis.</p>
-          <a href="cadastro.html?tipo=cliente" class="btn btn-primary">Encontrar meu arquiteto</a>
-        </div>
+        </aside>
       </form>
+
+      <div class="bq-why">
+        <span class="eyebrow reveal">Por que estimar antes</span>
+        <div class="budget-compare" data-stagger>
+          <div class="budget-compare-card">
+            <strong class="bcc-title">Pesquisando sozinho</strong>
+            <span class="bcc-note">Semanas comparando portfólios sem saber se o estilo bate</span>
+          </div>
+          <div class="budget-compare-card">
+            <strong class="bcc-title">Fechando com o primeiro orçamento</strong>
+            <span class="bcc-note">Risco de descobrir o descompasso de estilo no meio do projeto</span>
+          </div>
+          <div class="budget-compare-card featured">
+            <strong class="bcc-title">Com match.IA</strong>
+            <span class="bcc-note">Arquiteto pré-filtrado por estilo, orçamento e prazo compatíveis desde a primeira conversa</span>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </main>

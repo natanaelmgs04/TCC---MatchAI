@@ -1,9 +1,10 @@
 import User from "../models/User.js";
 import ProfileView from "../models/ProfileView.js";
 import { buildSearchQuery, searchReferenceImage } from "../services/imageSearchService.js";
+import { avatarPath } from "../services/avatar.js";
 
 export async function listArchitects(req, res) {
-  const query = { role: "architect" };
+  const query = { role: "architect", status: { $ne: "suspended" } };
   if (req.query.style) query["architectProfile.styles"] = req.query.style;
   if (req.query.city) query.city = { $regex: req.query.city, $options: "i" };
   if (req.query.minExperience)
@@ -15,6 +16,8 @@ export async function listArchitects(req, res) {
 
   const pipeline = [
     { $match: query },
+    // a foto (data URI) e os hashes não precisam sair do banco aqui
+    { $project: { avatarUrl: 0, passwordHash: 0, passwordResetTokenHash: 0, passwordResetExpires: 0 } },
     {
       $lookup: {
         from: "reviews",
@@ -78,6 +81,7 @@ export async function listArchitects(req, res) {
     architects: architects.map((architect) => ({
       id: architect._id,
       name: architect.name,
+      avatar: avatarPath(architect),
       city: architect.city,
       state: architect.state,
       profile: architect.architectProfile,
@@ -159,12 +163,14 @@ export async function getArchitectProfile(req, res) {
   const architect = await User.findOne({
     _id: req.params.id,
     role: "architect",
+    status: { $ne: "suspended" },
   }).populate("architectProfile.favoriteMaterials");
   if (!architect)
     return res.status(404).json({ error: "Arquiteto não encontrado" });
   res.json({
     id: architect.id,
     name: architect.name,
+    avatar: avatarPath(architect),
     email: architect.email,
     phone: architect.phone,
     city: architect.city,

@@ -23,6 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/assistente.css">
+<link rel="stylesheet" href="assets/css/dashboard.css">
 </head>
 <body>
 <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
@@ -126,29 +127,12 @@
         <div class="dash-main">
           <div class="profile-panel" data-profile-panel-content="home" id="clientHomePanel">
             <!-- O hero (#dashHero) é movido pra cá via JS assim que o papel é identificado. -->
-            <div class="dash-overview" id="clientOverview" data-stagger>
-              <button type="button" class="dash-overview-tile" data-jump-tab="match">
-                <strong id="overviewMatchCount">0</strong>
-                <span>buscas de compatibilidade feitas</span>
-              </button>
-              <button type="button" class="dash-overview-tile" data-jump-tab="favoritos">
-                <strong id="overviewFavCount">0</strong>
-                <span>arquitetos favoritados</span>
-              </button>
-              <button type="button" class="dash-overview-tile" data-jump-tab="mensagens">
-                <strong id="overviewUnreadCount">0</strong>
-                <span>mensagens não lidas</span>
-              </button>
-              <button type="button" class="dash-overview-tile" data-jump-tab="conta">
-                <strong>Conta</strong>
-                <span>Perfil, plano e privacidade</span>
-              </button>
-            </div>
-
-            <div class="dash-card spotlight dash-stats-card">
-              <h3>Estatísticas do match</h3>
-              <canvas id="clientStatsChart" height="190" aria-label="Seus projetos por status" role="img"></canvas>
-              <p class="dash-stats-empty" id="clientStatsEmpty" hidden>Crie um projeto para ver suas estatísticas aqui.</p>
+            <!-- Bento da Home: desenhado por DashHome.client (assets/js/dashboard-ui.js)
+                 a partir dos dados que o painel já carrega. -->
+            <div class="dv-bento is-loading" id="clientOverview" aria-live="polite">
+              <div class="dv-card dv-kpi dv-skel"></div><div class="dv-card dv-kpi dv-skel"></div>
+              <div class="dv-card dv-kpi dv-skel"></div><div class="dv-card dv-kpi dv-skel"></div>
+              <div class="dv-card dv-best dv-skel"></div><div class="dv-card dv-weeks dv-skel"></div>
             </div>
           </div>
 
@@ -157,7 +141,25 @@
           </div>
 
           <div class="profile-panel" data-profile-panel-content="projeto" hidden>
-            <div class="dash-card spotlight">
+            <header class="dv-head">
+              <span class="dv-head-ico" data-dv-icon="projeto"></span>
+              <div class="dv-head-text">
+                <span class="eyebrow">Painel do cliente</span>
+                <h2>Seus projetos</h2>
+                <p>Cada projeto guarda seu próprio estilo, metragem e prioridades. O match é feito a partir do projeto que você escolher.</p>
+              </div>
+              <div class="dv-head-actions">
+                <button type="button" id="openProjectsDrawerBtn" class="btn btn-secondary btn-sm">Gerenciar</button>
+                <a href="novo-projeto.html" class="btn btn-primary btn-sm">+ Novo projeto</a>
+              </div>
+            </header>
+            <div class="dv-strip" id="projectsKpis"></div>
+
+            <div class="dv-section" id="projectsCard">
+              <div class="dash-projects-grid" id="clientProjectsGrid"></div>
+            </div>
+
+            <div class="dash-card spotlight dv-summary-card">
               <h3>Resumo do projeto</h3>
               <p class="card-lead">Este é o resumo que os arquitetos veem no seu match — revise antes de validar.</p>
               <div class="summary-grid">
@@ -186,18 +188,19 @@
               <p class="card-lead">Uma foto real de arquitetura/interiores parecida com o estilo que você descreveu, pra ajudar a alinhar expectativas com o arquiteto.</p>
               <div id="referenceImageContent"></div>
             </div>
-
-            <div class="dash-card spotlight" id="projectsCard">
-              <h3>Seus projetos</h3>
-              <p class="card-lead">Cada projeto guarda seu próprio estilo, metragem e prioridades — o match é feito a partir do projeto que você abrir, não de um perfil único.</p>
-              <button type="button" id="openProjectsDrawerBtn" class="btn btn-secondary btn-sm">+ Novo projeto / gerenciar</button>
-              <div class="dash-projects-grid" id="clientProjectsGrid"></div>
-            </div>
           </div>
 
           <div class="profile-panel" data-profile-panel-content="match" hidden>
-            <p class="card-lead">Vá em "Seus projetos" e clique em "Rodar match" no projeto desejado para receber os arquitetos mais compatíveis, com pontuação e explicação gerada por IA.</p>
-            <p style="font-size:0.82rem; color:var(--ink-faint); margin:-8px 0 16px;" id="matchContextLabel"></p>
+            <header class="dv-head">
+              <span class="dv-head-ico" data-dv-icon="match"></span>
+              <div class="dv-head-text">
+                <span class="eyebrow">Painel do cliente</span>
+                <h2>Compatibilidade</h2>
+                <p>Em "Seus projetos", clique em "Rodar match" no projeto desejado para receber os arquitetos mais compatíveis, com pontuação e explicação geradas por IA.</p>
+              </div>
+            </header>
+            <div class="dv-strip" id="matchKpis"></div>
+            <p class="dv-context" id="matchContextLabel"></p>
             <div id="matchTabs" class="match-tabs" role="tablist" aria-label="Categorias de match" style="display:none;"></div>
             <div id="matchPanelMain" class="match-tabpanel" role="tabpanel" aria-labelledby="matchTab-main">
               <div id="matchResults" class="result-list"></div>
@@ -214,22 +217,43 @@
             </div>
             <div id="matchExtraPanels"></div>
 
-            <div class="dash-card spotlight" style="margin-top:20px;">
-              <h3>Histórico de buscas</h3>
-              <p class="card-lead">Suas últimas buscas de match, por projeto.</p>
+            <div class="dash-card spotlight dv-history-card">
+              <header class="dv-card-head"><div><span class="eyebrow">Linha do tempo</span><h3>Histórico de buscas</h3></div></header>
               <div id="matchHistoryList"></div>
             </div>
           </div>
 
           <div class="profile-panel" data-profile-panel-content="favoritos" hidden>
-            <p class="card-lead">Arquitetos que você salvou pra lembrar depois — de qualquer categoria do match, mesmo os que não deram certo agora (indisponível, fora da região ou do orçamento).</p>
-            <div id="favoritesList"></div>
+            <header class="dv-head">
+              <span class="dv-head-ico" data-dv-icon="favoritos"></span>
+              <div class="dv-head-text">
+                <span class="eyebrow">Painel do cliente</span>
+                <h2>Favoritos</h2>
+                <p>Arquitetos que você salvou para lembrar depois, de qualquer categoria do match, mesmo os que não deram certo agora.</p>
+              </div>
+            </header>
+            <div class="dv-strip" id="favoritesKpis"></div>
+            <div class="dv-fav-layout">
+              <div id="favoritesList"></div>
+              <aside class="dash-card dv-fav-aside" id="favoritesInsights" hidden></aside>
+            </div>
           </div>
 
           <div class="profile-panel" data-profile-panel-content="mensagens" hidden>
-            <p class="card-lead">Converse direto com os arquitetos do seu match.</p>
+            <header class="dv-head">
+              <span class="dv-head-ico" data-dv-icon="mensagens"></span>
+              <div class="dv-head-text">
+                <span class="eyebrow">Painel do cliente</span>
+                <h2>Mensagens</h2>
+                <p>Converse direto com os arquitetos do seu match.</p>
+              </div>
+              <div class="dv-head-actions" id="clientChatStats"></div>
+            </header>
             <div class="chat-layout" id="mensagens">
-              <div class="conversation-list" id="clientConversationList"></div>
+              <div class="dv-conv-col">
+                <label class="dv-search"><span class="dv-search-ico" data-dv-icon="search"></span><input type="search" placeholder="Buscar conversa" aria-label="Buscar conversa" data-conv-filter="clientConversationList"></label>
+                <div class="conversation-list" id="clientConversationList"></div>
+              </div>
               <div class="chat-shell" id="clientChatShell"><div class="chat-empty">Selecione uma conversa ou envie uma mensagem a partir do perfil de um arquiteto.</div></div>
             </div>
           </div>
@@ -254,29 +278,10 @@
         <div class="dash-main">
           <div class="profile-panel" data-profile-panel-content="home" id="architectHomePanel">
             <!-- O hero (#dashHero) é movido pra cá via JS assim que o papel é identificado. -->
-            <div class="dash-overview" id="architectOverview" data-stagger>
-              <button type="button" class="dash-overview-tile" data-jump-tab="contratacoes">
-                <strong id="overviewCommissionCount">0</strong>
-                <span>projetos fechados</span>
-              </button>
-              <button type="button" class="dash-overview-tile" data-jump-tab="avaliacoes">
-                <strong id="overviewRatingValue">—</strong>
-                <span>avaliação média</span>
-              </button>
-              <button type="button" class="dash-overview-tile" data-jump-tab="mensagens">
-                <strong id="overviewArchitectUnreadCount">0</strong>
-                <span>mensagens não lidas</span>
-              </button>
-              <button type="button" class="dash-overview-tile" data-jump-tab="conta">
-                <strong>Conta</strong>
-                <span>Perfil, plano e privacidade</span>
-              </button>
-            </div>
-
-            <div class="dash-card spotlight dash-stats-card">
-              <h3>Estatísticas dos seus projetos</h3>
-              <canvas id="architectStatsChart" height="190" aria-label="Seus projetos por status" role="img"></canvas>
-              <p class="dash-stats-empty" id="architectStatsEmpty" hidden>Quando um cliente fechar um projeto com você pela plataforma, ele aparece aqui.</p>
+            <div class="dv-bento is-loading" id="architectOverview" aria-live="polite">
+              <div class="dv-card dv-kpi dv-skel"></div><div class="dv-card dv-kpi dv-skel"></div>
+              <div class="dv-card dv-kpi dv-skel"></div><div class="dv-card dv-kpi dv-skel"></div>
+              <div class="dv-card dv-best dv-skel"></div><div class="dv-card dv-weeks dv-skel"></div>
             </div>
           </div>
 
@@ -401,7 +406,10 @@
           <div class="profile-panel" data-profile-panel-content="mensagens" hidden>
             <p class="card-lead">Converse com clientes que te encontraram pelo match.</p>
             <div class="chat-layout">
-              <div class="conversation-list" id="architectConversationList"></div>
+              <div class="dv-conv-col">
+                <label class="dv-search"><span class="dv-search-ico" data-dv-icon="search"></span><input type="search" placeholder="Buscar conversa" aria-label="Buscar conversa" data-conv-filter="architectConversationList"></label>
+                <div class="conversation-list" id="architectConversationList"></div>
+              </div>
               <div class="chat-shell" id="architectChatShell"><div class="chat-empty">Selecione uma conversa à esquerda.</div></div>
             </div>
           </div>
@@ -423,11 +431,43 @@
           </div>
 
           <div class="profile-panel" data-profile-panel-content="produtos" hidden>
-            <div class="dash-card spotlight">
-              <h3>Meus produtos</h3>
-              <p class="card-lead">A IA sugere seus produtos pros clientes durante o desenvolvimento do projeto, quando o estilo/categoria combina.</p>
-              <button type="button" id="openProductsDrawerBtn" class="btn btn-secondary btn-sm">Ver meus produtos</button>
-            </div>
+            <header class="dv-head">
+              <span class="dv-head-ico" data-dv-icon="produtos"></span>
+              <div class="dv-head-text">
+                <span class="eyebrow">Catálogo</span>
+                <h2>Seus produtos na match.IA</h2>
+                <p>A IA sugere seus produtos para os clientes durante o projeto, quando o estilo e os materiais combinam.</p>
+              </div>
+            </header>
+
+            <!-- Importar do site: preenchido por dashboard.js (setupCatalogImport) -->
+            <section class="dash-card dv-import" id="catalogImport" aria-labelledby="catalogImportTitle">
+              <div class="dv-import-head">
+                <span class="dv-import-ico" data-dv-icon="download"></span>
+                <div>
+                  <h3 id="catalogImportTitle">Importar do site da sua loja</h3>
+                  <p class="card-lead">Cole o endereço da sua loja virtual e trazemos todos os produtos de uma vez: nome, foto, preço e link de compra.</p>
+                </div>
+              </div>
+              <form class="dv-import-form" id="catalogImportForm" novalidate>
+                <input type="url" id="catalogUrl" aria-label="Endereço da loja" inputmode="url" autocomplete="url" placeholder="https://www.sualoja.com.br" required>
+                <button type="submit" class="btn btn-primary" id="catalogImportBtn">Importar produtos</button>
+              </form>
+              <p class="dv-import-platforms">Funciona com <strong>Shopify</strong>, <strong>WooCommerce</strong>, <strong>VTEX</strong>, <strong>Nuvemshop</strong> e lojas com páginas de produto padrão. Usa outra plataforma? Cole o link do <strong>feed XML de produtos</strong> (o mesmo do Google Shopping ou do catálogo do Instagram).</p>
+              <div class="dv-import-status" id="catalogStatus" aria-live="polite"></div>
+              <div class="dv-import-sample" id="catalogSample"></div>
+            </section>
+
+            <section class="dash-card spotlight dv-products-card">
+              <div class="dv-products-top">
+                <div>
+                  <h3>Meus produtos</h3>
+                  <p class="card-lead" id="storeProductsLead">Edite estilos, preço e foto, ou cadastre um produto à mão.</p>
+                </div>
+                <button type="button" id="openProductsDrawerBtn" class="btn btn-secondary btn-sm">Ver e editar produtos</button>
+              </div>
+              <div class="dv-products-grid" id="storeProductsGrid"></div>
+            </section>
           </div>
 
           <div class="profile-panel" data-profile-panel-content="indicacoes" hidden>
@@ -447,37 +487,79 @@
       <!-- Conta: compartilhado entre cliente e arquiteto, uma "aba" de cada
            barra aponta pra este mesmo bloco em vez de duplicar o conteúdo. -->
       <div id="contaPanel" class="profile-panel" hidden>
-        <div class="dash-card spotlight" id="editCard" style="display:none;">
-          <h3>Editar dados</h3>
-          <div class="form-field">
-            <label for="editName">Nome</label>
-            <input type="text" id="editName">
+        <header class="dv-head">
+          <span class="dv-head-ico" data-dv-icon="conta"></span>
+          <div class="dv-head-text">
+            <span class="eyebrow" id="contaEyebrow">Conta</span>
+            <h2>Configurações da conta</h2>
+            <p>Seus dados, convites e privacidade num lugar só.</p>
           </div>
-          <div class="form-field">
-            <label for="editCity">Cidade</label>
-            <input type="text" id="editCity">
-          </div>
-          <div class="form-field">
-            <label for="editState">Estado (UF)</label>
-            <input type="text" id="editState" maxlength="2">
-          </div>
-          <button id="saveProfileBtn" class="btn btn-primary btn-sm btn-block">Salvar alterações</button>
-        </div>
+        </header>
 
-        <div class="dash-card spotlight">
-          <div class="dash-subhead" style="margin-top:0;">Convide e ganhe</div>
-          <p class="card-lead" id="referralExplainer">Compartilhe seu link — cada pessoa que se cadastrar por ele te dá um bônus.</p>
-          <div class="share-row" style="margin-bottom:10px;">
-            <input type="text" id="referralLinkInput" readonly>
-            <button type="button" id="copyReferralLinkBtn" class="btn btn-tertiary btn-sm">Copiar link</button>
-          </div>
-          <p style="font-size:0.78rem; color:var(--ink-faint); margin:0;" id="referralBonusCount"></p>
+        <div class="dv-account">
+          <!-- Cartão de identidade (lado esquerdo) — preenchido por dashboard.js -->
+          <aside class="dash-card dv-id-card" id="accountIdCard">
+            <div class="dv-id-cover"></div>
+            <div class="dv-id-avatar" id="accountAvatar">—</div>
+            <h3 id="accountName">—</h3>
+            <p id="accountEmail">—</p>
+            <span class="dv-role-pill" id="accountRole">—</span>
+            <div class="dv-photo-actions">
+              <label class="btn btn-secondary btn-sm" for="avatarInput">Trocar foto</label>
+              <button type="button" class="btn btn-tertiary btn-sm" id="removeAvatarBtn" hidden>Remover</button>
+              <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp" hidden>
+            </div>
+            <p class="dv-photo-note" id="avatarNote" role="status">Aparece no seu perfil, nas conversas e nos resultados.</p>
+            <ul class="dv-id-facts" id="accountFacts"></ul>
+          </aside>
 
-          <div class="dash-subhead">Privacidade (LGPD)</div>
-          <p class="card-lead">Seus dados são seus. Baixe tudo que a plataforma guarda sobre você ou apague sua conta permanentemente.</p>
-          <div class="card-actions">
-            <button type="button" id="exportDataBtn" class="btn btn-tertiary btn-sm">Baixar meus dados</button>
-            <button type="button" id="deleteAccountBtn" class="btn btn-danger btn-sm">Excluir minha conta</button>
+          <div class="dv-settings">
+            <section class="dash-card dv-set" id="editCard">
+              <header class="dv-set-head"><span class="dv-set-ico" data-dv-icon="edit"></span><div><h3>Dados pessoais</h3><p>Como você aparece para arquitetos e clientes.</p></div></header>
+              <div class="form-grid">
+                <div class="form-field full">
+                  <label for="editName">Nome</label>
+                  <input type="text" id="editName" autocomplete="name">
+                </div>
+                <div class="form-field">
+                  <label for="editCity">Cidade</label>
+                  <input type="text" id="editCity" autocomplete="address-level2">
+                </div>
+                <div class="form-field">
+                  <label for="editState">Estado (UF)</label>
+                  <input type="text" id="editState" maxlength="2" autocomplete="address-level1">
+                </div>
+              </div>
+              <div class="dv-set-foot">
+                <span class="dv-save-note" id="saveProfileNote" role="status"></span>
+                <button id="saveProfileBtn" class="btn btn-primary btn-sm">Salvar alterações</button>
+              </div>
+            </section>
+
+            <section class="dash-card dv-set">
+              <header class="dv-set-head"><span class="dv-set-ico" data-dv-icon="gift"></span><div><h3>Convide e ganhe</h3><p id="referralExplainer">Compartilhe seu link — cada pessoa que se cadastrar por ele te dá um bônus.</p></div></header>
+              <div class="dv-copy-row">
+                <input type="text" id="referralLinkInput" readonly aria-label="Seu link de convite">
+                <button type="button" id="copyReferralLinkBtn" class="btn btn-secondary btn-sm">Copiar link</button>
+              </div>
+              <p class="dv-set-note" id="referralBonusCount"></p>
+            </section>
+
+            <section class="dash-card dv-set">
+              <header class="dv-set-head"><span class="dv-set-ico" data-dv-icon="shield"></span><div><h3>Privacidade (LGPD)</h3><p>Seus dados são seus. Baixe tudo que a plataforma guarda sobre você.</p></div></header>
+              <div class="dv-set-row">
+                <div><strong>Exportar meus dados</strong><span>Arquivo JSON com perfil, projetos, mensagens e histórico.</span></div>
+                <button type="button" id="exportDataBtn" class="btn btn-secondary btn-sm">Baixar meus dados</button>
+              </div>
+            </section>
+
+            <section class="dash-card dv-set dv-danger">
+              <header class="dv-set-head"><span class="dv-set-ico" data-dv-icon="alert"></span><div><h3>Zona de perigo</h3><p>Ações permanentes, sem como desfazer.</p></div></header>
+              <div class="dv-set-row">
+                <div><strong>Excluir minha conta</strong><span>Apaga sua conta e todos os seus dados permanentemente.</span></div>
+                <button type="button" id="deleteAccountBtn" class="btn btn-danger btn-sm">Excluir minha conta</button>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -504,8 +586,13 @@
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- Degradês compartilhados pelos anéis de pontuação (DashUI.scoreRing) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs><linearGradient id="dvRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--sage)"/><stop offset="1" stop-color="var(--terracotta)"/></linearGradient></defs>
+</svg>
+
 <script src="assets/js/api.js"></script>
+<script src="assets/js/portraits.js"></script>
 <script src="assets/js/data/project-styles.js"></script>
 <script src="assets/js/extras.js"></script>
 <script src="assets/js/color-wheel.js"></script>
@@ -514,6 +601,8 @@
 <script src="assets/js/style-share.js"></script>
 <script src="assets/js/theme.js"></script>
 <script src="assets/js/site.js"></script>
+<script src="assets/js/dashboard-ui.js"></script>
+<script src="assets/js/morph-orb.js"></script>
 <script src="assets/js/assistente.js"></script>
 <script src="assets/js/architect-assistente.js"></script>
 <script src="assets/js/dashboard.js"></script>

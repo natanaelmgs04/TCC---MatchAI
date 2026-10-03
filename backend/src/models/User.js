@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { avatarPath } from "../services/avatar.js";
 
 const projectSchema = new mongoose.Schema(
   {
@@ -30,7 +31,15 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     phone: String,
-    avatarUrl: String,
+    // Foto de perfil (data URI já reduzido no navegador, ou URL https). Nunca
+    // sai nas respostas: o JSON leva só "avatar" (caminho /api/avatars/:id?v=…).
+    avatarUrl: { type: String, select: false },
+    avatarVersion: Number,
+    // Conta suspensa pela equipe (painel admin): não entra nem aparece no match.
+    status: { type: String, enum: ["active", "suspended"], default: "active", index: true },
+    suspendedReason: String,
+    // Última atividade (atualizada no máximo a cada 10 min, ver middleware/auth.js) — painel da equipe.
+    lastSeenAt: Date,
     bio: String,
     passwordHash: { type: String, required: true, select: false },
     // Guarda o hash do token de redefinição, nunca o token cru (o mesmo
@@ -100,6 +109,12 @@ const userSchema = new mongoose.Schema(
       city: String,
       state: String,
       categories: [String],
+      // Catálogo importado do site da loja (painel → Produtos → Importar do site).
+      catalogUrl: String,
+      catalogPlatform: String,
+      catalogLabel: String,
+      catalogSyncedAt: Date,
+      catalogCount: Number,
     },
   },
   { timestamps: true },
@@ -117,6 +132,21 @@ userSchema.pre("save", async function (next) {
   if (this.isModified("passwordHash"))
     this.passwordHash = await bcrypt.hash(this.passwordHash, 12);
   next();
+});
+
+// Em toda resposta JSON: troca a foto pelo caminho público e nunca expõe hashes.
+userSchema.set("toJSON", {
+  virtuals: true,
+  transform(doc, ret) {
+    const path = avatarPath(ret);
+    if (path) ret.avatar = path;
+    delete ret.avatarUrl;
+    delete ret.passwordHash;
+    delete ret.passwordResetTokenHash;
+    delete ret.passwordResetExpires;
+    delete ret.__v;
+    return ret;
+  },
 });
 
 userSchema.methods.verifyPassword = function (password) {

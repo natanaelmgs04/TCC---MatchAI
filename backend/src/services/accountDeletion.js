@@ -1,0 +1,42 @@
+import Project from "../models/Project.js";
+import Message from "../models/Message.js";
+import Review from "../models/Review.js";
+import MatchHistory from "../models/MatchHistory.js";
+import Validation from "../models/Validation.js";
+import Favorite from "../models/Favorite.js";
+import Timeline from "../models/Timeline.js";
+import CaseStudy from "../models/CaseStudy.js";
+import ProfileView from "../models/ProfileView.js";
+import StoreProduct from "../models/StoreProduct.js";
+import StoreReferral from "../models/StoreReferral.js";
+import Notification from "../models/Notification.js";
+import Hire from "../models/Hire.js";
+import AssistantChat from "../models/AssistantChat.js";
+import ArchitectAssistantChat from "../models/ArchitectAssistantChat.js";
+import User from "../models/User.js";
+
+/**
+ * Apaga a conta e tudo que referencia esse usuário nas outras coleções
+ * (LGPD, art. 18, VI). Usado pela própria pessoa (DELETE /api/dashboard/me)
+ * e pela equipe no painel de gestão.
+ */
+export async function deleteUserCascade(userId) {
+  await Promise.all([
+    Project.deleteMany({ client: userId }),
+    Message.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
+    Review.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
+    MatchHistory.deleteMany({ client: userId }),
+    Validation.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
+    Favorite.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
+    Timeline.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
+    CaseStudy.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
+    ProfileView.deleteMany({ architect: userId }),
+    StoreProduct.deleteMany({ store: userId }),
+    StoreReferral.deleteMany({ $or: [{ store: userId }, { client: userId }] }),
+    Notification.deleteMany({ user: userId }),
+    Hire.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
+    AssistantChat.deleteMany({ client: userId }),
+    ArchitectAssistantChat.deleteMany({ architect: userId }),
+  ]);
+  await User.deleteOne({ _id: userId });
+}

@@ -1,0 +1,232 @@
+/* =========================================================
+   Perfil do arquiteto (arquiteto.html) — hero editorial de portfólio.
+   Uma composição de tela cheia: foto de estúdio, o nome rolando gigante,
+   a pessoa recortada POR CIMA do nome (as letras passam por trás dela),
+   navegação em colunas, linha que se desenha e rodapé. O resto do perfil
+   entra ao rolar. Tipografia e cores da marca; vidro só onde é superfície
+   (botão de menu, gaveta, cards abaixo do hero).
+   ========================================================= */
+
+/* a barra do site fica escondida enquanto o hero ocupa a tela */
+.ap-page .site-header {
+  position: fixed; left: 0; right: 0; top: 16px; margin: 0 auto;
+  translate: 0 calc(-100% - 32px); opacity: 0;
+  transition: translate .6s var(--ease-out), opacity .4s var(--ease-out);
+}
+.ap-page.ap-past-hero .site-header { translate: 0 0; opacity: 1; }
+.ap-empty { margin-top: 120px; }
+
+/* ---------- hero ---------- */
+.ap-hero {
+  --ap-ink: #333333;                 /* a foto é clara nos dois temas: o texto sobre ela não inverte */
+  position: relative; height: 100vh; height: 100dvh; width: 100%; overflow: hidden;
+  background: #b9b5b0; color: var(--ap-ink); isolation: isolate;   /* = cinza do estúdio das fotos */
+}
+.ap-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%;
+  filter: sepia(.08) saturate(.94) contrast(1.02);   /* mesma graduação quente nas duas camadas */
+}
+.ap-bg { z-index: 0; }
+.ap-cut { z-index: 20; pointer-events: none; }
+
+.ap-marquee { position: absolute; left: 0; right: 0; top: 16vh; z-index: 10; overflow: hidden; }
+.ap-track {
+  display: flex; width: max-content; white-space: nowrap;
+  font-family: var(--font-display); font-weight: 600; font-size: 16vh; line-height: 1; letter-spacing: -.025em;
+  color: var(--ap-ink);
+  animation: ap-marquee 30s linear infinite;
+}
+.ap-track span { padding-right: 6vw; }
+.ap-track em { font-style: italic; font-weight: 500; color: var(--terracotta-dark); }
+.ap-track b { font-weight: 500; color: var(--terracotta); }
+@keyframes ap-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.ap-rule {
+  position: absolute; left: 24px; right: 24px; bottom: 5.5rem; z-index: 10; height: 2px;
+  background: var(--ap-ink); transform-origin: left;
+}
+
+.ap-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+  padding: 0 24px 20px; font-family: var(--font-body); font-size: .75rem; line-height: 1.65;
+}
+.ap-foot > div { display: grid; }
+.ap-foot-right { text-align: right; }
+.ap-foot-right span:last-child, .ap-foot > div:first-child span:first-child { font-weight: 600; }
+
+/* navegação do hero */
+.ap-chrome {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 30;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 24px 24px 0;
+}
+.ap-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-logo); font-weight: 700; font-size: 1.125rem; letter-spacing: .01em; color: var(--ap-ink); }
+.ap-brand img { width: 30px; height: auto; }
+.ap-brand .ia { color: var(--terracotta); }
+.ap-cols { display: none; align-items: flex-start; gap: 64px; font-family: var(--font-body); font-size: .875rem; }
+.ap-col { display: flex; flex-direction: column; gap: 2px; }
+.ap-col a, .ap-year { color: var(--ap-ink); }
+.ap-col a { transition: opacity .3s ease; }
+.ap-col a:hover { opacity: .6; }
+.ap-year { font-weight: 600; }
+
+.ap-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+
+/* convite para rolar: pílula de vidro líquido, discreta, no centro do rodapé */
+.ap-scroll {
+  position: absolute; left: 50%; bottom: 7.4rem; z-index: 30; translate: -50% 0;
+  display: none; align-items: center; gap: 10px; padding: 9px 16px 9px 18px; border-radius: 999px;
+  font-family: var(--font-body); font-size: .78rem; font-weight: 600; letter-spacing: .04em; color: var(--ap-ink);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .14) 60%), rgba(250, 249, 246, .28);
+  backdrop-filter: blur(16px) saturate(170%); -webkit-backdrop-filter: blur(16px) saturate(170%);
+  box-shadow: 0 10px 30px rgba(51, 51, 51, .14), inset 1px 1px 1px -.5px rgba(255, 255, 255, .95), inset -1px -1px 1px -.5px rgba(0, 0, 0, .12);
+}
+.ap-scroll i { width: 14px; height: 22px; border-radius: 99px; border: 1.5px solid currentColor; position: relative; }
+.ap-scroll i::after { content: ''; position: absolute; left: 50%; top: 4px; width: 2px; height: 5px; margin-left: -1px; border-radius: 2px; background: currentColor; animation: ap-wheel 1.8s var(--ease-out) infinite; }
+@keyframes ap-wheel { 0% { opacity: 0; translate: 0 0; } 30% { opacity: 1; } 100% { opacity: 0; translate: 0 7px; } }
+
+/* ---------- celular: botão de menu (vidro líquido) + gaveta ---------- */
+.ap-burger {
+  position: absolute; right: 18px; top: 16px; z-index: 50;
+  width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .6), rgba(255, 255, 255, .16) 60%), rgba(250, 249, 246, .3);
+  backdrop-filter: blur(14px) saturate(170%); -webkit-backdrop-filter: blur(14px) saturate(170%);
+  box-shadow: 0 8px 22px rgba(51, 51, 51, .14), inset 1px 1px 1px -.5px rgba(255, 255, 255, .95), inset -1px -1px 1px -.5px rgba(0, 0, 0, .12);
+}
+.ap-burger span {
+  position: absolute; left: 50%; top: 50%; width: 22px; height: 2px; margin: -1px 0 0 -11px; border-radius: 2px; background: var(--ap-ink);
+  transition: transform .5s cubic-bezier(.76, 0, .24, 1), opacity .3s ease;
+}
+.ap-burger span:nth-child(1) { transform: translateY(-7px); }
+.ap-burger span:nth-child(3) { transform: translateY(7px); }
+.ap-hero.is-menu .ap-burger span:nth-child(1) { transform: rotate(45deg); }
+.ap-hero.is-menu .ap-burger span:nth-child(2) { opacity: 0; }
+.ap-hero.is-menu .ap-burger span:nth-child(3) { transform: rotate(-45deg); }
+
+.ap-scrim {
+  position: fixed; inset: 0; z-index: 40; opacity: 0; pointer-events: none;
+  background: rgba(28, 27, 25, .38); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  transition: opacity .5s ease;
+}
+.ap-hero.is-menu .ap-scrim { opacity: 1; pointer-events: auto; }
+.ap-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 45; width: 80%; max-width: 24rem;
+  padding: 40px 32px; overflow-y: auto; color: var(--ink);
+  background: linear-gradient(150deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .2) 60%), color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(28px) saturate(170%); -webkit-backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: -24px 0 60px rgba(28, 27, 25, .2), inset 1px 0 0 rgba(255, 255, 255, .7);
+  translate: 100% 0; transition: translate .6s cubic-bezier(.76, 0, .24, 1);
+}
+:root[data-theme="dark"] .ap-drawer { background: linear-gradient(150deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .02) 60%), color-mix(in srgb, var(--bg) 82%, transparent); box-shadow: -24px 0 60px rgba(0, 0, 0, .45), inset 1px 0 0 rgba(255, 255, 255, .12); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ap-drawer { background: linear-gradient(150deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .02) 60%), color-mix(in srgb, var(--bg) 82%, transparent); box-shadow: -24px 0 60px rgba(0, 0, 0, .45), inset 1px 0 0 rgba(255, 255, 255, .12); } }
+.ap-hero.is-menu .ap-drawer { translate: 0 0; }
+.ap-drawer-x {
+  position: absolute; right: 24px; top: 24px; border: 0; background: none; color: var(--ink); cursor: pointer; padding: 4px;
+  opacity: 0; rotate: 90deg; transition: opacity .4s ease, rotate .5s cubic-bezier(.76, 0, .24, 1);
+}
+.ap-hero.is-menu .ap-drawer-x { opacity: 1; rotate: 0deg; transition-delay: .3s; }
+.ap-drawer-label {
+  margin: 48px 0 14px; font-family: var(--font-body); font-size: .72rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft);
+}
+.ap-drawer-label + .ap-drawer-nav { margin-bottom: 8px; }
+.ap-drawer-nav, .ap-drawer-social { display: flex; }
+.ap-drawer-nav { flex-direction: column; gap: 6px; }
+.ap-drawer-nav a { font-family: var(--font-display); font-size: 2.25rem; line-height: 1.15; color: var(--ink); }
+.ap-drawer-social { flex-wrap: wrap; gap: 10px 18px; }
+.ap-drawer-social a { font-family: var(--font-body); font-size: .875rem; font-weight: 600; color: var(--terracotta); }
+/* entradas da gaveta em cascata */
+.ap-drawer-label, .ap-drawer-nav a, .ap-drawer-social a {
+  opacity: 0; translate: 0 24px;
+  transition: opacity .5s var(--ease-out), translate .6s cubic-bezier(.22, 1, .36, 1);
+}
+.ap-drawer-social a { translate: 0 16px; }
+.ap-hero.is-menu .ap-drawer-label, .ap-hero.is-menu .ap-drawer-nav a, .ap-hero.is-menu .ap-drawer-social a {
+  opacity: 1; translate: 0 0; transition-delay: var(--d, 0ms);
+}
+
+/* celular: a foto fica ancorada embaixo e o topo dela se dissolve no cinza do
+   estúdio — o nome aparece por cima da cabeça em vez de sumir atrás do rosto */
+@media (max-width: 639px) {
+  .ap-img { top: auto; bottom: 0; height: 74%; object-position: 50% 0; }
+  .ap-bg { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%); mask-image: linear-gradient(to bottom, transparent, #000 22%); }
+  .ap-marquee { top: 13vh; }
+}
+
+/* ---------- desktop ---------- */
+@media (min-width: 640px) {
+  .ap-chrome { padding: 32px 40px 0; }
+  .ap-cols { display: flex; }
+  .ap-burger, .ap-scrim, .ap-drawer { display: none; }
+  .ap-marquee { top: 14vh; }
+  .ap-track { font-size: 26vh; }
+  .ap-rule { left: 40px; right: 40px; bottom: 7rem; }
+  .ap-foot { padding: 0 40px 32px; font-size: .875rem; }
+  .ap-scroll { display: inline-flex; }
+}
+@media (min-width: 1024px) { .ap-cols { gap: 96px; } }
+
+/* ---------- entradas (tocam quando os dados e as fotos chegam: .is-ready) ---------- */
+.ap-hero:not(.is-ready) .anim-fade-in,
+.ap-hero:not(.is-ready) .anim-rise-in,
+.ap-hero:not(.is-ready) .anim-fade-up { opacity: 0; }
+.ap-hero:not(.is-ready) .anim-line { transform: scaleX(0); }
+.ap-hero.is-ready .anim-fade-in { animation: ap-fade-in 1.2s ease-out both; }
+.ap-hero.is-ready .anim-rise-in { animation: ap-rise-in 1.4s cubic-bezier(.22, 1, .36, 1) var(--d, 0ms) both; }
+.ap-hero.is-ready .anim-fade-up { animation: ap-fade-up .9s cubic-bezier(.22, 1, .36, 1) var(--d, 0ms) both; }
+.ap-hero.is-ready .anim-line { animation: ap-line 1.1s cubic-bezier(.76, 0, .24, 1) var(--d, 0ms) both; }
+@keyframes ap-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ap-rise-in { from { opacity: 0; transform: translateY(4vh) scale(1.03); } to { opacity: 1; transform: none; } }
+@keyframes ap-fade-up { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@keyframes ap-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.ap-scroll.anim-fade-up { translate: -50% 0; }
+
+/* "menos animação" do sistema: modo suave (como no resto do site) — sem deslocamentos, só opacidade curta */
+@media (prefers-reduced-motion: reduce) {
+  .ap-hero.is-ready .anim-fade-in, .ap-hero.is-ready .anim-rise-in, .ap-hero.is-ready .anim-fade-up, .ap-hero.is-ready .anim-line {
+    animation-duration: .01ms; animation-delay: 0ms;
+  }
+  .ap-track { animation-duration: 90s; }
+  .ap-scroll i::after { animation: none; }
+}
+
+/* ---------- conteúdo abaixo do hero ---------- */
+.ap-sec { padding: 112px 0 0; }
+.ap-sec:last-child { padding-bottom: 120px; }
+.ap-sec-head { margin-bottom: 36px; max-width: 680px; }
+.ap-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.06; letter-spacing: -.015em; margin: 10px 0 0; }
+.ap-title em { font-style: italic; color: var(--terracotta); }
+.ap-about { display: grid; grid-template-columns: 1.3fr 1fr; gap: 56px; align-items: start; }
+.ap-bio { font-family: var(--font-display); font-size: clamp(1.25rem, 2.1vw, 1.65rem); line-height: 1.45; color: var(--ink); margin: 24px 0 0; max-width: 34ch; }
+.ap-facts { padding: 28px 30px; }
+.ap-facts .dash-meta-row span:last-child { text-align: right; font-weight: 600; }
+.ap-tags { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line); }
+.ap-label { display: block; margin-bottom: 12px; font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--terracotta); }
+.ap-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.ap-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start; }
+.ap-gap-top { margin-top: 24px; }
+.ap-grid-2:empty, .ap-gap-top:not(:has(> :not([style*="display:none"]))) { display: none; }
+#archPortfolio .material-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+#archPortfolio .material-card .thumb { aspect-ratio: 4 / 3; }
+#archReviews { padding: 28px 30px; }
+
+@media (max-width: 900px) {
+  .ap-about, .ap-grid-2, .ap-grid-3, .ap-tags { grid-template-columns: 1fr; }
+  .ap-about { gap: 32px; }
+  .ap-sec { padding-top: 80px; }
+}
+
+/* ---------- foto enviada pelo próprio arquiteto ----------
+   Sem recorte disponível: a foto vira um retrato em arco (motivo de
+   arquitetura) no centro, sobre o cinza do estúdio e na frente do nome. */
+.ap-hero.ap-own-photo .ap-bg { display: none; }
+.ap-hero.ap-own-photo .ap-cut {
+  inset: auto; left: 50%; top: 49%; width: min(38vh, 72vw); height: min(50vh, 94vw);
+  translate: -50% -50%; object-fit: cover; object-position: 50% 30%;
+  border-radius: 999px 999px 26px 26px;
+  box-shadow: 0 34px 80px rgba(30, 24, 20, .28), 0 0 0 1px rgba(255, 255, 255, .55), 0 0 0 10px rgba(255, 255, 255, .14);
+  -webkit-mask-image: none; mask-image: none;
+}
+@media (max-width: 639px) {
+  .ap-hero.ap-own-photo .ap-cut { top: 58%; }
+}

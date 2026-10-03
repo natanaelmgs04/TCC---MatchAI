@@ -39,7 +39,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const role = [a.profile?.styles?.[0], location].filter(Boolean).join(' · ') || ROLE_FALLBACKS[i % ROLE_FALLBACKS.length];
     const bio = a.profile?.bio
       || `${a.name} atua${a.city ? ` em ${a.city}` : ''}${a.profile?.yearsExperience ? `, ${a.profile.yearsExperience} anos de experiência` : ''}${a.avgRating ? `, nota ${a.avgRating}` : ''}.`;
-    return { id: a.id, name: a.name, role, bio, photo: PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length] };
+    // mesmo retrato do perfil (assets/js/portraits.js); sem o script, cai na lista local
+    // foto que o arquiteto enviou; sem foto, o retrato ilustrativo de sempre
+    const photo = a.avatar ? MatchAPI.avatarSrc(a.avatar)
+      : typeof MatchPortraits !== 'undefined' ? MatchPortraits.pick(a.id, a.name).photo : PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length];
+    return { id: a.id, name: a.name, role, bio, photo };
   });
 
   const bgWrap = document.getElementById('fhBgs');

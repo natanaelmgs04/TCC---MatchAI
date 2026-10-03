@@ -3,6 +3,7 @@ import StoreReferral from "../models/StoreReferral.js";
 import User from "../models/User.js";
 import Project from "../models/Project.js";
 import { notify } from "../services/notificationService.js";
+import { importCatalog, PLATFORM_LABELS } from "../services/catalogImporter.js";
 
 export async function listMyProducts(req, res) {
   const products = await StoreProduct.find({ store: req.user.id }).sort("-createdAt");
@@ -38,6 +39,123 @@ export async function deleteProduct(req, res) {
   const product = await StoreProduct.findOneAndDelete({ _id: req.params.id, store: req.user.id });
   if (!product) return res.status(404).json({ error: "Produto não encontrado." });
   res.json({ ok: true });
+}
+
+// Uma importação por loja por vez, com um intervalo mínimo entre elas — cada
+// importação pode fazer dezenas de requisições ao site da loja.
+const importing = new Map();
+const IMPORT_COOLDOWN_MS = 60 * 1000;
+const FAILED_COOLDOWN_MS = 10 * 1000;
+
+export async function getCatalogStatus(req, res) {
+  const store = await User.findById(req.user.id).select("storeProfile");
+  const p = store?.storeProfile || {};
+  const [imported, manual] = await Promise.all([
+    StoreProduct.countDocuments({ store: req.user.id, source: "import" }),
+    StoreProduct.countDocuments({ store: req.user.id, source: { $ne: "import" } }),
+  ]);
+  res.json({
+    catalogUrl: p.catalogUrl || null,
+    platform: p.catalogPlatform || null,
+    platformLabel: p.catalogLabel || PLATFORM_LABELS[p.catalogPlatform] || null,
+    syncedAt: p.catalogSyncedAt || null,
+    imported,
+    manual,
+  });
+}
+
+/**
+ * Importa (ou sincroniza de novo) o catálogo do site da loja. Produtos já
+ * importados antes são atualizados pelo `externalId`; os que sumiram do site
+ * saem daqui também. Produtos cadastrados à mão nunca são tocados, e estilos
+ * que a loja ajustou à mão num produto importado são mantidos.
+ */
+export async function importProducts(req, res) {
+  const storeId = String(req.user.id);
+  const url = String(req.body?.url || "").trim();
+  if (!url) return res.status(400).json({ error: "Cole o endereço do site da sua loja." });
+  if (url.length > 500) return res.status(400).json({ error: "Endereço longo demais." });
+
+  const last = importing.get(storeId);
+  if (last === "running") return res.status(429).json({ error: "Já existe uma importação em andamento. Aguarde terminar." });
+  if (last && Date.now() < last) {
+    return res.status(429).json({ error: `Aguarde ${Math.ceil((last - Date.now()) / 1000)} segundos antes de importar de novo.` });
+  }
+
+  importing.set(storeId, "running");
+  let cooldown = FAILED_COOLDOWN_MS;
+  try {
+    let result;
+    try {
+      result = await importCatalog(url);
+    } catch (err) {
+      return res.status(err.status === 422 ? 422 : 400).json({ error: err.message || "Não foi possível importar agora." });
+    }
+    cooldown = IMPORT_COOLDOWN_MS;
+
+    const { products, platform, platformLabel, origin, sourceUrl } = result;
+    const ops = products.map((p) => ({
+      updateOne: {
+        filter: { store: req.user.id, externalId: p.externalId },
+        update: {
+          $set: {
+            name: p.name,
+            photo: p.photo,
+            category: p.category,
+            price: p.price,
+            purchaseUrl: p.purchaseUrl,
+            tags: p.tags,
+            source: "import",
+          },
+          $setOnInsert: { store: req.user.id, externalId: p.externalId, styles: p.styles },
+        },
+        upsert: true,
+      },
+    }));
+    const write = await StoreProduct.bulkWrite(ops, { ordered: false });
+    const removed = await StoreProduct.deleteMany({
+      store: req.user.id,
+      source: "import",
+      externalId: { $nin: products.map((p) => p.externalId) },
+    });
+
+    await User.updateOne(
+      { _id: req.user.id },
+      {
+        $set: {
+          "storeProfile.catalogUrl": sourceUrl,
+          "storeProfile.catalogPlatform": platform,
+          "storeProfile.catalogLabel": platformLabel,
+          "storeProfile.catalogSyncedAt": new Date(),
+          "storeProfile.catalogCount": products.length,
+        },
+      },
+    );
+
+    res.json({
+      platform,
+      platformLabel,
+      origin,
+      catalogUrl: sourceUrl,
+      total: products.length,
+      created: write.upsertedCount || 0,
+      updated: write.modifiedCount || 0,
+      removed: removed.deletedCount || 0,
+      sample: products.slice(0, 6).map(({ name, photo, price, category }) => ({ name, photo, price, category })),
+    });
+  } finally {
+    importing.set(storeId, Date.now() + cooldown);
+  }
+}
+
+/** Remove só os produtos importados (os cadastrados à mão ficam). */
+export async function clearImportedProducts(req, res) {
+  const removed = await StoreProduct.deleteMany({ store: req.user.id, source: "import" });
+  await User.updateOne(
+    { _id: req.user.id },
+    { $unset: { "storeProfile.catalogUrl": "", "storeProfile.catalogPlatform": "", "storeProfile.catalogLabel": "", "storeProfile.catalogSyncedAt": "", "storeProfile.catalogCount": "" } },
+  );
+  res.json({ removed: removed.deletedCount || 0 });
 }
 
 export async function getStoreProfile(req, res) {

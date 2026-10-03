@@ -1,4 +1,5 @@
 import Message from "../models/Message.js";
+import { avatarPath } from "../services/avatar.js";
 import User from "../models/User.js";
 import { newMessageEmail } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
@@ -36,8 +37,8 @@ export async function listConversations(req, res) {
   const messages = await Message.find({
     $or: [{ from: req.user.id }, { to: req.user.id }],
   })
-    .populate("from", "name role")
-    .populate("to", "name role")
+    .populate("from", "name role avatarVersion")
+    .populate("to", "name role avatarVersion")
     .sort("-createdAt");
 
   const seen = new Map();
@@ -50,6 +51,7 @@ export async function listConversations(req, res) {
         userId: key,
         name: other.name,
         role: other.role,
+        avatar: avatarPath(other),
         lastMessage: m.text,
         lastMessageAt: m.createdAt,
         unreadCount: 0,

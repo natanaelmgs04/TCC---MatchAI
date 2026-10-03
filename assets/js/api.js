@@ -58,7 +58,39 @@ const MatchAPI = (() => {
     return data;
   }
 
+  /** Endereço da foto de perfil ("/api/avatars/…") a partir da base da API. */
+  function avatarSrc(path) {
+    if (!path) return '';
+    if (/^https?:|^data:/.test(path)) return path;
+    const b = base();
+    return /^https?:/.test(b) ? b.replace(/\/api\/?$/, '') + path : path;
+  }
+
+  /** Reduz uma foto escolhida no computador/celular para ≈ 480 px (WebP/JPEG), pronta para enviar. */
+  function prepareAvatar(file, size = 480) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//.test(file.type)) return reject(new Error('Escolha uma imagem (JPG, PNG ou WebP).'));
+      if (file.size > 15 * 1024 * 1024) return reject(new Error('Imagem grande demais (máx. 15 MB).'));
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = Math.min(size, side);
+        canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        let data = canvas.toDataURL('image/webp', 0.85);
+        if (!data.startsWith('data:image/webp')) data = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(data);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler essa imagem.')); };
+      img.src = url;
+    });
+  }
+
   return {
+    avatarSrc, prepareAvatar,
     base, setBase, token, setSession, clearSession, currentUser,
     health: () => request('/health'),
     stats: () => request('/stats'),
@@ -81,6 +113,9 @@ const MatchAPI = (() => {
     updateStoreProduct: (id, payload) => request(`/stores/me/products/${encodeURIComponent(id)}`, { method: 'PATCH', auth: true, body: payload }),
     deleteStoreProduct: (id) => request(`/stores/me/products/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }),
     myStoreReferrals: () => request('/stores/me/referrals', { auth: true }),
+    storeCatalog: () => request('/stores/me/catalog', { auth: true }),
+    importStoreCatalog: (url) => request('/stores/me/catalog/import', { method: 'POST', auth: true, body: { url } }),
+    clearStoreCatalog: () => request('/stores/me/catalog', { method: 'DELETE', auth: true }),
     suggestedProducts: (projectId) => request(`/projects/${encodeURIComponent(projectId)}/suggested-products`, { auth: true }),
     createStoreReferral: (productId, projectId) => request('/stores/referrals', { method: 'POST', auth: true, body: { productId, projectId } }),
     featuredCaseStudies: (limit) => request(`/case-studies/featured${limit ? `?limit=${limit}` : ''}`),

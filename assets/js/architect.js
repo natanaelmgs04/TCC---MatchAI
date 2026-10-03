@@ -12,27 +12,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   const safeImg = (u) => (/^data:image\//.test(String(u)) ? String(u) : safeUrl(u));
 
-  // Fundo do hero por enquanto: sem foto própria cadastrada, cai numa das
-  // fotos ilustrativas (mesmas da vitrine de destaques.html) escolhida de
-  // forma fixa a partir do id -- a pessoa sempre vê a mesma foto no próprio
-  // perfil, em vez de uma trocando a cada visita. Some pra referência visual
-  // real (MatchAPI.architectReferenceImage) assim que ela carrega, mais abaixo.
-  const FALLBACK_HERO_PHOTOS = [
-    'assets/img/photos/arquiteto-hero-1.webp',
-    'assets/img/photos/arquiteto-hero-2.webp',
-    'assets/img/photos/arquiteto-hero-3.webp',
-    'assets/img/photos/arquiteto-hero-4.webp',
-    'assets/img/photos/arquiteto-hero-5.webp',
-    'assets/img/photos/arquiteto-hero-6.webp',
-    'assets/img/photos/arquiteto-hero-7.webp',
-    'assets/img/photos/arquiteto-hero-8.webp',
-  ];
-  const heroBg = document.getElementById('archHeroBg');
-  if (heroBg) {
-    const hash = [...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    heroBg.style.backgroundImage = `url("${FALLBACK_HERO_PHOTOS[hash % FALLBACK_HERO_PHOTOS.length]}")`;
-  }
-
   try {
     const arch = await MatchAPI.architect(id);
     const p = arch.profile || {};
@@ -47,8 +26,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       sessionStorage.setItem(viewedKey, '1');
     }
     document.getElementById('profileState').style.display = 'block';
-    document.getElementById('avatar').textContent = arch.name.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
     document.getElementById('archName').textContent = arch.name;
+    document.getElementById('apAboutName').textContent = arch.name;
+    document.title = `${arch.name} — match.IA`;
+    setupHero(arch, p);
     document.getElementById('archLocation').textContent = [arch.city, arch.state].filter(Boolean).join(' · ') || 'Localização não informada';
     document.getElementById('archAvailability').textContent = { available: 'Disponível', limited: 'Disponibilidade limitada', unavailable: 'Indisponível' }[p.availability] || '—';
     document.getElementById('archEmail').textContent = arch.email || '—';
@@ -58,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('archWebsite').innerHTML = website ? `<a href="${esc(website)}" target="_blank" rel="noopener" style="color:var(--terracotta);">${esc(p.website)}</a>` : '—';
     document.getElementById('archInstagram').textContent = p.instagram || '—';
     document.getElementById('archBio').textContent = p.bio || 'Este arquiteto ainda não adicionou uma bio.';
-    document.getElementById('archHeroBio').textContent = p.bio || `${arch.name} ainda não escreveu uma bio.`;
 
     const cauStatus = p.cauVerification?.status;
     document.getElementById('archVerifiedBadge').innerHTML = cauStatus === 'verified'
@@ -90,13 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('archReferenceImageContent').innerHTML = `
         <img src="${esc(img)}" alt="${esc(photo.description)}" style="width:100%; border-radius:12px; display:block;">
         <p style="font-size:0.76rem; color:var(--ink-faint); margin-top:8px;">Foto: ${credit ? `<a href="${esc(credit)}" target="_blank" rel="noopener" style="color:inherit;">${esc(photo.photographerName)}</a>` : esc(photo.photographerName)} via <a href="https://unsplash.com/?utm_source=matchia&utm_medium=referral" target="_blank" rel="noopener" style="color:inherit;">Unsplash</a></p>`;
-      // Referência visual real do arquiteto virou a foto do hero também,
-      // no lugar da ilustrativa (ver fallback acima) -- assim que carrega.
-      // Só troca depois que a foto carregar: se a rede bloquear o domínio, fica a ilustrativa local.
-      const probe = new Image();
-      probe.onload = () => { if (heroBg) heroBg.style.backgroundImage = `url("${img}")`; };
-      probe.src = img;
-    }).catch(() => { /* sem estilo/materiais suficientes, ou API fora do ar — card fica oculto, hero mantém a foto ilustrativa */ });
+    }).catch(() => { /* sem estilo/materiais suficientes, ou API fora do ar — card fica oculto */ });
 
     const combos = MatchExtras.generateMaterialCombos(p.favoriteMaterials);
     document.getElementById('archCombos').innerHTML = combos.length
@@ -205,6 +179,98 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (err.offline) document.getElementById('apiBanner').classList.add('show');
     document.getElementById('noId').style.display = 'block';
     document.getElementById('noId').innerHTML = `<h2>Não foi possível carregar este perfil</h2><p>${esc(err.message || '')}</p><a href="index.html" class="btn btn-secondary">Voltar ao início</a>`;
+  }
+
+  // ---------------- Hero editorial ----------------
+  // Foto de estúdio + pessoa recortada por cima do nome que rola. Enquanto o
+  // arquiteto não tem foto própria, usa o retrato ilustrativo fixo dele
+  // (assets/js/portraits.js — o mesmo da vitrine de destaques).
+  function setupHero(arch, p) {
+    const hero = document.getElementById('apHero');
+    const bg = document.getElementById('apBg'), cut = document.getElementById('apCut');
+    const pic = MatchPortraits.pick(arch.id || id, arch.name);
+    // Foto enviada pelo próprio arquiteto: vira um retrato em arco no centro
+    // (não há recorte dela), sobre o cinza do estúdio, na frente do nome.
+    const ownPhoto = arch.avatar ? MatchAPI.avatarSrc(arch.avatar) : '';
+    hero.classList.toggle('ap-own-photo', Boolean(ownPhoto));
+    cut.alt = `Retrato de ${arch.name}`;
+
+    // nome em duas metades idênticas (o trilho anda -50% e emenda sem pulo)
+    const [first, ...rest] = String(arch.name).trim().split(/\s+/);
+    const track = document.getElementById('apTrack');
+    for (let i = 0; i < 2; i++) {
+      const span = document.createElement('span');
+      span.append(first, ' — ');
+      if (rest.length) { const em = document.createElement('em'); em.textContent = rest.join(' '); span.append(em); }
+      span.append(' ');
+      track.append(span);
+    }
+
+    const years = Number(p.yearsExperience) || 0;
+    document.getElementById('apSince').textContent = years ? `Desde ${new Date().getFullYear() - years}` : 'match.IA';
+    const feminine = MatchPortraits.isFeminine(arch.name);
+    document.getElementById('apFootRole').textContent = `${feminine ? 'Arquiteta' : 'Arquiteto'}${p.cauVerification?.status === 'verified' ? ' · CAU verificado' : ''}`;
+    document.getElementById('apFootStyles').textContent = (p.styles || []).slice(0, 2).join(' · ') || (p.specialties || [])[0] || 'Arquitetura e interiores';
+    document.getElementById('apFootPlace').textContent = [arch.city, arch.state].filter(Boolean).join(' · ') || (years ? `${years} anos de experiência` : ' ');
+    const availability = { available: 'Disponível para novos projetos', limited: 'Agenda limitada', unavailable: 'Agenda fechada no momento' }[p.availability];
+    document.getElementById('apFootLabel').textContent = availability ? 'Disponibilidade' : 'Experiência';
+    document.getElementById('apFootValue').textContent = availability || (years ? `${years} anos` : '—');
+
+    // contato: só o que existe e é seguro (http/https, mailto)
+    const links = [];
+    const ig = String(p.instagram || '').trim().replace(/^@/, '');
+    if (ig) links.push(['Instagram', /^https?:/i.test(ig) ? safeUrl(ig) : `https://instagram.com/${encodeURIComponent(ig)}`]);
+    const site = safeUrl(p.website);
+    if (site) links.push(['Site', site]);
+    if (arch.email) links.push(['E-mail', `mailto:${encodeURIComponent(arch.email).replace(/%40/g, '@')}`]);
+    if (!links.length) links.push(['Mensagem', '#contratar']);
+    const fill = (wrap, base, step, cls) => {
+      wrap.textContent = '';
+      links.filter(([, href]) => href).forEach(([label, href], i) => {
+        const a = document.createElement('a');
+        a.href = href;
+        a.textContent = label;
+        if (/^https?:/.test(href)) { a.target = '_blank'; a.rel = 'noopener'; }
+        if (cls) a.className = cls;
+        a.style.setProperty('--d', `${base + i * step}ms`);
+        wrap.append(a);
+      });
+    };
+    fill(document.getElementById('apSocial'), 1150, 80, 'anim-fade-up');
+    fill(document.getElementById('apDrawerSocial'), 550, 60, '');
+
+    // entradas só quando as duas camadas carregaram (nunca pessoa sem fundo ou vice-versa)
+    const layers = ownPhoto ? [[cut, ownPhoto]] : [[bg, pic.photo], [cut, pic.cutout]];
+    let pending = layers.length;
+    const ready = () => { if (--pending <= 0) hero.classList.add('is-ready'); };
+    layers.forEach(([img, src]) => {
+      img.addEventListener('load', ready, { once: true });
+      img.addEventListener('error', ready, { once: true });
+      img.src = src;
+    });
+    setTimeout(() => hero.classList.add('is-ready'), 2500);
+
+    // gaveta do celular
+    const burger = document.getElementById('apBurger');
+    const drawer = document.getElementById('apDrawer');
+    const setMenu = (open) => {
+      hero.classList.toggle('is-menu', open);
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+      drawer.setAttribute('aria-hidden', String(!open));
+      document.body.style.overflow = open ? 'hidden' : '';
+      if (open) drawer.querySelector('a')?.focus({ preventScroll: true });
+    };
+    burger.addEventListener('click', () => setMenu(!hero.classList.contains('is-menu')));
+    document.getElementById('apDrawerX').addEventListener('click', () => { setMenu(false); burger.focus(); });
+    document.getElementById('apScrim').addEventListener('click', () => setMenu(false));
+    drawer.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hero.classList.contains('is-menu')) { setMenu(false); burger.focus(); } });
+
+    // a barra do site entra quando o hero sai da tela
+    new IntersectionObserver(([entry]) => {
+      document.body.classList.toggle('ap-past-hero', !entry.isIntersecting);
+    }, { threshold: 0.08 }).observe(hero);
   }
 
   // ---------------- Contratar este arquiteto ----------------

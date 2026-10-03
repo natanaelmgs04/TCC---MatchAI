@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { avatarPath } from "../services/avatar.js";
 import Hire from "../models/Hire.js";
 import Project from "../models/Project.js";
 import User from "../models/User.js";
@@ -42,14 +43,14 @@ function shape(hire) {
           status: p.status,
         }
       : { id: String(p) },
-    client: hire.client?._id ? { id: hire.client.id, name: hire.client.name, city: hire.client.city, state: hire.client.state } : { id: String(hire.client) },
-    architect: hire.architect?._id ? { id: hire.architect.id, name: hire.architect.name, city: hire.architect.city, state: hire.architect.state } : { id: String(hire.architect) },
+    client: hire.client?._id ? { id: hire.client.id, name: hire.client.name, avatar: avatarPath(hire.client), city: hire.client.city, state: hire.client.state } : { id: String(hire.client) },
+    architect: hire.architect?._id ? { id: hire.architect.id, name: hire.architect.name, avatar: avatarPath(hire.architect), city: hire.architect.city, state: hire.architect.state } : { id: String(hire.architect) },
   };
 }
 const populateAll = (q) =>
   q.populate("project", "name propertyType areaM2 city state preferredStyles preferredMaterials budget projectGoals status")
-    .populate("client", "name city state")
-    .populate("architect", "name city state");
+    .populate("client", "name city state avatarVersion")
+    .populate("architect", "name city state avatarVersion");
 
 /** POST /api/hires { projectId, architectId, message } — cliente pede a contratação. */
 export async function requestHire(req, res) {

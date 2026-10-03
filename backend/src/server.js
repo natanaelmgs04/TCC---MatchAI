@@ -29,6 +29,10 @@ import assistantRoutes from "./routes/assistant.js";
 import architectProjectRoutes from "./routes/architectProjects.js";
 import architectAssistantRoutes from "./routes/architectAssistant.js";
 import hireRoutes from "./routes/hires.js";
+import avatarRoutes from "./routes/avatars.js";
+import adminRoutes from "./routes/admin.js";
+import siteRoutes from "./routes/site.js";
+import User from "./models/User.js";
 import { emailStatus } from "./services/emailService.js";
 
 const app = express(),
@@ -81,6 +85,9 @@ app.use("/api/assistant", assistantRoutes);
 app.use("/api/architect-projects", architectProjectRoutes);
 app.use("/api/architect-assistant", architectAssistantRoutes);
 app.use("/api/hires", hireRoutes);
+app.use("/api/avatars", avatarRoutes);
+app.use("/api/admin", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600 }), adminRoutes);
+app.use("/api/site", siteRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Site (front-end) servido pelo mesmo processo/porta que a API.
@@ -161,6 +168,8 @@ if (envProblem) {
   process.exit(1);
 }
 connectDatabase({ allowLocal: true })
+  // Contas que já tinham foto do cadastro antigo ganham a versão que publica a foto.
+  .then(() => User.updateMany({ avatarUrl: { $exists: true, $nin: [null, ""] }, avatarVersion: { $exists: false } }, { $set: { avatarVersion: 1 } }).catch(() => {}))
   .then(() =>
     app.listen(process.env.PORT || 3000, () => {
       console.log(`Arkitetum running at http://localhost:${process.env.PORT || 3000}`);

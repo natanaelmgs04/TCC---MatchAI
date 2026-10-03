@@ -11,6 +11,8 @@ import StoreProduct from "../models/StoreProduct.js";
 import StoreReferral from "../models/StoreReferral.js";
 import { notify } from "../services/notificationService.js";
 import { recomputeProfileFromPortfolio } from "../services/portfolioProfile.js";
+import { parseAvatar } from "../services/avatar.js";
+import { deleteUserCascade } from "../services/accountDeletion.js";
 
 export function getMe(req, res) {
   res.json(req.user);
@@ -56,21 +58,7 @@ export async function exportMyData(req, res) {
  * referencia esse usuário nas outras coleções.
  */
 export async function deleteMyAccount(req, res) {
-  const userId = req.user.id;
-  await Promise.all([
-    Project.deleteMany({ client: userId }),
-    Message.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
-    Review.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
-    MatchHistory.deleteMany({ client: userId }),
-    Validation.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
-    Favorite.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
-    Timeline.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
-    CaseStudy.deleteMany({ $or: [{ client: userId }, { architect: userId }] }),
-    ProfileView.deleteMany({ architect: userId }),
-    StoreProduct.deleteMany({ store: userId }),
-    StoreReferral.deleteMany({ $or: [{ store: userId }, { client: userId }] }),
-  ]);
-  await req.user.deleteOne();
+  await deleteUserCascade(req.user.id);
   res.json({ ok: true });
 }
 
@@ -85,6 +73,15 @@ export async function updateMe(req, res) {
   const allowed = ["name", "phone", "city", "state"];
   for (const key of allowed)
     if (req.body[key] !== undefined) req.user[key] = req.body[key];
+
+  // Foto de perfil: data URI reduzido (ou "" para remover). A versão nova faz
+  // todo lugar que mostra a foto buscar a imagem atualizada.
+  if (req.body.avatarUrl !== undefined) {
+    const { value, error } = parseAvatar(req.body.avatarUrl);
+    if (error) return res.status(400).json({ error });
+    req.user.avatarUrl = value || undefined;
+    req.user.avatarVersion = value ? Date.now() : undefined;
+  }
 
   const wasUnavailable = req.user.role === "architect" && req.user.architectProfile?.availability === "unavailable";
 

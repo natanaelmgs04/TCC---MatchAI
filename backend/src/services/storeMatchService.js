@@ -17,10 +17,15 @@ export async function suggestProductsForProject(project) {
 
   if (!terms.length) return [];
 
-  const products = await StoreProduct.find().populate("store", "name storeProfile.storeName");
+  const products = await StoreProduct.find()
+    .select("name photo category styles tags price purchaseUrl store")
+    .populate("store", "name storeProfile.storeName status");
   const scored = products
+    .filter((product) => product.store && product.store.status !== "suspended")
     .map((product) => {
-      const productTerms = [product.category, ...(product.styles || [])].filter(Boolean).map((t) => String(t).toLowerCase());
+      const productTerms = [product.category, ...(product.styles || []), ...(product.tags || [])]
+        .filter(Boolean)
+        .map((t) => String(t).toLowerCase());
       const score = terms.reduce((sum, term) => sum + (productTerms.some((pt) => pt.includes(term) || term.includes(pt)) ? 1 : 0), 0);
       return { product, score };
     })
