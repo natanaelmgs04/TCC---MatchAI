@@ -538,6 +538,18 @@
             <input type="range" class="xv-range" data-xv-range min="0" max="100" step="0.1" value="0" aria-label="Posição no vídeo">
           </div>
           <span class="xv-time xv-time--total" data-xv-total>0:00</span>
+          <div class="xv-speed">
+            <button type="button" class="xv-btn xv-btn--speed" data-xv-speed aria-haspopup="menu" aria-expanded="false" aria-label="Velocidade: normal" title="Velocidade">1×</button>
+            <div class="xv-speed-menu" data-xv-speed-menu role="menu" aria-label="Velocidade do vídeo" hidden>
+              <span class="xv-speed-title" aria-hidden="true">Velocidade</span>
+              <button type="button" role="menuitemradio" data-rate="0.5" aria-checked="false">0,5×</button>
+              <button type="button" role="menuitemradio" data-rate="0.75" aria-checked="false">0,75×</button>
+              <button type="button" role="menuitemradio" data-rate="1" aria-checked="true">Normal</button>
+              <button type="button" role="menuitemradio" data-rate="1.25" aria-checked="false">1,25×</button>
+              <button type="button" role="menuitemradio" data-rate="1.5" aria-checked="false">1,5×</button>
+              <button type="button" role="menuitemradio" data-rate="2" aria-checked="false">2×</button>
+            </div>
+          </div>
           <button type="button" class="xv-btn" data-xv-sound aria-label="Desligar narração" aria-pressed="true">
             <svg class="xv-i-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="xv-wave" d="M15.5 9a4 4 0 0 1 0 6M17.8 6.8a7.2 7.2 0 0 1 0 10.4"/></svg>
             <svg class="xv-i-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="xv-wave" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>

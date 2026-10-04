@@ -593,14 +593,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ---------------- Meus projetos (drawer estilo lista de conversas) ----------------
+  // Estilos da lista + "+ Outros..." (estilos digitados pelo cliente/loja,
+  // ex.: "Japandi", aparecem como chips próprios e não se perdem ao salvar).
   function buildProjectStyleChips(containerId, selected = []) {
     const container = document.getElementById(containerId);
     container.innerHTML = PROJECT_STYLES.map(style =>
-      `<button type="button" class="chip has-thumb${selected.includes(style) ? ' active' : ''}" data-style="${style}"><img class="chip-thumb" src="${PROJECT_STYLE_THUMBS[style]}" alt="" loading="lazy">${style}</button>`
+      `<button type="button" class="chip has-thumb${selected.includes(style) ? ' active' : ''}" data-style="${style}" aria-pressed="${selected.includes(style)}"><img class="chip-thumb" src="${PROJECT_STYLE_THUMBS[style]}" alt="" loading="lazy">${style}</button>`
     ).join('');
-    container.querySelectorAll('.chip').forEach(chip => {
-      chip.addEventListener('click', () => chip.classList.toggle('active'));
+    container.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      chip.setAttribute('aria-pressed', String(chip.classList.toggle('active')));
     });
+    MatchChipOther.attach(container, { dataKey: 'style', initial: selected.filter((s) => !PROJECT_STYLES.includes(s)), placeholder: 'Ex.: Japandi, Boho…' });
   }
 
   function projectDrawerCardHtml(p) {
@@ -738,6 +743,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <option value="Comercial">Comercial</option>
               <option value="Paisagismo">Paisagismo</option>
             </select>
+            <input type="text" id="projPropertyTypeOther" placeholder="Qual? Ex.: Casa de campo, Clínica…" maxlength="60" aria-label="Outro tipo de imóvel" style="margin-top:8px;" hidden>
           </div>
           <div class="form-field">
             <label for="projAreaM2">Metragem (m²)</label>
@@ -784,7 +790,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     buildProjectStyleChips('projStylesChips', project?.preferredStyles || []);
     document.getElementById('projName').value = project?.name || '';
-    document.getElementById('projPropertyType').value = project?.propertyType || 'Residencial unifamiliar';
+    const propertyType = MatchChipOther.select(document.getElementById('projPropertyType'), document.getElementById('projPropertyTypeOther'));
+    propertyType.set(project?.propertyType || 'Residencial unifamiliar');
     document.getElementById('projAreaM2').value = project?.areaM2 || '';
     document.getElementById('projBudgetMin').value = project?.budget?.min || '';
     document.getElementById('projBudgetMax').value = project?.budget?.max || '';
@@ -796,7 +803,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const payload = {
         name: document.getElementById('projName').value.trim(),
-        propertyType: document.getElementById('projPropertyType').value,
+        propertyType: propertyType.get(),
         areaM2: document.getElementById('projAreaM2').value,
         budgetMin: document.getElementById('projBudgetMin').value,
         budgetMax: document.getElementById('projBudgetMax').value,
@@ -806,6 +813,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
       if (project) payload.status = document.getElementById('projStatus').value;
       if (!payload.name) { alert('Dê um nome para o projeto.'); return; }
+      if (!payload.propertyType) { alert('Escreva qual é o tipo de imóvel (ou escolha um da lista).'); document.getElementById('projPropertyTypeOther').focus(); return; }
       try {
         if (project) await MatchAPI.updateProject(project._id, payload);
         else await MatchAPI.createProject(payload);

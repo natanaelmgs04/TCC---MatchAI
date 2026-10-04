@@ -21,12 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let qIndex = 0;
 
   // ---------- Etapa 1: o básico ----------
-  const fields = { name: 'npName', propertyType: 'npPropertyType', areaM2: 'npArea', city: 'npCity', state: 'npState', budgetMin: 'npBudgetMin', budgetMax: 'npBudgetMax', preferredMaterials: 'npMaterials', projectGoals: 'npGoals', familySize: 'npFamily' };
+  const fields = { name: 'npName', areaM2: 'npArea', city: 'npCity', state: 'npState', budgetMin: 'npBudgetMin', budgetMax: 'npBudgetMax', preferredMaterials: 'npMaterials', projectGoals: 'npGoals', familySize: 'npFamily' };
   Object.entries(fields).forEach(([key, id]) => {
     const el = $(id);
     if (draft.basics[key] != null) el.value = draft.basics[key];
     el.addEventListener('input', () => { draft.basics[key] = el.value; persist(); });
   });
+
+  // Tipo de imóvel: lista + "Outro…" com campo livre.
+  const propertyType = MatchChipOther.select($('npPropertyType'), $('npPropertyTypeOther'), {
+    onChange: (value) => { draft.basics.propertyType = value; persist(); },
+  });
+  if (draft.basics.propertyType) propertyType.set(draft.basics.propertyType);
+  else draft.basics.propertyType = propertyType.get();
 
   const stylesBox = $('npStyles');
   stylesBox.innerHTML = MatchProjectStyles.list.map((s) =>
@@ -37,9 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!chip) return;
     const on = chip.classList.toggle('active');
     chip.setAttribute('aria-pressed', String(on));
+    syncStyles();
+  });
+  function syncStyles() {
     draft.basics.preferredStyles = [...stylesBox.querySelectorAll('.chip.active')].map((c) => c.dataset.style);
     persist();
-  });
+  }
+  MatchChipOther.attach(stylesBox, { dataKey: 'style', initial: draft.basics.preferredStyles || [], onChange: syncStyles, placeholder: 'Ex.: Japandi, Boho…' });
 
   // ---------- Etapa 2: estilo ----------
   $('npNotes').value = draft.styleNotes || '';
@@ -51,9 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!chip) return;
     const on = chip.classList.toggle('active');
     chip.setAttribute('aria-pressed', String(on));
+    syncFeelings();
+  });
+  function syncFeelings() {
     draft.feelings = [...feelingsBox.querySelectorAll('.chip.active')].map((c) => c.dataset.feeling);
     persist();
-  });
+  }
+  MatchChipOther.attach(feelingsBox, { dataKey: 'feeling', initial: draft.feelings || [], onChange: syncFeelings, placeholder: 'Ex.: Liberdade, Silêncio…' });
 
   // ---------- Etapa 3: referências por imagem ----------
   const choices = $('npChoices');
@@ -156,13 +171,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------- Navegação entre etapas ----------
   function validateBasics() {
     const ok = Boolean(String(draft.basics.name || '').trim());
+    const typeOk = Boolean(propertyType.get());
     $('npName').closest('.form-field').classList.toggle('has-error', !ok);
-    $('npError0').textContent = ok ? '' : 'Dê um nome ao projeto para continuar.';
-    return ok;
+    $('npPropertyType').closest('.form-field').classList.toggle('has-error', !typeOk);
+    $('npError0').textContent = !ok ? 'Dê um nome ao projeto para continuar.' : !typeOk ? 'Escreva qual é o tipo de imóvel (ou escolha um da lista).' : '';
+    return ok && typeOk;
   }
 
   function goTo(next) {
-    if (next > step && step === 0 && !validateBasics()) { $('npName').focus(); return; }
+    if (next > step && step === 0 && !validateBasics()) { (String(draft.basics.name || '').trim() ? $('npPropertyTypeOther') : $('npName')).focus(); return; }
     const dir = next > step ? 1 : -1;
     step = Math.max(0, Math.min(STEPS - 1, next));
     document.querySelectorAll('.np-step').forEach((s) => {

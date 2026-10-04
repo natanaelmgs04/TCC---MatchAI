@@ -2,12 +2,17 @@ import Project from "../models/Project.js";
 import { suggestProductsForProject } from "../services/storeMatchService.js";
 import { normalizeStyleNotes, normalizeStylePicks, normalizeExperience } from "../services/projectPreferences.js";
 
-const normalizeStringArray = (value) =>
-  Array.isArray(value)
-    ? value
-    : typeof value === "string"
-      ? value.split(",").map((item) => item.trim()).filter(Boolean)
-      : [];
+// Estilos e materiais podem ser digitados pelo cliente ("+ Outros..."):
+// cada item recortado, sem repetição e com um limite de itens.
+const normalizeStringArray = (value) => {
+  const list = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+  const seen = new Set();
+  return list
+    .map((item) => String(item ?? "").trim().replace(/\s+/g, " ").slice(0, 60))
+    .filter((item) => item && !seen.has(item.toLowerCase()) && seen.add(item.toLowerCase()))
+    .slice(0, 20);
+};
+const cleanPropertyType = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 60) : undefined);
 
 const normalizeBudget = (body) => {
   const min = body.budgetMin !== undefined && body.budgetMin !== "" ? Number(body.budgetMin) : undefined;
@@ -35,7 +40,7 @@ export async function createProject(req, res) {
     preferredStyles: normalizeStringArray(req.body.preferredStyles),
     preferredMaterials: normalizeStringArray(req.body.preferredMaterials),
     budget: normalizeBudget(req.body),
-    propertyType: req.body.propertyType,
+    propertyType: cleanPropertyType(req.body.propertyType),
     familySize: req.body.familySize ? Number(req.body.familySize) : undefined,
     projectGoals: req.body.projectGoals,
     preferences: req.body.preferences,
@@ -56,6 +61,7 @@ export async function updateProject(req, res) {
 
   const allowed = ["name", "propertyType", "projectGoals", "preferences", "status"];
   for (const key of allowed) if (req.body[key] !== undefined) project[key] = req.body[key];
+  if (req.body.propertyType !== undefined) project.propertyType = cleanPropertyType(req.body.propertyType);
   if (req.body.familySize !== undefined) project.familySize = Number(req.body.familySize);
   if (req.body.areaM2 !== undefined) project.areaM2 = req.body.areaM2 ? Number(req.body.areaM2) : undefined;
   if (req.body.city !== undefined) project.city = cleanCity(req.body.city);

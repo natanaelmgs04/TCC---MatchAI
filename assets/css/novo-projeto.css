@@ -175,3 +175,6 @@
 }
 .np-choice-label { box-shadow: inset 1px 1px 1px -0.5px rgba(255, 255, 255, .55), inset -1px -1px 1px -0.5px rgba(0, 0, 0, .3); }
 .np-quiz-dots i.is-current { background: linear-gradient(135deg, rgba(255, 255, 255, .4), rgba(255, 255, 255, 0) 60%), var(--terracotta); }
+
+/* Campo "Outro…" do tipo de imóvel (aparece abaixo do select) */
+.np-other-input { margin-top: 8px; }

@@ -43,6 +43,8 @@
     total: root.querySelector('[data-xv-total]'),
     length: root.querySelector('[data-xv-length]'),
     live: root.querySelector('[data-xv-live]'),
+    speed: root.querySelector('[data-xv-speed]'),
+    speedMenu: root.querySelector('[data-xv-speed-menu]'),
   };
   const chapters = [...document.querySelectorAll('[data-xv-jump]')];
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -365,7 +367,16 @@
   // ---------- narração (áudio gravado + Web Audio) ----------
   const AC = window.AudioContext || window.webkitAudioContext;
   let narrate = !!AC, actx = null, gain = null;
-  let voice = null;                       // { line, src } — fala tocando agora
+  let voice = null;                       // { line, src } ou { line, media } — fala tocando agora
+  // Velocidade (0,5× a 2×): o relógio do vídeo anda `rate` vezes mais rápido.
+  // A fala acompanha: em 1× pelo Web Audio (como sempre); fora de 1× por um
+  // <audio> com preservesPitch, para a voz não ficar aguda/grave. Se o
+  // navegador bloquear esse <audio>, cai no Web Audio com playbackRate.
+  const RATES = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  let rate = 1;
+  try { const saved = parseFloat(localStorage.getItem('matchia_xv_rate')); if (RATES.includes(saved)) rate = saved; } catch { /* sem storage: 1× */ }
+  let mediaBlocked = false;
+  const medias = new Map();               // id → HTMLAudioElement (só usado fora de 1×)
   const bytes = new Map();                // id → ArrayBuffer baixado (antes do play)
   const buffers = new Map();              // id → AudioBuffer decodificado (depois do play)
   const allLines = scenes.flatMap((s) => s.lines);
@@ -410,24 +421,46 @@
   }
   function stopVoice() {
     if (!voice) return;
-    try { voice.src.stop(); } catch { /* já tinha terminado */ }
+    if (voice.media) voice.media.pause();
+    else { try { voice.src.stop(); } catch { /* já tinha terminado */ } }
     voice = null;
+  }
+  function mediaFor(l) {
+    let m = medias.get(l.id);
+    if (!m) {
+      m = new Audio(l.audio.src);
+      m.preload = 'auto';
+      m.preservesPitch = m.mozPreservesPitch = m.webkitPreservesPitch = true;
+      medias.set(l.id, m);
+    }
+    return m;
   }
   // a cada quadro: qual fala deveria estar soando agora? se não for a que está tocando, troca
   function syncVoice(time) {
     if (!playing || !narrate || !actx) { stopVoice(); return; }
     const sc = scenes[sceneAt(time)], lt = time - sc.start;
     const l = sc.lines.find((x) => x.audio && lt >= x.speakAt && lt < x.end - 0.05);
-    if (!l) { if (voice && !sc.lines.includes(voice.line)) stopVoice(); return; }
+    if (!l) { if (voice && (voice.media || !sc.lines.includes(voice.line))) stopVoice(); return; }
     if (voice?.line === l) return;
+    const offset = lt - l.speakAt;
+    if (rate !== 1 && !mediaBlocked) {
+      stopVoice();
+      const media = mediaFor(l);
+      media.playbackRate = rate;
+      try { media.currentTime = l.audio.start + offset; } catch { /* ainda sem metadados: começa do início da fala */ }
+      const entry = { line: l, media };
+      voice = entry;
+      media.play().catch(() => { mediaBlocked = true; if (voice === entry) voice = null; });
+      return;
+    }
     const buf = buffers.get(l.id);
     if (!buf) return;                  // ainda decodificando: entra no próximo quadro
     stopVoice();
-    const offset = lt - l.speakAt;
     const src = actx.createBufferSource();
     src.buffer = buf;
+    src.playbackRate.value = rate;     // só chega aqui fora de 1× se o <audio> foi bloqueado
     src.connect(gain);
-    src.start(0, l.audio.start + offset, Math.max(0.05, l.dur - offset));
+    src.start(0, l.audio.start + offset, Math.max(0.05, (l.dur - offset)));
     const entry = { line: l, src };
     src.onended = () => { if (voice === entry) voice = null; };
     voice = entry;
@@ -469,7 +502,7 @@
   // ---------- relógio ----------
   function frame(now) {
     if (!playing) return;
-    t = Math.min(total, t + Math.min(0.1, (now - lastNow) / 1000));
+    t = Math.min(total, t + Math.min(0.1, (now - lastNow) / 1000) * rate);
     lastNow = now;
     render(t);
     syncVoice(t);
@@ -560,6 +593,52 @@
     render(t);
   });
 
+  // ---------- velocidade ----------
+  const rateLabel = (r) => (r === 1 ? '1×' : `${String(r).replace('.', ',')}×`);
+  function setRate(r, { announce = true } = {}) {
+    if (!RATES.includes(r)) return;
+    rate = r;
+    try { localStorage.setItem('matchia_xv_rate', String(r)); } catch { /* sem storage: vale só nesta visita */ }
+    stopVoice();                       // o próximo quadro retoma a fala na nova velocidade
+    els.speed.textContent = rateLabel(r);
+    els.speed.classList.toggle('is-changed', r !== 1);
+    els.speed.setAttribute('aria-label', `Velocidade: ${r === 1 ? 'normal' : rateLabel(r)}`);
+    els.speedMenu.querySelectorAll('[data-rate]').forEach((b) => b.setAttribute('aria-checked', String(parseFloat(b.dataset.rate) === r)));
+    if (announce && els.live) els.live.textContent = `Velocidade ${r === 1 ? 'normal' : rateLabel(r)}`;
+  }
+  function closeSpeedMenu(focusButton) {
+    if (els.speedMenu.hidden) return;
+    els.speedMenu.hidden = true;
+    els.speed.setAttribute('aria-expanded', 'false');
+    if (focusButton) els.speed.focus();
+  }
+  els.speed.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = els.speedMenu.hidden;
+    els.speedMenu.hidden = !open;
+    els.speed.setAttribute('aria-expanded', String(open));
+    if (open) els.speedMenu.querySelector('[aria-checked="true"]')?.focus();
+  });
+  els.speedMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const b = e.target.closest('[data-rate]');
+    if (!b) return;
+    setRate(parseFloat(b.dataset.rate));
+    closeSpeedMenu(true);
+  });
+  els.speedMenu.addEventListener('keydown', (e) => {
+    const items = [...els.speedMenu.querySelectorAll('[data-rate]')];
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      e.stopPropagation();
+      items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+    } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSpeedMenu(true); }
+    else if (e.key === 'Tab') closeSpeedMenu(false);
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.xv-speed')) closeSpeedMenu(false); });
+  setRate(rate, { announce: false });
+
   els.full.addEventListener('click', () => {
     const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
     if (fsEl) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
@@ -578,6 +657,10 @@
       e.preventDefault();
       begin();
       seek(t + (k === 'arrowright' ? 5 : -5));
+    } else if (e.key === '>' || e.key === '<') {       // como no YouTube: Shift + . / Shift + ,
+      e.preventDefault();
+      const i = RATES.indexOf(rate) + (e.key === '>' ? 1 : -1);
+      if (i >= 0 && i < RATES.length) setRate(RATES[i]);
     } else if (k === 'm') { els.sound.click(); }
     else if (k === 'f') { els.full.click(); }
   });
