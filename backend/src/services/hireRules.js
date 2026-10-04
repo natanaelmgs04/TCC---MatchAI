@@ -5,9 +5,14 @@
  */
 
 /** Cliente pedindo para contratar um arquiteto para um projeto. */
+/** Perfis ilustrativos (isDemo) não têm ninguém do outro lado. */
+export const DEMO_BLOCK_MESSAGE =
+  "Este é um perfil ilustrativo da fase inicial da match.IA, ainda não ligado a um arquiteto de verdade. Rode o match para encontrar arquitetos disponíveis.";
+
 export function canRequestHire({ project, architect, openHire, acceptedHire, clientId }) {
   if (!project || String(project.client) !== String(clientId)) return { status: 404, error: "Projeto não encontrado" };
   if (!architect || architect.role !== "architect") return { status: 404, error: "Arquiteto não encontrado" };
+  if (architect.isDemo) return { status: 409, error: DEMO_BLOCK_MESSAGE };
   if (acceptedHire || project.architect) return { status: 409, error: "Este projeto já foi contratado." };
   if (openHire) {
     return String(openHire.architect) === String(architect._id ?? architect.id)

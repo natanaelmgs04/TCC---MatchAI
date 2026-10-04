@@ -25,5 +25,8 @@ router.get("/settings", asyncHandler(admin.getSettings));
 router.put("/settings", asyncHandler(admin.saveSettings));
 router.get("/logs", asyncHandler(admin.logs));
 router.get("/system", admin.system);
+router.get("/demo-architects", asyncHandler(admin.demoStatus));
+router.post("/demo-architects", asyncHandler(admin.createDemo));
+router.delete("/demo-architects", asyncHandler(admin.removeDemo));
 
 export default router;

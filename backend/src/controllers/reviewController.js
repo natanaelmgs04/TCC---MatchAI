@@ -2,11 +2,13 @@ import Review from "../models/Review.js";
 import User from "../models/User.js";
 import { newReviewEmail } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
+import { DEMO_BLOCK_MESSAGE } from "../services/demoArchitects.js";
 
 export async function createReview(req, res) {
   const { architect, rating, comment } = req.body;
   if (!architect || !rating)
     return res.status(400).json({ error: "Arquiteto e nota são obrigatórios" });
+  if (await User.exists({ _id: architect, isDemo: true }).catch(() => null)) return res.status(409).json({ error: DEMO_BLOCK_MESSAGE });
   // upsert: reenvio (clique duplo, ou o cliente mudando de ideia) atualiza a
   // mesma avaliação em vez de criar outra — um cliente só avalia uma vez
   // cada arquiteto (reforçado pelo índice único client+architect no model).

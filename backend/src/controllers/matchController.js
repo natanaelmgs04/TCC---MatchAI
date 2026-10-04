@@ -46,6 +46,7 @@ function shapeArchitect(architect, sameCity) {
     state: architect.state,
     profile: architect.architectProfile,
     sameCity,
+    isDemo: !!architect.isDemo,
   };
 }
 

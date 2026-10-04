@@ -26,6 +26,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       sessionStorage.setItem(viewedKey, '1');
     }
     document.getElementById('profileState').style.display = 'block';
+    if (arch.isDemo) {
+      const note = document.createElement('p');
+      note.className = 'ap-demo-note';
+      note.setAttribute('role', 'note');
+      note.innerHTML = '<strong>Perfil ilustrativo.</strong> Este perfil mostra como os arquitetos aparecem na match.IA durante a fase inicial — ainda não está ligado a um profissional de verdade, então não recebe mensagens nem pedidos de contratação.';
+      document.getElementById('profileState').prepend(note);
+    }
     document.getElementById('archName').textContent = arch.name;
     document.getElementById('apAboutName').textContent = arch.name;
     document.title = `${arch.name} — match.IA`;
@@ -282,6 +289,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body = document.getElementById('hireCardBody');
     if (!card || !body) return;
     if (me && !isClient) { card.style.display = 'none'; return; }
+    if (arch.isDemo) {
+      body.innerHTML = '<p class="hire-muted">Este é um perfil ilustrativo, sem um arquiteto de verdade por trás. <a href="dashboard.html" style="color:var(--terracotta); font-weight:600;">Rode o match</a> para encontrar arquitetos disponíveis.</p>';
+      return;
+    }
     if (!me) {
       body.innerHTML = `<p class="hire-muted">Para contratar, <a href="login.html" style="color:var(--terracotta); font-weight:600;">entre</a> ou <a href="cadastro.html?tipo=cliente" style="color:var(--terracotta); font-weight:600;">crie sua conta de cliente</a> e cadastre o seu projeto.</p>`;
       return;

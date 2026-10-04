@@ -188,7 +188,15 @@
         <select id="uSort" aria-label="Ordenar"><option value="createdAt">Mais recentes</option><option value="lastSeen">Vistos por último</option><option value="name">Nome (A–Z)</option></select>
         <button type="button" class="btn btn-secondary btn-sm" id="uCsv">${U.icon('download', 15)} Exportar CSV</button>
       </div>
+      <section class="dv-card adm-card adm-demo" id="uDemo" aria-labelledby="uDemoTitle">
+        <div class="adm-demo-text">
+          <h3 id="uDemoTitle">Arquitetos de demonstração</h3>
+          <p>10 perfis ilustrativos para a plataforma não parecer vazia no começo. Aparecem com o selo "Perfil ilustrativo", ninguém consegue entrar neles, e mensagens, contratações e avaliações para eles são bloqueadas. Remova quando houver arquitetos reais.</p>
+        </div>
+        <div class="adm-demo-actions"><span class="adm-muted" id="uDemoCount">…</span><button type="button" class="btn btn-sm" id="uDemoBtn" disabled>…</button></div>
+      </section>
       <div id="uList"><div class="adm-loading"><span class="spinner"></span></div></div>`;
+    setupDemoCard();
     $('uRole').value = userFilters.role; $('uStatus').value = userFilters.status; $('uSort').value = userFilters.sort;
     let t;
     $('uQ').addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { userFilters.q = $('uQ').value.trim(); userFilters.page = 1; loadUsers(); }, 280); });
@@ -206,6 +214,30 @@
     });
     await loadUsers();
   }
+  async function setupDemoCard() {
+    const btn = $('uDemoBtn'), count = $('uDemoCount');
+    const paint = (n) => {
+      if (!btn) return;
+      count.textContent = n ? `${n} ${n === 1 ? 'perfil ativo' : 'perfis ativos'}` : 'Nenhum perfil ativo';
+      btn.className = `btn btn-sm ${n ? 'btn-secondary' : 'btn-primary'}`;
+      btn.textContent = n ? 'Remover todos' : 'Criar os 10 perfis';
+      btn.dataset.mode = n ? 'remove' : 'create';
+      btn.disabled = false;
+    };
+    try { paint((await api('/demo-architects')).count); } catch (err) { count.textContent = ''; fail(err); }
+    btn?.addEventListener('click', async () => {
+      const removing = btn.dataset.mode === 'remove';
+      if (removing && !confirm('Remover todos os arquitetos de demonstração? Favoritos e matches ligados a eles também saem.')) return;
+      btn.disabled = true;
+      btn.textContent = removing ? 'Removendo…' : 'Criando…';
+      try {
+        const r = await api('/demo-architects', { method: removing ? 'DELETE' : 'POST' });
+        toast(removing ? `${r.removed} perfis removidos` : `${r.created} perfis criados${r.skipped ? ` (${r.skipped} já existiam)` : ''}`);
+        paint(removing ? 0 : r.total);
+        loadUsers();
+      } catch (err) { fail(err); paint(removing ? 1 : 0); }
+    });
+  }
   async function loadUsers() {
     const qs = new URLSearchParams({ q: userFilters.q, role: userFilters.role, status: userFilters.status, sort: userFilters.sort, page: userFilters.page });
     const d = await api(`/users?${qs}`);
@@ -215,7 +247,7 @@
       ['Pessoa', 'Papel', 'Local', 'Plano / CAU', 'Situação', 'Cadastro', 'Visto por último'],
       d.users.map((u) => `<tr data-user="${u.id}" tabindex="0">
         <td>${person(u, u.email)}</td>
-        <td>${pill(ROLE[u.role] || u.role, u.role)}</td>
+        <td>${pill(ROLE[u.role] || u.role, u.role)}${u.isDemo ? ` ${pill('Ilustrativo', 'warn')}` : ''}</td>
         <td>${esc([u.city, u.state].filter(Boolean).join(' / ') || '—')}</td>
         <td>${u.role === 'architect' ? `${u.plan === 'pro' ? pill('Pro', 'accent') : pill('Gratuito')} ${u.cau === 'verified' ? pill('CAU ✓', 'ok') : u.cau === 'pending' ? pill('CAU pendente', 'warn') : ''}` : '<span class="adm-muted">—</span>'}</td>
         <td>${statusPill(u)}</td>

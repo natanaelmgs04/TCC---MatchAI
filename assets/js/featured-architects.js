@@ -36,7 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const slides = architects.map((a, i) => {
     const location = [a.city, a.state].filter(Boolean).join('/');
-    const role = [a.profile?.styles?.[0], location].filter(Boolean).join(' · ') || ROLE_FALLBACKS[i % ROLE_FALLBACKS.length];
+    const role = ([a.profile?.styles?.[0], location].filter(Boolean).join(' · ') || ROLE_FALLBACKS[i % ROLE_FALLBACKS.length])
+      + (a.isDemo ? ' · Perfil ilustrativo' : '');
     const bio = a.profile?.bio
       || `${a.name} atua${a.city ? ` em ${a.city}` : ''}${a.profile?.yearsExperience ? `, ${a.profile.yearsExperience} anos de experiência` : ''}${a.avgRating ? `, nota ${a.avgRating}` : ''}.`;
     // mesmo retrato do perfil (assets/js/portraits.js); sem o script, cai na lista local

@@ -48,3 +48,9 @@ test("publicProjectTitle: não expõe o nome que o cliente deu ao projeto", () =
   assert.equal(publicProjectTitle(project), "Apartamento · Moderno");
   assert.equal(publicProjectTitle({ name: "Casa da família Silva" }), "Projeto");
 });
+
+test("canRequestHire: perfil ilustrativo (isDemo) não recebe pedido de contratação", () => {
+  const problem = canRequestHire({ project, architect: { ...architect, isDemo: true }, clientId: client });
+  assert.equal(problem.status, 409);
+  assert.match(problem.error, /perfil ilustrativo/);
+});

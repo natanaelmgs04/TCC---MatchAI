@@ -18,6 +18,7 @@ import { deleteUserCascade } from "../services/accountDeletion.js";
 import { avatarPath } from "../services/avatar.js";
 import { adminEmails } from "../middleware/auth.js";
 import { clearSiteConfigCache } from "../routes/site.js";
+import { countDemoArchitects, createDemoArchitects, removeDemoArchitects } from "../services/demoArchitects.js";
 
 /**
  * Painel da equipe (admin.html). Tudo aqui exige login + e-mail em
@@ -78,7 +79,23 @@ function userRow(u) {
     plan: u.role === "architect" ? u.architectProfile?.subscriptionTier || "free" : null,
     cau: u.role === "architect" ? u.architectProfile?.cauVerification?.status || "none" : null,
     storeName: u.role === "store" ? u.storeProfile?.storeName : undefined,
+    isDemo: !!u.isDemo,
   };
+}
+
+// ---------- perfis ilustrativos (arquitetos de demonstração) ----------
+export async function demoStatus(req, res) {
+  res.json({ count: await countDemoArchitects() });
+}
+export async function createDemo(req, res) {
+  const result = await createDemoArchitects();
+  log(req, "demo.create", { type: "system", label: "Arquitetos de demonstração" }, `${result.created} criados`);
+  res.json(result);
+}
+export async function removeDemo(req, res) {
+  const result = await removeDemoArchitects();
+  log(req, "demo.remove", { type: "system", label: "Arquitetos de demonstração" }, `${result.removed} removidos`);
+  res.json(result);
 }
 
 export function me(req, res) {

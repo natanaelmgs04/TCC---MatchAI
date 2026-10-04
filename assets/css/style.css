@@ -2933,3 +2933,7 @@ body::before {
 .mi-announce button { flex: none; width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--ink-soft); background: color-mix(in srgb, var(--ink) 7%, transparent); }
 .mi-announce button:hover { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .mi-announce { transition: none; } }
+
+/* Perfil ilustrativo (arquitetos de demonstração da fase inicial) */
+.badge-demo { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-soft); border: 1px dashed color-mix(in srgb, var(--ink) 28%, transparent); }
+.tag.tag-demo { border-style: dashed; color: var(--ink-soft); }

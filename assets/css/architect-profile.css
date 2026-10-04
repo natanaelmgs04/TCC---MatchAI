@@ -230,3 +230,12 @@
 @media (max-width: 639px) {
   .ap-hero.ap-own-photo .ap-cut { top: 58%; }
 }
+
+/* Aviso de perfil ilustrativo no topo do perfil */
+.ap-demo-note {
+  max-width: 1080px; margin: 12px auto 0; padding: 12px 18px; border-radius: 14px; font-size: .88rem; line-height: 1.5;
+  color: var(--ink-soft); background: color-mix(in srgb, var(--bg-alt) 80%, transparent); border: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  position: relative; z-index: 3;
+}
+.ap-demo-note strong { color: var(--ink); }
+@media (max-width: 640px) { .ap-demo-note { margin: 10px 16px 0; } }

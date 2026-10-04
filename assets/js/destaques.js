@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const verified = p.cauVerification?.status === 'verified' ? '<span class="status-pill badge-validated">✓ Verificado</span>' : '';
     const proBadge = a.isPro ? '<span class="badge-pro">★ Pro</span>' : '';
     const trackRecordBadge = a.isVerifiedTrackRecord ? '<span class="status-pill badge-validated">Trajetória verificada</span>' : '';
+    const demoBadge = a.isDemo ? '<span class="status-pill badge-demo" title="Perfil ilustrativo da fase inicial da match.IA">Perfil ilustrativo</span>' : '';
     const checked = compareSelection.has(a.id) ? 'checked' : '';
     const location = esc([a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada');
     const ratingSuffix = a.reviewCount ? ` · ★ ${a.avgRating}` : '';
@@ -82,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h4>${esc(a.name)}</h4>
             <span class="arch-card-meta">${location}${ratingSuffix}</span>
             <p class="arch-card-quote">${esc(quoteLine(p))}</p>
-            ${(verified || proBadge || trackRecordBadge) ? `<div class="arch-card-badges">${verified}${proBadge}${trackRecordBadge}</div>` : ''}
+            ${(verified || proBadge || trackRecordBadge || demoBadge) ? `<div class="arch-card-badges">${demoBadge}${verified}${proBadge}${trackRecordBadge}</div>` : ''}
           </div>
         </a>
       </div>`;

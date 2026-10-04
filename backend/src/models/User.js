@@ -40,6 +40,8 @@ const userSchema = new mongoose.Schema(
     suspendedReason: String,
     // Última atividade (atualizada no máximo a cada 10 min, ver middleware/auth.js) — painel da equipe.
     lastSeenAt: Date,
+    // Perfil ilustrativo (fase inicial): sem dono real, criado pelo painel da equipe.
+    isDemo: { type: Boolean, default: false, index: true },
     bio: String,
     passwordHash: { type: String, required: true, select: false },
     // Guarda o hash do token de redefinição, nunca o token cru (o mesmo

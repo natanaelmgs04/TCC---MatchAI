@@ -1175,7 +1175,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderHireRows() {
     document.querySelectorAll('.hire-row[id^="hire-"]').forEach(row => {
       const id = row.id.slice(5);
-      row.querySelector('.hire-row-body').innerHTML = hireRowContent(id, allResultsById.get(id)?.architect?.name || 'o arquiteto');
+      const arch = allResultsById.get(id)?.architect;
+      row.querySelector('.hire-row-body').innerHTML = arch?.isDemo
+        ? `<span class="hire-muted">${DEMO_PROFILE_NOTE} Contratação e mensagens ficam disponíveis com arquitetos reais.</span>`
+        : hireRowContent(id, arch?.name || 'o arquiteto');
     });
   }
 
@@ -1540,7 +1543,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  const DEMO_PROFILE_NOTE = 'Perfil ilustrativo da fase inicial da match.IA — ainda não ligado a um arquiteto de verdade.';
   function resultCardHtml(r, i, user) {
+    const demo = !!r.architect.isDemo;
     return `
         <div class="result-rank">${i + 1}</div>
         <div class="result-body">
@@ -1553,6 +1558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <p class="explanation">${escapeHtml(r.explanation)}</p>
           <div class="tag-row">
+            ${demo ? `<span class="tag tag-demo" title="${DEMO_PROFILE_NOTE}">Perfil ilustrativo</span>` : ''}
             ${r.architect.sameCity ? '<span class="tag tag-samecity">Mesma cidade</span>' : ''}
             ${(r.architect.profile?.styles || []).slice(0, 4).map(s => `<span class="tag">${s}</span>`).join('')}
           </div>
@@ -1562,8 +1568,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-timeline="${r.architect.id}">Linha do tempo do projeto</button>
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-brief="${r.architect.id}">Gerar brief com IA</button>
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-casestudy="${r.architect.id}">Case de sucesso</button>
-            <button type="button" class="btn btn-secondary btn-sm" data-toggle-review="${r.architect.id}">★ Avaliar arquiteto</button>
-            <button type="button" class="btn btn-secondary btn-sm" data-open-chat="${r.architect.id}" data-open-chat-name="${escapeHtml(r.architect.name)}">Mensagem</button>
+            ${demo ? '' : `<button type="button" class="btn btn-secondary btn-sm" data-toggle-review="${r.architect.id}">★ Avaliar arquiteto</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-open-chat="${r.architect.id}" data-open-chat-name="${escapeHtml(r.architect.name)}">Mensagem</button>`}
             <button type="button" class="btn btn-secondary btn-sm" data-toggle-favorite="${r.architect.id}" aria-pressed="${favoriteIds.has(r.architect.id)}">${favoriteIds.has(r.architect.id) ? '★ Salvo' : '☆ Salvar para depois'}</button>
           </div>
           ${breakdownBlock(r.architect.id, r.breakdown)}

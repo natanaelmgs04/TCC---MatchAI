@@ -89,6 +89,7 @@ export async function listArchitects(req, res) {
       reviewCount: architect.reviewCount,
       isPro: architect.isPro,
       isVerifiedTrackRecord: architect.verifiedBonus > 0,
+      isDemo: !!architect.isDemo,
     })),
     total,
     page,
@@ -171,10 +172,11 @@ export async function getArchitectProfile(req, res) {
     id: architect.id,
     name: architect.name,
     avatar: avatarPath(architect),
-    email: architect.email,
-    phone: architect.phone,
+    email: architect.isDemo ? undefined : architect.email,
+    phone: architect.isDemo ? undefined : architect.phone,
     city: architect.city,
     state: architect.state,
     profile: architect.architectProfile,
+    isDemo: !!architect.isDemo,
   });
 }

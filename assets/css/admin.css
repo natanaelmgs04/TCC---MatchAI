@@ -215,3 +215,10 @@
 
 /* o atributo hidden vence o display das classes acima */
 .adm-body [hidden] { display: none !important; }
+
+/* Arquitetos de demonstração (Usuários) */
+.adm-demo { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
+.adm-demo-text { flex: 1 1 380px; }
+.adm-demo-text h3 { margin: 0 0 4px; font-size: 1.02rem; }
+.adm-demo-text p { margin: 0; font-size: .84rem; color: var(--ink-soft); line-height: 1.5; max-width: 72ch; }
+.adm-demo-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

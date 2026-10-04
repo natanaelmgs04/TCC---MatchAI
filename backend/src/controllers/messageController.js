@@ -3,11 +3,13 @@ import { avatarPath } from "../services/avatar.js";
 import User from "../models/User.js";
 import { newMessageEmail } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
+import { DEMO_BLOCK_MESSAGE } from "../services/demoArchitects.js";
 
 export async function sendMessage(req, res) {
   const { to, text } = req.body;
   if (!to || !text?.trim())
     return res.status(400).json({ error: "Destinatário e texto são obrigatórios" });
+  if (await User.exists({ _id: to, isDemo: true }).catch(() => null)) return res.status(409).json({ error: DEMO_BLOCK_MESSAGE });
   const message = await Message.create({ from: req.user.id, to, text: text.trim() });
   res.status(201).json(message);
 
