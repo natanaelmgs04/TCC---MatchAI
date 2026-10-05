@@ -60,6 +60,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     tagRow('archSpecialties', p.specialties);
     tagRow('archMaterials', p.favoriteMaterials);
 
+    // Assinatura: o jeito de projetar, escrito pelo próprio arquiteto (Painel → Portfólio).
+    const sig = p.signature || {};
+    if (sig.statement || sig.principles?.length || sig.signatureMaterials?.length) {
+      document.getElementById('archSignature').hidden = false;
+      const quote = document.getElementById('archSigStatement');
+      quote.textContent = sig.statement ? `“${sig.statement}”` : '';
+      quote.hidden = !sig.statement;
+      document.getElementById('archSigPrinciples').innerHTML = (sig.principles || []).map((x) => `<li>${esc(x)}</li>`).join('');
+      const group = (label, list, cls = '') => (list?.length ? `<div><span class="ap-label">${label}</span><div class="tag-row">${list.map((x) => `<span class="tag ${cls}">${esc(x)}</span>`).join('')}</div></div>` : '');
+      document.getElementById('archSigTags').innerHTML =
+        group('Materiais de assinatura', sig.signatureMaterials) + group('Paleta', sig.palette) + group('Evita', sig.avoid, 'is-avoid');
+    }
+
     const styleProfile = MatchExtras.getStyleProfile(id);
     if (styleProfile.palette.length || styleProfile.keywords.length) {
       document.getElementById('stylePaletteCard').style.display = 'block';

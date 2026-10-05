@@ -27,6 +27,51 @@ const projectSchema = new mongoose.Schema(
     styleNotes: String,
     stylePicks: [{ question: String, choice: String, styles: [String] }],
     experience: { type: mongoose.Schema.Types.Mixed },
+    // Espaço do projeto (projeto.html), depois que um arquiteto aceita a
+    // contratação. Regras em services/workspaceRules.js.
+    targetDate: Date, // meta de fechar o projeto (padrão: 12 semanas, até o executivo)
+    stages: [
+      {
+        key: String,
+        name: String,
+        dueDate: Date,
+        status: { type: String, enum: ["pending", "in_progress", "awaiting_approval", "approved"], default: "pending" },
+        submittedAt: Date,
+        approvedAt: Date,
+        revisionRounds: { type: Number, default: 0 },
+      },
+    ],
+    // Biblioteca do arquiteto para ESTE projeto: produtos das lojas parceiras
+    // (copiados no momento da escolha, para não sumirem se a loja mudar o
+    // catálogo) ou itens cadastrados por ele. É também a lista de compras.
+    library: [
+      {
+        kind: { type: String, enum: ["product", "custom"], default: "product" },
+        product: { type: mongoose.Schema.Types.ObjectId, ref: "StoreProduct" },
+        store: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        name: String,
+        photo: String,
+        category: String,
+        storeName: String,
+        purchaseUrl: String,
+        price: Number,
+        room: String,
+        note: String,
+        quantity: { type: Number, default: 1 },
+        unit: String,
+        purchased: { type: Boolean, default: false },
+        addedAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Histórico de alterações (etapas, arquivos, biblioteca) — quem fez o quê e quando.
+    activity: [
+      {
+        at: { type: Date, default: Date.now },
+        by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        kind: String,
+        text: String,
+      },
+    ],
     status: {
       type: String,
       enum: ["draft", "matching", "in_progress", "completed"],

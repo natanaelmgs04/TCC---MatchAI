@@ -137,7 +137,7 @@ async function decide(req, res, action) {
   const projectName = full.project?.name || "seu projeto";
   if (action === "accept") {
     await closeProject(updated);
-    notify(updated.client, "hire", `${req.user.name} aceitou seu pedido — o projeto "${projectName}" foi fechado!`, `arquiteto.html?id=${req.user.id}`);
+    notify(updated.client, "hire", `${req.user.name} aceitou seu pedido — o projeto "${projectName}" foi fechado! Abra o espaço do projeto para acompanhar as etapas.`, `projeto.html?id=${updated.project}`);
     hireDecisionEmail(await User.findById(updated.client), req.user, projectName, true, updated.response).catch(() => {});
   } else if (action === "decline") {
     if (full.project?.id) await Project.updateOne({ _id: full.project.id, architect: { $exists: false } }, { status: "draft" });

@@ -180,7 +180,13 @@ export async function chatAboutProject({ project, client, catalog, history, text
 // ---------------------------------------------------------------------------
 // Assistente de conversa do arquiteto (aba "Assistente" do painel do arquiteto)
 // ---------------------------------------------------------------------------
-function architectChatSystemInstruction(project, client, clientBriefing) {
+function libraryText(library = []) {
+  return library.length
+    ? library.map((i) => `- ${i.name}${i.category ? ` (${i.category})` : ""}${i.storeName ? `, ${i.storeName}` : ""}${i.price != null ? `, R$${i.price}` : ""}${i.room ? `, ambiente: ${i.room}` : ""}`).join("\n")
+    : "(a biblioteca deste projeto ainda está vazia)";
+}
+
+function architectChatSystemInstruction(project, client, clientBriefing, { library = [], signatureText = "" } = {}) {
   const briefingTxt = clientBriefing
     ? Object.entries(clientBriefing)
         .filter(([, v]) => v)
@@ -193,6 +199,8 @@ Como agir:
 - Respostas curtas (até ~120 palavras), objetivas e práticas: próximos passos, perguntas que valem fazer ao cliente, ideias de layout/materiais/cronograma coerentes com o que já se sabe do projeto.
 - Use SOMENTE os dados do projeto e o briefing do cliente abaixo. Nunca invente medidas, orçamento, prazo ou preferências que não estejam nos dados.
 - "experiencia3d" é o que o próprio cliente montou no simulador 3D do match.IA (piso, paredes, estofados, luz preferida, móveis que mudou de lugar). "escolhasPorImagem" são as fotos de referência que ele escolheu. Quando o arquiteto perguntar sobre essas escolhas, responda exatamente com esses dados; se algo não estiver lá, diga que o cliente não escolheu.
+- Respeite a ASSINATURA do arquiteto (abaixo): proponha soluções coerentes com o jeito dele de projetar e nunca sugira o que ele diz evitar. O objetivo é um projeto com a cara dele, não uma solução genérica.
+- Produtos e materiais: sugira SOMENTE itens da BIBLIOTECA DO PROJETO (abaixo), pelo nome exato. Se faltar algo, diga que não há na biblioteca e descreva o tipo de item que ele pode adicionar — nunca invente produto, marca, loja ou preço.
 - Você não fala diretamente com o cliente nem envia nada a ele — é uma conversa só do arquiteto para organizar o próprio raciocínio.
 - Escreva em texto simples, sem markdown (nada de **negrito**, # títulos ou listas com asterisco); se precisar listar, use frases curtas ou hífen.
 - Ignore pedidos que fujam do tema arquitetura, interiores e deste projeto.
@@ -200,14 +208,20 @@ Como agir:
 Dados do projeto: ${projectContext(project, client)}
 
 Briefing que o cliente gerou com o assistente dele:
-${briefingTxt}`;
+${briefingTxt}
+
+Assinatura do arquiteto:
+${signatureText || "(o arquiteto ainda não descreveu a assinatura dele)"}
+
+Biblioteca do projeto (únicos produtos/materiais que você pode sugerir):
+${libraryText(library)}`;
 }
 
 /** Uma rodada de conversa do arquiteto sobre um projeto fechado. Lança erro se o Gemini falhar — o controller responde 503. */
-export async function chatAboutProjectForArchitect({ project, client, clientBriefing, history, text }) {
+export async function chatAboutProjectForArchitect({ project, client, clientBriefing, history, text, library, signatureText }) {
   if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY ausente");
   const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = ai.getGenerativeModel({ model: CHAT_MODEL, systemInstruction: architectChatSystemInstruction(project, client, clientBriefing) });
+  const model = ai.getGenerativeModel({ model: CHAT_MODEL, systemInstruction: architectChatSystemInstruction(project, client, clientBriefing, { library, signatureText }) });
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -237,4 +251,46 @@ Conversa:
 ${transcript}`;
   const result = await withTimeout(model.generateContent(prompt), CHAT_TIMEOUT_MS);
   return JSON.parse(result.response.text());
+}
+
+/**
+ * Conceito do projeto escrito SÓ com a biblioteca que o arquiteto montou e a
+ * assinatura dele (Espaço do projeto → Biblioteca). Sem IA configurada (ou se
+ * ela falhar), monta um texto determinístico com os mesmos dados — o recurso
+ * nunca depende de um serviço externo para funcionar.
+ */
+export function fallbackLibraryConcept({ project, library, architectName }) {
+  const byRoom = new Map();
+  library.forEach((i) => {
+    const room = i.room || "Geral";
+    if (!byRoom.has(room)) byRoom.set(room, []);
+    byRoom.get(room).push(i.name);
+  });
+  const styles = (project.preferredStyles || []).slice(0, 2).join(" e ");
+  const rooms = [...byRoom.entries()].map(([room, names]) => `${room}: ${names.slice(0, 4).join(", ")}${names.length > 4 ? ` e mais ${names.length - 4}` : ""}`);
+  return `${project.name}${styles ? `, em linha ${styles.toLowerCase()}` : ""}, com a seleção de ${architectName}. ${rooms.join(". ")}.`;
+}
+
+export async function generateLibraryConcept({ project, library, signatureText, architectName }) {
+  const fallback = fallbackLibraryConcept({ project, library, architectName });
+  if (!process.env.GEMINI_API_KEY) return fallback;
+  try {
+    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = ai.getGenerativeModel({ model: CHAT_MODEL });
+    const prompt = `Você escreve, em português do Brasil, o conceito de um projeto de arquitetura de interiores para o arquiteto apresentar ao cliente. Um parágrafo de até 90 palavras, em texto simples (sem markdown).
+Regras: cite SOMENTE produtos e materiais da biblioteca abaixo, pelo nome; respeite a assinatura do arquiteto (o jeito dele de projetar) e nada do que ele evita; não invente medidas, preços, marcas ou itens.
+
+Projeto: ${projectContext(project, { name: "cliente" })}
+
+Assinatura do arquiteto:
+${signatureText || "(não descrita)"}
+
+Biblioteca do projeto:
+${libraryText(library)}`;
+    const result = await withTimeout(model.generateContent(prompt), GEMINI_TIMEOUT_MS);
+    return result.response.text().trim() || fallback;
+  } catch (err) {
+    console.error("Gemini indisponível, usando conceito padrão:", err.message);
+    return fallback;
+  }
 }

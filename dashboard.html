@@ -350,6 +350,38 @@
               <button type="button" id="openPortfolioDrawerBtn" class="btn btn-secondary btn-sm">Ver meu portfólio</button>
             </div>
 
+            <div class="dash-card spotlight sig-card" id="signatureCard">
+              <h3>Minha assinatura</h3>
+              <p class="card-lead">O seu jeito de projetar, nas suas palavras. Aparece no seu perfil público e orienta o assistente de IA e o conceito de cada projeto — para as sugestões terem a sua cara, e não a de qualquer arquiteto.</p>
+              <div class="sig-derived" id="sigDerived"></div>
+              <form id="signatureForm" class="sig-form" novalidate>
+                <div class="form-field full">
+                  <label for="sigStatement">Como você projeta</label>
+                  <textarea id="sigStatement" rows="3" maxlength="600" placeholder="Ex.: Projeto a partir da luz natural e de poucos materiais honestos, com marcenaria desenhada para cada casa."></textarea>
+                </div>
+                <div class="form-field full">
+                  <label for="sigPrinciples">Princípios (um por linha, até 6)</label>
+                  <textarea id="sigPrinciples" rows="3" placeholder="Ventilação cruzada sempre que der&#10;Nada de forro sem necessidade"></textarea>
+                </div>
+                <div class="form-field">
+                  <label for="sigMaterials">Materiais de assinatura</label>
+                  <input type="text" id="sigMaterials" placeholder="Separados por vírgula: freijó, cimento queimado, linho">
+                </div>
+                <div class="form-field">
+                  <label for="sigPalette">Paleta</label>
+                  <input type="text" id="sigPalette" placeholder="Ex.: areia, terracota, verde-oliva">
+                </div>
+                <div class="form-field full">
+                  <label for="sigAvoid">O que você evita</label>
+                  <input type="text" id="sigAvoid" placeholder="Ex.: porcelanato polido, gesso decorativo">
+                </div>
+                <div class="form-field full sig-actions">
+                  <button type="submit" class="btn btn-primary btn-sm">Salvar assinatura</button>
+                  <span class="sig-status" id="sigStatus" role="status" aria-live="polite"></span>
+                </div>
+              </form>
+            </div>
+
             <div class="dash-card spotlight" id="caseStudiesCard" style="display:none;">
               <h3>Cases de sucesso</h3>
               <p class="card-lead">Depois que o resumo do projeto é confirmado pelos dois lados, proponha um case pra exibir no seu perfil público — imagens, descrição e o testemunho do cliente.</p>

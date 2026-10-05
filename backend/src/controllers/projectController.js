@@ -1,5 +1,6 @@
 import Project from "../models/Project.js";
 import { suggestProductsForProject } from "../services/storeMatchService.js";
+import { deleteFilesOfProjects } from "../services/projectFileStore.js";
 import { normalizeStyleNotes, normalizeStylePicks, normalizeExperience } from "../services/projectPreferences.js";
 
 // Estilos e materiais podem ser digitados pelo cliente ("+ Outros..."):
@@ -80,6 +81,7 @@ export async function updateProject(req, res) {
 export async function deleteProject(req, res) {
   const project = await Project.findOneAndDelete({ _id: req.params.id, client: req.user.id });
   if (!project) return res.status(404).json({ error: "Projeto não encontrado" });
+  await deleteFilesOfProjects([project._id]);
   res.json({ ok: true });
 }
 

@@ -41,6 +41,19 @@ async function getOrCreateChat(req, project) {
 // Catálogo que a IA pode citar: produtos das lojas parceiras que cruzam com
 // estilo/materiais do projeto (ou, sem cruzamento, os mais recentes).
 async function catalogFor(project) {
+  // Projeto contratado com biblioteca montada: a IA do cliente só cita o que o arquiteto escolheu.
+  if (project.architect && project.library?.length) {
+    return project.library.slice(0, 40).map((i) => ({
+      id: String(i.product || i._id),
+      name: i.name,
+      photo: i.photo,
+      category: i.category,
+      price: i.price,
+      purchaseUrl: i.purchaseUrl,
+      storeName: i.storeName || "seleção do arquiteto",
+      score: 1,
+    }));
+  }
   const products = await StoreProduct.find().sort("-createdAt").limit(60).populate("store", "name storeProfile.storeName");
   const terms = [...(project.preferredStyles || []), ...(project.preferredMaterials || [])].map((t) => String(t).toLowerCase());
   const shaped = products.map((p) => ({

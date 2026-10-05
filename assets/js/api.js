@@ -126,8 +126,46 @@ const MatchAPI = (() => {
     return res.blob();
   }
 
+  /** Envia um arquivo cru (sem base64) com o nome no cabeçalho — Espaço do projeto → Arquivos. */
+  async function uploadRaw(path, file) {
+    const t = token();
+    if (!t) throw { status: 401, message: 'Faça login para continuar.' };
+    let res;
+    try {
+      res = await fetch(`${base()}${path}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+        body: file,
+      });
+    } catch {
+      throw { offline: true, status: 0, message: 'Não foi possível conectar à API do match.IA.' };
+    }
+    let data = null;
+    try { data = await res.json(); } catch { /* sem corpo */ }
+    if (!res.ok) throw { status: res.status, message: (data && data.error) || (res.status === 413 ? 'Arquivo grande demais (máximo 15 MB).' : 'Não foi possível enviar o arquivo.') };
+    return data;
+  }
+
+  const ws = (id, rest = '') => `/workspace/${encodeURIComponent(id)}${rest}`;
+
   return {
     avatarSrc, prepareAvatar, prepareImage, authBlob,
+    workspace: (id) => request(ws(id), { auth: true }),
+    workspaceStageAction: (id, key, action, text) => request(ws(id, `/stages/${encodeURIComponent(key)}/${action}`), { method: 'POST', auth: true, body: { text } }),
+    workspaceUpdateStage: (id, key, payload) => request(ws(id, `/stages/${encodeURIComponent(key)}`), { method: 'PATCH', auth: true, body: payload }),
+    workspaceTarget: (id, targetDate) => request(ws(id, '/target'), { method: 'PATCH', auth: true, body: { targetDate } }),
+    workspaceUpload: (id, file, stage) => uploadRaw(ws(id, `/files?stage=${encodeURIComponent(stage || '')}`), file),
+    workspaceFileBlob: (id, fileId) => authBlob(ws(id, `/files/${encodeURIComponent(fileId)}`)),
+    workspaceDeleteFile: (id, fileId) => request(ws(id, `/files/${encodeURIComponent(fileId)}`), { method: 'DELETE', auth: true }),
+    workspaceReviewFile: (id, fileId, decision, comment) => request(ws(id, `/files/${encodeURIComponent(fileId)}/review`), { method: 'POST', auth: true, body: { decision, comment } }),
+    workspaceCatalog: (id, q) => request(ws(id, `/catalog?q=${encodeURIComponent(q || '')}`), { auth: true }),
+    workspaceAddItem: (id, payload) => request(ws(id, '/library'), { method: 'POST', auth: true, body: payload }),
+    workspaceUpdateItem: (id, itemId, payload) => request(ws(id, `/library/${encodeURIComponent(itemId)}`), { method: 'PATCH', auth: true, body: payload }),
+    workspaceRemoveItem: (id, itemId) => request(ws(id, `/library/${encodeURIComponent(itemId)}`), { method: 'DELETE', auth: true }),
+    workspaceCopyLibrary: (id, otherId) => request(ws(id, `/library/copy-from/${encodeURIComponent(otherId)}`), { method: 'POST', auth: true }),
+    workspaceConcept: (id) => request(ws(id, '/concept'), { method: 'POST', auth: true }),
+    mySignature: () => request('/architects/me/signature', { auth: true }),
+    saveSignature: (payload) => request('/architects/me/signature', { method: 'PUT', auth: true, body: payload }),
     models3dStatus: () => request('/models3d/status', { auth: true }),
     models3d: () => request('/models3d', { auth: true }),
     model3d: (id) => request(`/models3d/${encodeURIComponent(id)}`, { auth: true }),

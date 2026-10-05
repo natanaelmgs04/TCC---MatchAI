@@ -100,6 +100,10 @@ const ArchitectAssistant = (() => {
         b.insertAdjacentHTML('beforeend', ICONS.arrow);
         b.addEventListener('click', () => openProject(p));
         refs.pickerList.append(b);
+        // Etapas, arquivos, biblioteca e lista de compras do projeto ficam no Espaço do projeto.
+        const ws = el('a', 'ai-project-ws', 'Abrir espaço do projeto →');
+        ws.href = `projeto.html?id=${encodeURIComponent(p._id)}`;
+        refs.pickerList.append(ws);
       });
     }
 

@@ -167,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('roleLabel').textContent = 'Painel do arquiteto';
     setupProfileTabs('architectProfileTabs', 'architectPanel');
     setupStudio3d();
+    setupSignature();
     DashUI.decorateTabs(document.getElementById('architectProfileTabs'));
     DashUI.autoHeads(document.getElementById('architectPanel'), 'Painel do arquiteto');
     document.getElementById('architectStatRating').style.display = '';
@@ -504,6 +505,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${item('Materiais', f.materials, 'nenhum informado')}
           ${item('Objetivos e prioridades', f.goals, 'nenhum informado', true)}
         </div>
+        ${project._id && project.architect ? `
+        <div class="dv-proj-3d dv-proj-ws">
+          <div>
+            <span class="mock-label">Espaço do projeto</span>
+            <p>Etapas com prazo e aprovação, arquivos técnicos, a biblioteca de produtos do arquiteto e a lista de compras da obra.</p>
+          </div>
+          <a class="btn btn-primary btn-sm" href="projeto.html?id=${encodeURIComponent(project._id)}">Abrir espaço do projeto</a>
+        </div>` : ''}
         ${project._id ? `
         <div class="dv-proj-3d">
           <div>
@@ -2258,6 +2267,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // ---------------- Assinatura do arquiteto ----------------
+  function setupSignature() {
+    const form = document.getElementById('signatureForm');
+    if (!form) return;
+    const status = document.getElementById('sigStatus');
+    const field = (id) => document.getElementById(id);
+    const lines = (v) => v.split('\n').map((x) => x.trim()).filter(Boolean);
+    const fill = ({ signature, derived }) => {
+      const sig = signature || {};
+      field('sigStatement').value = sig.statement || '';
+      field('sigPrinciples').value = (sig.principles || []).join('\n');
+      field('sigMaterials').value = (sig.signatureMaterials || []).join(', ');
+      field('sigPalette').value = (sig.palette || []).join(', ');
+      field('sigAvoid').value = (sig.avoid || []).join(', ');
+      const chips = (list) => list.map((x) => `<span class="tag">${escapeHtml(x.name)} <small>${x.count}×</small></span>`).join('');
+      field('sigDerived').innerHTML = derived?.projects
+        ? `<p class="sig-derived-title">O que mais se repete nas ${derived.projects} peças do seu portfólio</p>
+           ${derived.styles.length ? `<div class="tag-row">${chips(derived.styles.slice(0, 5))}</div>` : ''}
+           ${derived.materials.length ? `<div class="tag-row">${chips(derived.materials.slice(0, 6))}</div>` : ''}`
+        : '<p class="sig-derived-title">Cadastre peças no portfólio: o que mais se repete nelas aparece aqui e também orienta a IA.</p>';
+    };
+    MatchAPI.mySignature().then(fill).catch(() => {});
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('[type="submit"]');
+      btn.disabled = true;
+      status.textContent = 'Salvando…';
+      try {
+        fill(await MatchAPI.saveSignature({
+          statement: field('sigStatement').value,
+          principles: lines(field('sigPrinciples').value),
+          signatureMaterials: field('sigMaterials').value,
+          palette: field('sigPalette').value,
+          avoid: field('sigAvoid').value,
+        }));
+        status.textContent = 'Assinatura salva.';
+      } catch (err) {
+        status.textContent = err.message || 'Não foi possível salvar agora.';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
   function setupStudio3d() {
     const form = document.getElementById('s3Form');
     if (!form) return;
@@ -2555,6 +2608,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <header><strong>${escapeHtml(h.project?.name || 'Projeto')}</strong><span>${escapeHtml(h.client.name)}${date ? ` · fechado em ${date}` : ''}</span></header>
         ${hireProjectSummary(h)}
         <div class="hire-actions">
+          ${h.project?.id ? `<a class="btn btn-primary btn-sm" href="projeto.html?id=${encodeURIComponent(h.project.id)}">Abrir espaço do projeto</a>` : ''}
           <button type="button" class="btn btn-secondary btn-sm" data-architect-chat="${h.client.id}" data-architect-chat-name="${escapeHtml(h.client.name)}">Conversar com o cliente</button>
           <button type="button" class="btn btn-tertiary btn-sm" data-hire-jump="assistente">Desenvolver com a IA</button>
         </div>

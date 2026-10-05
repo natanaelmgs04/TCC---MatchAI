@@ -4,6 +4,7 @@ import AssistantChat from "../models/AssistantChat.js";
 import Project from "../models/Project.js";
 import { chatAboutProjectForArchitect } from "../services/geminiService.js";
 import { MAX_TEXT, MAX_MESSAGES_PER_CHAT, buildHistory } from "../services/assistantService.js";
+import { deriveSignature, signatureToText } from "../services/workspaceRules.js";
 
 const UNAVAILABLE = "O assistente não conseguiu responder agora. Tente de novo em instantes.";
 
@@ -60,6 +61,8 @@ export async function postMessage(req, res) {
       clientBriefing: clientChat?.briefing || null,
       history: buildHistory(chat.messages),
       text,
+      library: project.library || [],
+      signatureText: signatureToText(req.user.architectProfile?.signature, deriveSignature(req.user.architectProfile?.portfolio || [])),
     });
   } catch (err) {
     console.error("Assistente do arquiteto indisponível:", err.message);

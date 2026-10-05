@@ -89,6 +89,16 @@ const userSchema = new mongoose.Schema(
         default: "available",
       },
       portfolio: [projectSchema],
+      // "Assinatura" do arquiteto: o jeito dele de projetar, escrito por ele.
+      // Orienta o assistente de IA e a biblioteca de cada projeto (ver workspaceRules.js).
+      signature: {
+        statement: String,
+        principles: [String],
+        palette: [String],
+        signatureMaterials: [String],
+        avoid: [String],
+        updatedAt: Date,
+      },
       referenceImage: {
         imageUrl: String,
         description: String,

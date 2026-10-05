@@ -10,11 +10,14 @@ import {
   setSubscriptionTier,
 } from "../controllers/architectController.js";
 import { listClosedProjects } from "../controllers/hireController.js";
+import { getMine as getMySignature, updateMine as updateMySignature } from "../controllers/signatureController.js";
 const router = Router();
 const referenceImageLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 30 });
 const viewLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 60 });
 router.get("/", asyncHandler(listArchitects));
 router.post("/me/subscription", requireAuth, requireRole("architect"), asyncHandler(setSubscriptionTier));
+router.get("/me/signature", requireAuth, requireRole("architect"), asyncHandler(getMySignature));
+router.put("/me/signature", requireAuth, requireRole("architect"), asyncHandler(updateMySignature));
 router.get("/:id/reference-image", referenceImageLimiter, asyncHandler(getArchitectReferenceImage));
 router.post("/:id/view", viewLimiter, asyncHandler(recordProfileView));
 router.get("/:id/closed-projects", asyncHandler(listClosedProjects));

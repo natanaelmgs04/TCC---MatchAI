@@ -33,6 +33,7 @@ import avatarRoutes from "./routes/avatars.js";
 import adminRoutes from "./routes/admin.js";
 import siteRoutes from "./routes/site.js";
 import model3dRoutes from "./routes/models3d.js";
+import workspaceRoutes from "./routes/workspace.js";
 import { startModel3dWorker } from "./services/model3dStore.js";
 import User from "./models/User.js";
 import { emailStatus } from "./services/emailService.js";
@@ -92,6 +93,7 @@ app.use("/api/avatars", avatarRoutes);
 app.use("/api/admin", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600 }), adminRoutes);
 app.use("/api/site", siteRoutes);
 app.use("/api/models3d", model3dRoutes);
+app.use("/api/workspace", workspaceRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Site (front-end) servido pelo mesmo processo/porta que a API.

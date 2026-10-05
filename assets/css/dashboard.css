@@ -689,3 +689,15 @@ a.dv-prod:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .s3-unavailable p { margin: 0; font-size: .88rem; line-height: 1.5; }
 .s3-gen:has(.s3-unavailable:not([hidden])) .s3-modes,
 .s3-gen:has(.s3-unavailable:not([hidden])) .s3-form { opacity: .5; pointer-events: none; }
+
+.dv-proj-ws { background: color-mix(in srgb, var(--sage) 12%, transparent); }
+.sig-derived { margin: 0 0 14px; display: grid; gap: 6px; }
+.sig-derived-title { margin: 0; font-size: .8rem; color: var(--ink-faint); }
+.sig-derived .tag small { opacity: .7; }
+.sig-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.sig-form .form-field.full { grid-column: 1 / -1; }
+.sig-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.sig-status { font-size: .84rem; color: var(--ink-faint); }
+@media (max-width: 640px) { .sig-form { grid-template-columns: 1fr; } }
+
+.ai-project-ws { align-self: flex-start; margin: -2px 0 8px 14px; font-size: .8rem; font-weight: 600; color: var(--terracotta-dark); }

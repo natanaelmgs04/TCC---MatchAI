@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('matchia_theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Espaço do projeto — match.IA</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<meta name="theme-color" content="#B0755A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/projeto.css">
+</head>
+<body class="pj-page">
+<a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="index.html" class="logo">
+      <img src="assets/img/mark.png" alt="" width="32" height="32">
+      <span class="logo-word">match<span class="ia">.IA</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html#como-funciona">Como funciona</a></li>
+      <li><a href="projetos.html" data-page="projetos.html">Projetos</a></li>
+      <li><a href="destaques.html" data-page="destaques.html">Arquitetos</a></li>
+      <li><a href="planos.html" data-page="planos.html">Planos</a></li>
+      <li><a href="sobre.html" data-page="sobre.html">Sobre</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="dashboard.html" class="login-link" id="pjBack">Voltar ao painel</a>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema" type="button"></button>
+    <button class="nav-toggle" aria-label="Abrir menu"><span></span><span></span><span></span></button>
+  </nav>
+</header>
+
+<main id="main-content" class="pj-shell">
+  <p class="pj-state" id="pjState"><span class="spinner"></span> Carregando o espaço do projeto…</p>
+
+  <div id="pjApp" hidden>
+    <header class="pj-hero">
+      <div class="pj-hero-text">
+        <span class="eyebrow">Espaço do projeto</span>
+        <h1 id="pjTitle">—</h1>
+        <p class="pj-people" id="pjPeople"></p>
+      </div>
+      <div class="pj-kpis" id="pjKpis" aria-live="polite"></div>
+    </header>
+
+    <nav class="pj-tabs" role="tablist" aria-label="Seções do projeto">
+      <button type="button" class="pj-tab is-active" role="tab" aria-selected="true" aria-controls="pjPanelEtapas" data-pj-tab="etapas">Etapas</button>
+      <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelArquivos" data-pj-tab="arquivos">Arquivos</button>
+      <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelBiblioteca" data-pj-tab="biblioteca">Biblioteca</button>
+      <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelCompras" data-pj-tab="compras">Lista de compras</button>
+      <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelHistorico" data-pj-tab="historico">Histórico</button>
+    </nav>
+
+    <p class="pj-flash" id="pjFlash" role="status" aria-live="polite"></p>
+
+    <section class="pj-panel" id="pjPanelEtapas" role="tabpanel" data-pj-panel="etapas"></section>
+    <section class="pj-panel" id="pjPanelArquivos" role="tabpanel" data-pj-panel="arquivos" hidden></section>
+    <section class="pj-panel" id="pjPanelBiblioteca" role="tabpanel" data-pj-panel="biblioteca" hidden></section>
+    <section class="pj-panel" id="pjPanelCompras" role="tabpanel" data-pj-panel="compras" hidden></section>
+    <section class="pj-panel" id="pjPanelHistorico" role="tabpanel" data-pj-panel="historico" hidden></section>
+  </div>
+</main>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/site.js"></script>
+<script src="assets/js/projeto.js"></script>
+</body>
+</html>
