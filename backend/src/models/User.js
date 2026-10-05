@@ -80,6 +80,8 @@ const userSchema = new mongoose.Schema(
       website: String,
       instagram: String,
       bonusPortfolioSlots: { type: Number, default: 0 },
+      // Mensagens ao assistente de IA no dia (UTC) — limite por plano em services/planLimits.js.
+      aiUsage: { day: String, count: { type: Number, default: 0 } },
       subscriptionTier: { type: String, enum: ["free", "pro"], default: "free" },
       proSince: Date,
       closedProjectsCount: { type: Number, default: 0 },

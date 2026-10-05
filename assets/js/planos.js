@@ -67,8 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       CheckoutModal.open({
         name: 'Plano Pro',
-        desc: 'Portfólio ilimitado, selo Pro e um bônus de prioridade nos resultados.',
-        price: 49,
+        desc: 'Espaço do projeto em todos os seus projetos, biblioteca ilimitada e reaproveitável, assistente de IA sem limite diário, Estúdio 3D, portfólio ilimitado e selo Pro.',
+        price: 79,
       }, async () => {
         try {
           await MatchAPI.setArchitectSubscription('pro');

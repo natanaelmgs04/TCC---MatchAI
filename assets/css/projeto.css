@@ -184,3 +184,10 @@
   body.pj-printing .pj-print-head { display: block; margin-bottom: 12px; }
   body.pj-printing .pj-card { box-shadow: none; break-inside: avoid; background: #fff; }
 }
+
+/* Plano Gratuito: espaço além do ativo fica só para leitura (arquiteto) */
+.pj-plan-banner { margin: 0 0 16px; padding: 14px 16px; border-radius: var(--radius-md); font-size: .88rem; line-height: 1.5; border: 1px solid color-mix(in srgb, #d9a441 45%, var(--line)); background: color-mix(in srgb, #d9a441 12%, transparent); }
+.pj-plan-banner[hidden] { display: none; }
+.pj-plan-banner a, .pj-upsell a { color: var(--terracotta-dark); font-weight: 600; }
+.pj-tools h2 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.pj-upsell { margin-top: 12px; }

@@ -30,6 +30,7 @@ const projectSchema = new mongoose.Schema(
     // Espaço do projeto (projeto.html), depois que um arquiteto aceita a
     // contratação. Regras em services/workspaceRules.js.
     targetDate: Date, // meta de fechar o projeto (padrão: 12 semanas, até o executivo)
+    workspaceStartedAt: Date, // no plano Gratuito o arquiteto edita só o espaço ativo mais antigo
     stages: [
       {
         key: String,

@@ -8,6 +8,7 @@ import { avatarPath } from "../services/avatar.js";
 import { notify } from "../services/notificationService.js";
 import { PROVIDERS, ProviderError, availability, providerFor } from "../services/model3dProviders.js";
 import { deleteModel, fail, finish, openFile } from "../services/model3dStore.js";
+import { UPGRADE_HINT, limitsFor } from "../services/planLimits.js";
 
 /**
  * Estúdio 3D: o arquiteto gera modelos (objeto por texto/foto, planta → 3D),
@@ -89,6 +90,8 @@ export async function status(req, res) {
     demo: avail.object === "demo" || avail.floorplan === "demo",
     dailyLimit: dailyLimit(),
     usedToday,
+    // Cada modelo gerado custa crédito na API: o Estúdio 3D faz parte do Pro.
+    allowed: req.user.role === "architect" && limitsFor(req.user).studio3d,
   });
 }
 
@@ -99,6 +102,8 @@ export async function create(req, res) {
   const prompt = String(req.body?.prompt || "").trim().slice(0, 1000);
   if (!title) return res.status(400).json({ error: "Dê um nome ao modelo." });
   if (source === "text" && prompt.length < 8) return res.status(400).json({ error: "Descreva o objeto com um pouco mais de detalhe (forma, material, estilo)." });
+
+  if (!limitsFor(req.user).studio3d) return res.status(403).json({ error: `O Estúdio 3D faz parte do plano Pro. ${UPGRADE_HINT}`, plan: true });
 
   const provider = providerFor(kind);
   if (!provider) {

@@ -7,7 +7,8 @@ import User from "../models/User.js";
 import { avatarPath } from "../services/avatar.js";
 import { notify } from "../services/notificationService.js";
 import { checkUpload, deleteProjectFile, openBuffer, saveBuffer } from "../services/projectFileStore.js";
-import { generateLibraryConcept } from "../services/geminiService.js";
+import { fallbackLibraryConcept, generateLibraryConcept } from "../services/geminiService.js";
+import { UPGRADE_HINT, limitsFor, publicLimits, tierOf } from "../services/planLimits.js";
 import {
   applyStageAction,
   defaultStages,
@@ -28,9 +29,8 @@ import {
  */
 const isId = (v) => mongoose.isValidObjectId(v);
 const FILE_MAX = 15 * 1024 * 1024;
-const PROJECT_QUOTA = 80 * 1024 * 1024; // o plano grátis do Atlas tem 512 MB no total
 const ACTIVITY_LIMIT = 200;
-const LIBRARY_LIMIT = 300;
+const mb = (b) => Math.round(b / 1024 / 1024);
 const link = (p) => `projeto.html?id=${p._id}`;
 const person = (u) => (u && u._id ? { id: String(u._id), name: u.name, avatar: avatarPath(u) } : null);
 
@@ -55,9 +55,29 @@ async function load(req, res) {
     const start = hire?.decidedAt || new Date();
     project.stages = defaultStages(start);
     project.targetDate = targetDate(start);
+    project.workspaceStartedAt = new Date();
     await project.save();
   }
-  return { project, role, otherId: role === "client" ? project.architect : project.client };
+  // Os limites vêm do plano do ARQUITETO do projeto — o cliente nunca paga nem esbarra em limite.
+  const architect = role === "architect" ? req.user : await User.findById(project.architect).select("architectProfile.subscriptionTier");
+  const tier = tierOf(architect);
+  const limits = limitsFor(architect);
+  let locked = false;
+  if (limits.activeWorkspaces !== Infinity) {
+    const active = await Project.find({ architect: project.architect, status: { $ne: "completed" }, "stages.0": { $exists: true } })
+      .select("_id workspaceStartedAt createdAt").lean();
+    active.sort((a, b) => (a.workspaceStartedAt || a.createdAt) - (b.workspaceStartedAt || b.createdAt));
+    const allowed = active.slice(0, limits.activeWorkspaces).map((p) => String(p._id));
+    locked = project.status !== "completed" && !allowed.includes(String(project._id));
+  }
+  return { project, role, otherId: role === "client" ? project.architect : project.client, tier, limits, locked };
+}
+
+/** Escrita do arquiteto num espaço além do limite do plano Gratuito: só leitura (o cliente segue normal). */
+function blockedByPlan(ctx, res) {
+  if (ctx.role !== "architect" || !ctx.locked) return false;
+  res.status(403).json({ error: `No plano Gratuito você edita o Espaço de ${ctx.limits.activeWorkspaces} projeto ativo por vez — este fica só para leitura até o atual ser concluído. ${UPGRADE_HINT}`, plan: true });
+  return true;
 }
 
 function log(project, userId, kind, text) {
@@ -94,7 +114,8 @@ const shapeFile = (f) => ({
   createdAt: f.createdAt,
 });
 
-async function shape(project, role, userId) {
+async function shape(ctx, userId) {
+  const { project, role } = ctx;
   const [parties, files] = await Promise.all([
     User.find({ _id: { $in: [project.client, project.architect] } }).select("name avatarVersion architectProfile.signature architectProfile.portfolio.styles architectProfile.portfolio.materials"),
     ProjectFile.find({ project: project._id }).sort("-createdAt"),
@@ -119,7 +140,8 @@ async function shape(project, role, userId) {
     library: items,
     totals: shoppingTotals(items),
     files: files.map(shapeFile),
-    storage: { used: files.reduce((s, f) => s + (f.size || 0), 0), quota: PROJECT_QUOTA, fileMax: FILE_MAX },
+    storage: { used: files.reduce((s, f) => s + (f.size || 0), 0), quota: ctx.limits.workspaceStorage, fileMax: FILE_MAX },
+    plan: { tier: ctx.tier, locked: ctx.locked, limits: publicLimits(ctx.limits) },
     signature: architect?.architectProfile?.signature || null,
     signatureDerived: deriveSignature(architect?.architectProfile?.portfolio || []),
     activity: project.activity
@@ -129,7 +151,7 @@ async function shape(project, role, userId) {
   };
 }
 
-const respond = async (res, ctx, req) => res.json(await shape(ctx.project, ctx.role, req.user.id));
+const respond = async (res, ctx, req) => res.json(await shape(ctx, req.user.id));
 
 export async function get(req, res) {
   const ctx = await load(req, res);
@@ -141,6 +163,7 @@ export async function updateStage(req, res) {
   const ctx = await load(req, res);
   if (!ctx) return;
   if (ctx.role !== "architect") return res.status(403).json({ error: "Só o arquiteto ajusta as etapas." });
+  if (blockedByPlan(ctx, res)) return;
   const stage = ctx.project.stages.find((s) => s.key === req.params.key);
   if (!stage) return res.status(404).json({ error: "Etapa não encontrada." });
   const changes = [];
@@ -164,6 +187,7 @@ export async function updateTarget(req, res) {
   const ctx = await load(req, res);
   if (!ctx) return;
   if (ctx.role !== "architect") return res.status(403).json({ error: "Só o arquiteto ajusta a meta." });
+  if (blockedByPlan(ctx, res)) return;
   const d = new Date(req.body?.targetDate);
   if (Number.isNaN(d.getTime())) return res.status(400).json({ error: "Data inválida." });
   ctx.project.targetDate = d;
@@ -179,6 +203,7 @@ export async function stageAction(req, res) {
   if (!ctx) return;
   const action = ACTIONS[req.params.action];
   if (!action) return res.status(404).json({ error: "Ação inválida." });
+  if (blockedByPlan(ctx, res)) return;
   const text = String(req.body?.text || "").trim().slice(0, 1000);
   if (action === "request_changes" && text.length < 5) return res.status(400).json({ error: "Explique o que precisa mudar — é isso que evita uma nova rodada de ajustes." });
   const result = applyStageAction(ctx.project.stages, req.params.key, action, ctx.role);
@@ -204,6 +229,7 @@ export async function stageAction(req, res) {
 export async function uploadFile(req, res) {
   const ctx = await load(req, res);
   if (!ctx) return;
+  if (blockedByPlan(ctx, res)) return;
   const buffer = Buffer.isBuffer(req.body) ? req.body : null;
   if (!buffer?.length) return res.status(400).json({ error: "Arquivo vazio." });
   if (buffer.length > FILE_MAX) return res.status(413).json({ error: "Arquivo grande demais (máximo 15 MB)." });
@@ -214,7 +240,10 @@ export async function uploadFile(req, res) {
   const stageKey = ctx.project.stages.some((s) => s.key === req.query.stage) ? req.query.stage : "";
 
   const used = (await ProjectFile.aggregate([{ $match: { project: ctx.project._id } }, { $group: { _id: null, n: { $sum: "$size" } } }]))[0]?.n || 0;
-  if (used + buffer.length > PROJECT_QUOTA) return res.status(413).json({ error: "O espaço de arquivos deste projeto está cheio (80 MB). Apague versões antigas para enviar novas." });
+  if (used + buffer.length > ctx.limits.workspaceStorage) {
+    const extra = ctx.role === "architect" && ctx.tier === "free" ? ` No Pro são ${mb(limitsFor({ architectProfile: { subscriptionTier: "pro" } }).workspaceStorage)} MB por projeto.` : "";
+    return res.status(413).json({ error: `O espaço de arquivos deste projeto está cheio (${mb(ctx.limits.workspaceStorage)} MB). Apague versões antigas para enviar novas.${extra}` });
+  }
 
   const prev = await ProjectFile.findOne({ project: ctx.project._id, stage: stageKey, name: checked.name }).sort("-version").select("version");
   const fileId = await saveBuffer(buffer, { filename: checked.name, owner: req.user.id, project: ctx.project._id });
@@ -309,7 +338,10 @@ export async function addItem(req, res) {
   const ctx = await load(req, res);
   if (!ctx) return;
   if (ctx.role !== "architect") return res.status(403).json({ error: "Só o arquiteto monta a biblioteca." });
-  if (ctx.project.library.length >= LIBRARY_LIMIT) return res.status(409).json({ error: "A biblioteca deste projeto chegou ao limite de itens." });
+  if (blockedByPlan(ctx, res)) return;
+  if (ctx.project.library.length >= ctx.limits.libraryItems) {
+    return res.status(409).json({ error: `A biblioteca deste projeto chegou ao limite de ${ctx.limits.libraryItems} itens.${ctx.tier === "free" ? ` ${UPGRADE_HINT}` : ""}`, plan: ctx.tier === "free" });
+  }
   let item;
   if (req.body?.productId) {
     if (!isId(req.body.productId)) return res.status(400).json({ error: "Produto inválido." });
@@ -341,7 +373,7 @@ export async function updateItem(req, res) {
     it.purchased = req.body.purchased;
     log(ctx.project, req.user.id, "purchase", `${it.purchased ? "marcou como comprado" : "desmarcou a compra de"} ${it.name}`);
   }
-  if (ctx.role === "architect") {
+  if (ctx.role === "architect" && !ctx.locked) {
     Object.assign(it, normalizeItemDetails(req.body));
     if (it.kind === "custom" && req.body?.price !== undefined) {
       const fixed = normalizeCustomItem({ name: it.name, price: req.body.price }).item;
@@ -370,6 +402,8 @@ export async function copyLibrary(req, res) {
   const ctx = await load(req, res);
   if (!ctx) return;
   if (ctx.role !== "architect") return res.status(403).json({ error: "Só o arquiteto monta a biblioteca." });
+  if (blockedByPlan(ctx, res)) return;
+  if (!ctx.limits.copyLibrary) return res.status(403).json({ error: `Trazer a biblioteca de outro projeto faz parte do Pro. ${UPGRADE_HINT}`, plan: true });
   if (!isId(req.params.otherId)) return res.status(404).json({ error: "Projeto não encontrado." });
   const other = await Project.findOne({ _id: req.params.otherId, architect: req.user.id }).select("name library");
   if (!other) return res.status(404).json({ error: "Projeto não encontrado." });
@@ -377,7 +411,7 @@ export async function copyLibrary(req, res) {
   let added = 0;
   for (const i of other.library) {
     const key = i.product ? `p:${i.product}` : `c:${i.name.toLowerCase()}`;
-    if (have.has(key) || ctx.project.library.length >= LIBRARY_LIMIT) continue;
+    if (have.has(key) || ctx.project.library.length >= ctx.limits.libraryItems) continue;
     const { _id, purchased, quantity, room, addedAt, ...rest } = i.toObject();
     ctx.project.library.push({ ...rest, quantity: 1, purchased: false });
     have.add(key);
@@ -385,7 +419,7 @@ export async function copyLibrary(req, res) {
   }
   if (added) log(ctx.project, req.user.id, "library", `trouxe ${added} ${added === 1 ? "item" : "itens"} da biblioteca de "${other.name}"`);
   await ctx.project.save();
-  res.json({ added, workspace: await shape(ctx.project, ctx.role, req.user.id) });
+  res.json({ added, workspace: await shape(ctx, req.user.id) });
 }
 
 /** Conceito do projeto escrito só com a biblioteca + a assinatura do arquiteto. */
@@ -394,11 +428,13 @@ export async function concept(req, res) {
   if (!ctx) return;
   if (!ctx.project.library.length) return res.status(400).json({ error: "A biblioteca ainda está vazia — o conceito é escrito só com os itens dela." });
   const architect = await User.findById(ctx.project.architect).select("name architectProfile.signature architectProfile.portfolio");
-  const text = await generateLibraryConcept({
+  const input = {
     project: ctx.project,
     library: ctx.project.library.map(shapeItem),
     signatureText: signatureToText(architect?.architectProfile?.signature, deriveSignature(architect?.architectProfile?.portfolio || [])),
     architectName: architect?.name || "o arquiteto",
-  });
-  res.json({ concept: text });
+  };
+  // Gratuito: o texto padrão, montado só com a biblioteca (sem chamada de IA).
+  if (!ctx.limits.aiConcept) return res.json({ concept: fallbackLibraryConcept(input), ai: false });
+  res.json({ concept: await generateLibraryConcept(input), ai: true });
 }

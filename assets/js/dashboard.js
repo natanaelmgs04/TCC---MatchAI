@@ -263,8 +263,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const count = (user.architectProfile?.portfolio || []).length;
     const limit = tier === 'pro' ? Infinity : 3 + (user.architectProfile?.bonusPortfolioSlots || 0);
     document.getElementById('planUsage').textContent = limit === Infinity
-      ? 'Portfólio ilimitado'
-      : `${count}/${limit} projetos no portfólio`;
+      ? 'Tudo liberado'
+      : `${count}/${limit} no portfólio · 1 espaço de projeto ativo`;
     if (tier === 'free') {
       upgradeBtn.textContent = 'Assinar Pro';
       upgradeBtn.style.display = '';
@@ -277,8 +277,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openUpgrade(user, onDone) {
     CheckoutModal.open({
       name: 'Plano Pro',
-      desc: 'Portfólio ilimitado, selo Pro e um bônus de prioridade nos resultados -- mérito real sempre conta mais que o plano.',
-      price: 49,
+      desc: 'Espaço do projeto em todos os seus projetos, biblioteca ilimitada e reaproveitável, assistente de IA sem limite diário, Estúdio 3D, portfólio ilimitado e selo Pro.',
+      price: 79,
     }, async () => {
       try {
         await MatchAPI.setArchitectSubscription('pro');
@@ -2338,12 +2338,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const kind = mode === 'floorplan' ? 'floorplan' : 'object';
       const available = status ? status[kind] : true;
       const offline = !!status && !status.object && !status.floorplan;
+      const needsPro = !offline && !!status && status.allowed === false;
       document.getElementById('s3Unavailable').hidden = !offline;
-      form.querySelectorAll('input, textarea, button').forEach((el) => { el.disabled = offline; });
-      document.querySelectorAll('[data-s3-mode]').forEach((b) => { b.disabled = offline; });
-      submit.disabled = !available;
+      document.getElementById('s3NeedsPro').hidden = !needsPro;
+      form.querySelectorAll('input, textarea, button').forEach((el) => { el.disabled = offline || needsPro; });
+      document.querySelectorAll('[data-s3-mode]').forEach((b) => { b.disabled = offline || needsPro; });
+      submit.disabled = !available || needsPro;
       let note = '';
-      if (offline) note = ''; // o aviso de indisponível já explica
+      if (offline || needsPro) note = ''; // o aviso acima já explica
       else if (status && !available) note = 'Este tipo ainda não está disponível na plataforma.';
       else if (status?.demo) note = 'Modo demonstração: devolve um modelo de exemplo (sem chave de API neste servidor).';
       else if (status) note = mode === 'floorplan' ? 'Costuma levar de 2 a 3 minutos.' : 'Costuma levar de 1 a 2 minutos.';

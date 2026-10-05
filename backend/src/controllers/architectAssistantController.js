@@ -5,6 +5,8 @@ import Project from "../models/Project.js";
 import { chatAboutProjectForArchitect } from "../services/geminiService.js";
 import { MAX_TEXT, MAX_MESSAGES_PER_CHAT, buildHistory } from "../services/assistantService.js";
 import { deriveSignature, signatureToText } from "../services/workspaceRules.js";
+import { UPGRADE_HINT, limitsFor, tierOf } from "../services/planLimits.js";
+import User from "../models/User.js";
 
 const UNAVAILABLE = "O assistente não conseguiu responder agora. Tente de novo em instantes.";
 
@@ -47,6 +49,19 @@ export async function postMessage(req, res) {
   if (!text) return res.status(400).json({ error: "Escreva uma mensagem." });
   if (text.length > MAX_TEXT) return res.status(400).json({ error: `Mensagem longa demais (máximo ${MAX_TEXT} caracteres).` });
 
+  const today = new Date().toISOString().slice(0, 10);
+  const usage = req.user.architectProfile?.aiUsage;
+  const usedToday = usage?.day === today ? usage.count || 0 : 0;
+  const { assistantDaily } = limitsFor(req.user);
+  if (usedToday >= assistantDaily) {
+    return res.status(429).json({
+      error: tierOf(req.user) === "free"
+        ? `Você usou as ${assistantDaily} mensagens de hoje do assistente no plano Gratuito. Volte amanhã ou ${UPGRADE_HINT.charAt(0).toLowerCase()}${UPGRADE_HINT.slice(1)}`
+        : "Você chegou ao limite de mensagens de hoje do assistente. Volte amanhã.",
+      plan: tierOf(req.user) === "free",
+    });
+  }
+
   const chat = await getOrCreateChat(req, project);
   if (chat.messages.length >= MAX_MESSAGES_PER_CHAT)
     return res.status(400).json({ error: "Esta conversa ficou longa. Reinicie a conversa para continuar." });
@@ -72,7 +87,8 @@ export async function postMessage(req, res) {
   chat.messages.push({ role: "user", text });
   chat.messages.push({ role: "model", text: reply });
   await chat.save();
-  res.json({ reply });
+  await User.updateOne({ _id: req.user._id }, { $set: { "architectProfile.aiUsage": { day: today, count: usedToday + 1 } } });
+  res.json({ reply, usage: { used: usedToday + 1, limit: assistantDaily } });
 }
 
 export async function resetChat(req, res) {

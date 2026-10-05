@@ -687,6 +687,7 @@ a.dv-prod:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .s3-unavailable { margin: 0 0 16px; padding: 14px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--terracotta) 35%, transparent); background: color-mix(in srgb, var(--terracotta) 9%, transparent); }
 .s3-unavailable strong { display: block; margin-bottom: 4px; }
 .s3-unavailable p { margin: 0; font-size: .88rem; line-height: 1.5; }
+.s3-unavailable a { color: var(--terracotta-dark); font-weight: 600; }
 .s3-gen:has(.s3-unavailable:not([hidden])) .s3-modes,
 .s3-gen:has(.s3-unavailable:not([hidden])) .s3-form { opacity: .5; pointer-events: none; }
 

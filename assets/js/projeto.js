@@ -69,6 +69,9 @@
     const s = W.summary;
     const current = W.stages.find((x) => x.key === s.current);
     const left = W.targetDate ? daysFrom(W.targetDate) : null;
+    const banner = $('#pjPlanBanner');
+    banner.hidden = !(isArchitect() && W.plan?.locked);
+    banner.innerHTML = banner.hidden ? '' : `<strong>Este projeto está só para leitura no plano Gratuito.</strong> No Gratuito você usa o Espaço do projeto com 1 projeto ativo por vez (o mais antigo). Conclua o atual ou <a href="planos.html">assine o Pro</a> para editar todos. O cliente continua vendo e aprovando normalmente.`;
     $('#pjKpis').innerHTML = `
       <div class="pj-kpi">
         <span>Progresso</span><strong>${s.progress}%</strong>
@@ -273,9 +276,12 @@
   function renderLibrary() {
     const rooms = new Map();
     W.library.forEach((it) => { const r = it.room || 'Geral'; if (!rooms.has(r)) rooms.set(r, []); rooms.get(r).push(it); });
+    const lim = W.plan?.limits || {};
+    const free = W.plan?.tier === 'free';
+    const count = lim.libraryItems ? `<span class="pj-muted">${W.library.length} de ${lim.libraryItems} itens${free ? ' no plano Gratuito' : ''}</span>` : '';
     const tools = isArchitect() ? `
       <div class="pj-card pj-tools">
-        <h2>Montar a biblioteca</h2>
+        <h2>Montar a biblioteca ${count}</h2>
         <p class="pj-muted">Escolha produtos reais do catálogo das lojas parceiras ou cadastre os seus. O assistente de IA (seu e do cliente) só sugere o que estiver aqui — nada de produto inventado.</p>
         <form class="pj-inline" data-form="search">
           <label class="sr-only" for="pjSearch">Buscar no catálogo</label>
@@ -304,7 +310,8 @@
             <div class="is-wide"><button type="submit" class="btn btn-primary btn-sm">Adicionar à biblioteca</button></div>
           </form>
         </details>
-        ${otherProjects?.length ? `
+        ${otherProjects?.length && !lim.copyLibrary ? `<p class="pj-muted pj-upsell">Reaproveitar a seleção de outro projeto faz parte do Pro. <a href="planos.html">Ver planos</a></p>` : ''}
+        ${otherProjects?.length && lim.copyLibrary ? `
         <form class="pj-inline" data-form="copy">
           <label for="pjCopyFrom">Trazer a seleção de outro projeto</label>
           <select id="pjCopyFrom">${otherProjects.map((p) => `<option value="${p._id}">${esc(p.name)}</option>`).join('')}</select>
@@ -318,7 +325,7 @@
       <div class="pj-card pj-concept">
         <div>
           <h2>Conceito do projeto</h2>
-          <p class="pj-muted">Um texto curto para apresentar o projeto, escrito só com os itens da biblioteca e a assinatura do arquiteto.</p>
+          <p class="pj-muted">Um texto curto para apresentar o projeto, escrito só com os itens da biblioteca e a assinatura do arquiteto.${isArchitect() && free ? ' No plano Gratuito sai um texto padrão montado com a biblioteca; no <a href="planos.html">Pro</a>, a IA escreve seguindo a sua assinatura.' : ''}</p>
         </div>
         <button type="button" class="btn btn-secondary btn-sm" data-act="concept" ${W.library.length ? '' : 'disabled'}>Escrever o conceito</button>
         ${conceptText ? `<p class="pj-concept-text">${esc(conceptText)}</p>` : ''}

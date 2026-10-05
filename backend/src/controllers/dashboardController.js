@@ -13,6 +13,7 @@ import { notify } from "../services/notificationService.js";
 import { recomputeProfileFromPortfolio } from "../services/portfolioProfile.js";
 import { parseAvatar } from "../services/avatar.js";
 import { deleteUserCascade } from "../services/accountDeletion.js";
+import { PLAN_LIMITS } from "../services/planLimits.js";
 
 export function getMe(req, res) {
   res.json(req.user);
@@ -159,7 +160,7 @@ async function notifyClientsArchitectAvailableAgain(architect) {
   );
 }
 
-const FREE_PORTFOLIO_LIMIT = 3;
+const FREE_PORTFOLIO_LIMIT = PLAN_LIMITS.free.portfolioItems;
 
 export async function addPortfolio(req, res) {
   const p = req.user.architectProfile;
