@@ -45,6 +45,8 @@ const icon = (name) => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="f
 
 export function createUI(host, api) {
   const { store, gsap, reduceMotion, house } = api;
+  const editing = api.mode === 'edit';
+  const createLabel = editing ? 'Salvar no meu projeto' : 'Vamos transformar isso em projeto';
   const root = host.querySelector('[data-x3-ui]');
   const stage = host.querySelector('[data-x3-stage]');
   const live = host.querySelector('[data-x3-live]');
@@ -65,7 +67,7 @@ export function createUI(host, api) {
     <aside class="x3-panel x3-mood" aria-label="Clima e moodboard">
       <div class="x3-mood-top">
         <a class="x3-logo" href="index.html" aria-label="match.IA, página inicial">match<span>.IA</span></a>
-        <button type="button" class="x3-textbtn" data-act="back">${icon('left')}Formulário</button>
+        <button type="button" class="x3-textbtn" data-act="back">${icon('left')}${editing ? 'Painel' : 'Formulário'}</button>
         <button type="button" class="x3-sheet-close" data-act="close-sheet" aria-label="Fechar painel">${icon('x')}</button>
       </div>
       <p class="x3-eyebrow">Se esta fosse a sua casa</p>
@@ -658,9 +660,9 @@ export function createUI(host, api) {
           <div><dt>Luz</dt><dd>${esc(p.timeLabel)}, ${p.time}</dd></div>
           ${moved.length ? `<div><dt>Móveis</dt><dd>${esc(moved.join(', '))} no lugar que você escolheu</dd></div>` : ''}
         </dl>
-        <p class="x3-sum-note">O arquiteto recebe tudo isso junto com o seu formulário — e pode perguntar ao assistente sobre cada escolha.</p>
+        <p class="x3-sum-note">${editing ? 'Ao salvar, o projeto passa a mostrar estas escolhas — e os arquitetos e o assistente veem a versão nova.' : 'O arquiteto recebe tudo isso junto com o seu formulário — e pode perguntar ao assistente sobre cada escolha.'}</p>
         <div class="x3-sum-actions">
-          <button type="button" class="x3-btn x3-btn--primary" data-create data-autofocus>Vamos transformar isso em projeto${icon('right')}</button>
+          <button type="button" class="x3-btn x3-btn--primary" data-create data-autofocus>${createLabel}${icon('right')}</button>
           <button type="button" class="x3-btn x3-btn--ghost" data-close>Continuar ajustando</button>
         </div>
         <p class="x3-sum-error" role="alert" data-error></p>
@@ -668,13 +670,13 @@ export function createUI(host, api) {
     const btn = el.querySelector('[data-create]');
     btn.addEventListener('click', async () => {
       btn.disabled = true;
-      btn.firstChild.textContent = 'Criando o seu projeto…';
+      btn.firstChild.textContent = editing ? 'Salvando…' : 'Criando o seu projeto…';
       el.querySelector('[data-error]').textContent = '';
       try { await api.finish(exp); }
       catch (err) {
-        el.querySelector('[data-error]').textContent = err?.message || 'Não foi possível criar o projeto agora. Tente de novo.';
+        el.querySelector('[data-error]').textContent = err?.message || (editing ? 'Não foi possível salvar agora. Tente de novo.' : 'Não foi possível criar o projeto agora. Tente de novo.');
         btn.disabled = false;
-        btn.firstChild.textContent = 'Vamos transformar isso em projeto';
+        btn.firstChild.textContent = createLabel;
       }
     });
     if (!reduceMotion) gsap.from(el.querySelectorAll('.x3-sum-body > *'), { opacity: 0, y: 14, duration: 0.5, stagger: 0.05, delay: 0.12, ease: 'matchOut' });

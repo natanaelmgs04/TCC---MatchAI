@@ -48,3 +48,17 @@ test("normalizeStyleNotes: corta em 2000 caracteres", () => {
   assert.equal(normalizeStyleNotes("a".repeat(3000)).length, 2000);
   assert.equal(normalizeStyleNotes("   "), undefined);
 });
+
+test("normalizeExperience: guarda a cena crua para reabrir a experiência, sem lixo", () => {
+  const exp = normalizeExperience({
+    surfaces: { piso: { surface: "Piso", id: "carvalho-mel", label: "Carvalho mel" } },
+    scene: {
+      preset: "fim-de-tarde",
+      surfaces: { piso: "carvalho-mel", "bad key!": "x", paredes: { $gt: "" } },
+      time: 1110.4,
+      furniture: { "poltrona-sala": { x: 1.23456, z: -999 }, sofa: { x: "1", z: 2 } },
+    },
+  });
+  assert.deepEqual(exp.scene, { preset: "fim-de-tarde", surfaces: { piso: "carvalho-mel" }, time: 1110, furniture: { "poltrona-sala": { x: 1.235, z: -50 } } });
+  assert.equal(normalizeExperience({ summary: "ok", scene: { surfaces: {} } }).scene, undefined);
+});

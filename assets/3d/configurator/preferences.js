@@ -232,6 +232,8 @@ export function toExperience(state, furnitureMeta = {}) {
       furniture,
       summary: `${desc.text} O clima é ${desc.word}.`,
       styles,
+      // Estado cru da cena: é o que permite reabrir a experiência depois e continuar de onde parou.
+      scene: clone({ preset: state.preset, surfaces: state.surfaces, time: state.time, furniture: state.furniture }),
     },
   };
 }

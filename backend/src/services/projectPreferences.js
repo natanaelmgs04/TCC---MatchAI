@@ -24,6 +24,38 @@ export function normalizeStylePicks(value) {
     .filter((p) => p.question && p.choice);
 }
 
+// Estado cru da experiência 3D (ids de material por superfície, hora em
+// minutos e posição dos móveis), guardado para o cliente reabrir e continuar
+// mexendo. O navegador ainda valida tudo contra o catálogo ao carregar.
+const ID_RE = /^[\w-]{1,40}$/;
+const coord = (v) => (Number.isFinite(v) ? Math.max(-50, Math.min(50, Math.round(v * 1000) / 1000)) : null);
+
+function normalizeScene(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const surfaces = {};
+  if (value.surfaces && typeof value.surfaces === "object") {
+    for (const [k, id] of Object.entries(value.surfaces).slice(0, 12)) {
+      if (ID_RE.test(k) && typeof id === "string" && ID_RE.test(id)) surfaces[k] = id;
+    }
+  }
+  const furniture = {};
+  if (value.furniture && typeof value.furniture === "object") {
+    for (const [k, p] of Object.entries(value.furniture).slice(0, 30)) {
+      const x = coord(p?.x);
+      const z = coord(p?.z);
+      if (ID_RE.test(k) && x !== null && z !== null) furniture[k] = { x, z };
+    }
+  }
+  const time = Number(value.time);
+  if (!Object.keys(surfaces).length) return undefined;
+  return {
+    preset: typeof value.preset === "string" && ID_RE.test(value.preset) ? value.preset : null,
+    surfaces,
+    time: Number.isFinite(time) ? Math.max(0, Math.min(1439, Math.round(time))) : undefined,
+    furniture,
+  };
+}
+
 export function normalizeExperience(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const surfaces = {};
@@ -49,7 +81,9 @@ export function normalizeExperience(value) {
     furniture,
     summary: str(value.summary, 400),
     styles: onlyStyles(value.styles),
+    scene: normalizeScene(value.scene),
   };
+  if (!out.scene) delete out.scene;
   return Object.keys(surfaces).length || time || out.summary ? out : undefined;
 }
 

@@ -448,6 +448,8 @@ export function system(_req, res) {
     services: {
       gemini: Boolean(process.env.GEMINI_API_KEY),
       unsplash: Boolean(process.env.UNSPLASH_ACCESS_KEY),
+      tripo: Boolean(process.env.TRIPO_API_KEY),
+      meltflex: Boolean(process.env.MELTFLEX_API_KEY),
       email: Boolean(process.env.BREVO_API_KEY || process.env.EMAIL_HOST),
       jwtFixed: Boolean(process.env.JWT_SECRET) && process.env.JWT_SECRET.length >= 32,
       appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || null,

@@ -1,0 +1,68 @@
+/* Página de um modelo do Estúdio 3D (modelo-3d.html) */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.m3-shell { max-width: 1240px; margin: 0 auto; padding: 112px 24px 80px; }
+.m3-state { text-align: center; color: var(--ink-soft); padding: 80px 0; }
+.m3-state a { color: var(--terracotta); font-weight: 600; }
+
+.m3-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+.m3-head { margin-bottom: 16px; }
+.m3-head h1 { font-size: clamp(1.7rem, 3vw, 2.4rem); margin: 4px 0 6px; overflow-wrap: anywhere; }
+.m3-meta { margin: 0; font-size: .86rem; color: var(--ink-faint); }
+.m3-prompt { margin: 8px 0 0; font-size: .9rem; font-style: italic; color: var(--ink-soft); max-width: 70ch; }
+
+.m3-stage {
+  position: relative; aspect-ratio: 4 / 3; border-radius: var(--radius-lg); overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(120% 90% at 50% 15%, color-mix(in srgb, var(--white) 95%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
+  box-shadow: var(--shadow-md), inset 0 0 0 1px var(--line);
+}
+.m3-stage canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; cursor: grab; }
+.m3-stage canvas:active { cursor: grabbing; }
+.m3-stage-msg {
+  position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; padding: 24px; text-align: center;
+  font-size: .9rem; color: var(--ink-soft);
+}
+.m3-stage-msg[hidden], .m3-stage-msg:empty { display: none; }
+.m3-stage-msg strong { font-size: 1.05rem; color: var(--ink); }
+.m3-stage-msg span { max-width: 46ch; margin: 0 auto; line-height: 1.5; }
+.m3-bar { display: block; width: min(320px, 80vw); height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.m3-bar i { display: block; height: 100%; border-radius: inherit; background: var(--brand-gradient); transition: width .6s var(--ease-out); }
+.m3-hint {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 7px 14px; border-radius: 999px; pointer-events: none;
+  font-size: .76rem; color: var(--ink-soft); white-space: nowrap;
+  background: color-mix(in srgb, var(--white) 75%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.m3-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.m3-danger { color: #9c3b23; }
+
+.m3-side { display: grid; gap: 16px; position: sticky; top: 100px; }
+.m3-card { padding: 20px; }
+.m3-card h2 { font-size: 1.1rem; margin: 0 0 4px; }
+.m3-card .card-lead { font-size: .84rem; margin: 0 0 12px; }
+.m3-share-row { display: flex; gap: 8px; }
+.m3-share-row select { flex: 1; min-width: 0; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: .88rem; }
+.m3-people { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: .86rem; }
+.m3-people li { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.m3-link { background: none; border: 0; padding: 0; font: inherit; font-size: .78rem; color: var(--ink-faint); text-decoration: underline; cursor: pointer; }
+.m3-link:hover { color: var(--terracotta-dark); }
+.m3-muted { color: var(--ink-faint); font-size: .82rem; }
+
+.m3-comments { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 10px; max-height: 360px; overflow-y: auto; }
+.m3-comments li:not(.m3-muted) { padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--bg) 80%, transparent); border: 1px solid var(--line); }
+.m3-comments li.is-mine { background: color-mix(in srgb, var(--terracotta) 9%, var(--bg)); }
+.m3-c-head { display: flex; justify-content: space-between; gap: 8px; font-size: .78rem; margin-bottom: 4px; }
+.m3-c-head time { color: var(--ink-faint); }
+.m3-comments p { margin: 0; font-size: .88rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.m3-comment-form { display: grid; gap: 8px; }
+.m3-comment-form textarea { width: 100%; resize: vertical; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: .88rem; }
+.m3-comment-form .btn { justify-self: end; }
+
+@media (max-width: 960px) {
+  .m3-layout { grid-template-columns: 1fr; }
+  .m3-side { position: static; }
+}
+@media (max-width: 640px) {
+  .m3-shell { padding: 96px 16px 64px; }
+  .m3-stage { aspect-ratio: 1 / 1; border-radius: var(--radius-md); }
+}

@@ -14,6 +14,8 @@ import Hire from "../models/Hire.js";
 import AssistantChat from "../models/AssistantChat.js";
 import ArchitectAssistantChat from "../models/ArchitectAssistantChat.js";
 import User from "../models/User.js";
+import Model3D from "../models/Model3D.js";
+import { deleteModel } from "./model3dStore.js";
 
 /**
  * Apaga a conta e tudo que referencia esse usuário nas outras coleções
@@ -21,6 +23,9 @@ import User from "../models/User.js";
  * e pela equipe no painel de gestão.
  */
 export async function deleteUserCascade(userId) {
+  // Estúdio 3D: modelos (e arquivos) do arquiteto; nos de outros, sai da lista e dos comentários.
+  for (const m of await Model3D.find({ owner: userId }).select("_id file preview")) await deleteModel(m);
+  await Model3D.updateMany({ $or: [{ sharedWith: userId }, { "comments.author": userId }] }, { $pull: { sharedWith: userId, comments: { author: userId } } });
   await Promise.all([
     Project.deleteMany({ client: userId }),
     Message.deleteMany({ $or: [{ from: userId }, { to: userId }] }),

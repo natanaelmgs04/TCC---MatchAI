@@ -593,6 +593,8 @@
         ${check(s.services.email, `E-mail: ${esc(s.email)}`, 'Boas-vindas, recuperação de senha, contratação e mensagens (Brevo)')}
         ${check(s.services.gemini, 'Inteligência artificial (Gemini)', 'Explicações do match, assistente, moodboard e brief')}
         ${check(s.services.unsplash, 'Fotos de referência (Unsplash)', 'Opcional — referência visual dos arquitetos')}
+        ${check(s.services.tripo, 'Estúdio 3D: objetos (Tripo)', 'Opcional — modelo 3D a partir de texto ou foto (TRIPO_API_KEY)')}
+        ${check(s.services.meltflex, 'Estúdio 3D: plantas (MeltFlex)', 'Opcional — planta baixa → 3D (MELTFLEX_API_KEY)')}
         ${check(Boolean(s.services.appUrl), 'Endereço público', s.services.appUrl ? esc(s.services.appUrl) : 'Usado nos links dos e-mails (APP_URL)')}
       </ul>`, { eyebrow: 'Saúde do serviço', cls: 'adm-narrow' })}`;
     play();

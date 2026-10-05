@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     setupMatchTabs();
     setupProfileTabs('clientProfileTabs', 'clientPanel');
+    setupClientModels3d();
     DashUI.decorateTabs(document.getElementById('clientProfileTabs'));
     document.getElementById('clientStatMatch').style.display = '';
     document.getElementById('clientStatFav').style.display = '';
@@ -165,6 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     moveHeroIntoHome('architectHomePanel');
     document.getElementById('roleLabel').textContent = 'Painel do arquiteto';
     setupProfileTabs('architectProfileTabs', 'architectPanel');
+    setupStudio3d();
     DashUI.decorateTabs(document.getElementById('architectProfileTabs'));
     DashUI.autoHeads(document.getElementById('architectPanel'), 'Painel do arquiteto');
     document.getElementById('architectStatRating').style.display = '';
@@ -502,6 +504,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${item('Materiais', f.materials, 'nenhum informado')}
           ${item('Objetivos e prioridades', f.goals, 'nenhum informado', true)}
         </div>
+        ${project._id ? `
+        <div class="dv-proj-3d">
+          <div>
+            <span class="mock-label">Experiência 3D</span>
+            <p>${project.experience?.summary ? escapeHtml(project.experience.summary) : 'Você ainda não montou este projeto na casa em 3D.'}</p>
+          </div>
+          <a class="btn btn-primary btn-sm" href="experiencia-3d.html?projeto=${encodeURIComponent(project._id)}">${project.experience ? 'Voltar à experiência 3D' : 'Abrir a experiência 3D'}</a>
+        </div>` : ''}
         <div class="card-actions">
           <button type="button" class="btn btn-sage btn-sm" data-summary="validate" ${ok ? 'disabled' : ''}>${ok ? '✓ Resumo validado' : 'Validar resumo'}</button>
           <button type="button" class="btn btn-secondary btn-sm" data-summary="pdf">Exportar PDF</button>
@@ -2204,6 +2214,180 @@ document.addEventListener('DOMContentLoaded', async () => {
       `).join('');
       window.print();
     });
+  }
+
+  // ---------------- Estúdio 3D (arquiteto) e Modelos 3D (cliente) ----------------
+  // Gera pelo back-end (Tripo / MeltFlex), guarda no banco e compartilha com o
+  // cliente; a página modelo-3d.html é o visualizador com comentários.
+  // (sem const solto aqui: o init do painel é assíncrono e chama estas funções
+  // antes de a execução chegar a esta altura do arquivo)
+  function s3CardHtml(m, { showOwner } = {}) {
+    const S3_KIND = { object: 'Objeto 3D', floorplan: 'Planta 3D' };
+    const status = m.status === 'success' ? '' : m.status === 'failed'
+      ? '<span class="s3-status is-failed">Falhou</span>'
+      : `<span class="s3-status is-running"><i style="width:${Math.max(4, m.progress)}%"></i></span>`;
+    const shared = m.sharedWith?.length ? `compartilhado com ${m.sharedWith.length}` : '';
+    const meta = [S3_KIND[m.kind], showOwner ? `de ${m.owner?.name || 'arquiteto'}` : shared, m.comments?.length ? `${m.comments.length} coment.` : ''].filter(Boolean).join(' · ');
+    const badge = m.status === 'success' ? '' : `<em>${m.status === 'failed' ? 'Não gerou' : `Gerando… ${m.progress}%`}</em>`;
+    return `
+      <a class="s3-card" href="modelo-3d.html?id=${encodeURIComponent(m.id)}" data-s3-id="${escapeHtml(m.id)}" data-s3-preview="${m.hasPreview ? '1' : ''}">
+        <span class="s3-thumb">${DashUI.icon('modelos3d', 30)}${badge}</span>
+        <span class="s3-body">
+          <strong>${escapeHtml(m.title)}</strong>
+          <span class="s3-meta">${escapeHtml(meta)}</span>
+          ${status}
+        </span>
+      </a>`;
+  }
+
+  async function s3LoadPreviews(grid) {
+    const s3Previews = (s3LoadPreviews.cache ||= new Map()); // id → URL da prévia (baixada com o login)
+    for (const card of grid.querySelectorAll('[data-s3-preview="1"]')) {
+      const id = card.dataset.s3Id;
+      try {
+        if (!s3Previews.has(id)) s3Previews.set(id, URL.createObjectURL(await MatchAPI.authBlob(`/models3d/${encodeURIComponent(id)}/preview`)));
+        card.querySelector('.s3-thumb').innerHTML = `<img src="${s3Previews.get(id)}" alt="">`;
+      } catch { /* fica o ícone */ }
+    }
+  }
+
+  function s3PollWhileRunning(models, reload) {
+    clearTimeout(s3PollWhileRunning.t);
+    if (models.some((m) => m.status === 'queued' || m.status === 'running')) {
+      s3PollWhileRunning.t = setTimeout(reload, 4000);
+    }
+  }
+
+  function setupStudio3d() {
+    const form = document.getElementById('s3Form');
+    if (!form) return;
+    const gallery = document.getElementById('s3Gallery');
+    const err = document.getElementById('s3Error');
+    const submit = document.getElementById('s3Submit');
+    const fileInput = document.getElementById('s3Image');
+    const DROP_TEXT = 'Clique para escolher a imagem (PNG, JPG ou WebP)';
+    let mode = 'text';
+    let status = null;
+    let imageData = null;
+
+    const applyMode = () => {
+      document.querySelectorAll('[data-s3-mode]').forEach((b) => {
+        const on = b.dataset.s3Mode === mode;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', String(on));
+      });
+      form.querySelector('[data-s3-for="text"]').hidden = mode !== 'text';
+      form.querySelector('[data-s3-for="image"]').hidden = mode === 'text';
+      document.getElementById('s3ImageLabel').textContent = mode === 'floorplan' ? 'Imagem da planta baixa' : 'Foto da referência';
+      document.getElementById('s3ImageHint').textContent = mode === 'floorplan'
+        ? 'Planta limpa, vista de cima, com paredes bem marcadas (exportada do CAD ou escaneada reta).'
+        : 'Foto do objeto com fundo limpo e bem iluminada dá o melhor resultado.';
+      const kind = mode === 'floorplan' ? 'floorplan' : 'object';
+      const available = status ? status[kind] : true;
+      const offline = !!status && !status.object && !status.floorplan;
+      document.getElementById('s3Unavailable').hidden = !offline;
+      form.querySelectorAll('input, textarea, button').forEach((el) => { el.disabled = offline; });
+      document.querySelectorAll('[data-s3-mode]').forEach((b) => { b.disabled = offline; });
+      submit.disabled = !available;
+      let note = '';
+      if (offline) note = ''; // o aviso de indisponível já explica
+      else if (status && !available) note = 'Este tipo ainda não está disponível na plataforma.';
+      else if (status?.demo) note = 'Modo demonstração: devolve um modelo de exemplo (sem chave de API neste servidor).';
+      else if (status) note = mode === 'floorplan' ? 'Costuma levar de 2 a 3 minutos.' : 'Costuma levar de 1 a 2 minutos.';
+      document.getElementById('s3Note').textContent = note;
+      err.textContent = '';
+    };
+    document.querySelectorAll('[data-s3-mode]').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.s3Mode; applyMode(); }));
+
+    fileInput.addEventListener('change', async () => {
+      err.textContent = '';
+      imageData = null;
+      const preview = document.getElementById('s3ImagePreview');
+      const file = fileInput.files?.[0];
+      if (!file) { preview.hidden = true; return; }
+      try {
+        imageData = await MatchAPI.prepareImage(file);
+        preview.src = imageData;
+        preview.hidden = false;
+        document.getElementById('s3DropText').textContent = file.name;
+      } catch (e) {
+        err.textContent = e.message;
+        preview.hidden = true;
+      }
+    });
+
+    const paintUsage = () => {
+      if (!status) return;
+      if (!status.object && !status.floorplan) { document.getElementById('s3Usage').textContent = 'Indisponível no momento'; return; }
+      document.getElementById('s3Usage').textContent = `${Math.max(0, status.dailyLimit - status.usedToday)} de ${status.dailyLimit} gerações disponíveis nas próximas 24 h`;
+    };
+
+    async function reload() {
+      let models = [];
+      try {
+        models = await MatchAPI.models3d();
+      } catch (e) {
+        gallery.innerHTML = `<p class="s3-empty">${escapeHtml(e.message || 'Não foi possível carregar seus modelos.')}</p>`;
+        return;
+      }
+      gallery.innerHTML = models.length
+        ? models.map((m) => s3CardHtml(m)).join('')
+        : `<p class="s3-empty">${status && !status.object && !status.floorplan ? 'Quando a geração de 3D for liberada, seus modelos aparecem aqui.' : 'Seus modelos aparecem aqui. Gere o primeiro acima.'}</p>`;
+      s3LoadPreviews(gallery);
+      s3PollWhileRunning(models, reload);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+      const title = document.getElementById('s3Title').value.trim();
+      const prompt = document.getElementById('s3Prompt').value.trim();
+      if (!title) { err.textContent = 'Dê um nome ao modelo.'; return; }
+      if (mode === 'text' && prompt.length < 8) { err.textContent = 'Descreva o objeto com um pouco mais de detalhe.'; return; }
+      if (mode !== 'text' && !imageData) { err.textContent = 'Escolha a imagem.'; return; }
+      submit.disabled = true;
+      submit.textContent = 'Enviando…';
+      try {
+        await MatchAPI.createModel3d({
+          kind: mode === 'floorplan' ? 'floorplan' : 'object',
+          source: mode === 'text' ? 'text' : 'image',
+          title,
+          prompt: mode === 'text' ? prompt : undefined,
+          image: mode === 'text' ? undefined : imageData,
+        });
+        form.reset();
+        imageData = null;
+        document.getElementById('s3ImagePreview').hidden = true;
+        document.getElementById('s3DropText').textContent = DROP_TEXT;
+        if (status) status.usedToday += 1;
+        paintUsage();
+      } catch (e2) {
+        err.textContent = e2.message || 'Não foi possível gerar agora.';
+      } finally {
+        submit.textContent = 'Gerar modelo 3D';
+        applyMode();
+        await reload();
+      }
+    });
+
+    MatchAPI.models3dStatus().then((st) => { status = st; applyMode(); paintUsage(); }).catch(() => {});
+    applyMode();
+    reload();
+  }
+
+  function setupClientModels3d() {
+    const grid = document.getElementById('clientModels3d');
+    if (!grid) return;
+    async function reload() {
+      let models = [];
+      try { models = await MatchAPI.models3d(); } catch { grid.innerHTML = ''; return; }
+      grid.innerHTML = models.length
+        ? models.map((m) => s3CardHtml(m, { showOwner: true })).join('')
+        : '<p class="s3-empty">Quando um arquiteto compartilhar um modelo 3D com você, ele aparece aqui.</p>';
+      s3LoadPreviews(grid);
+      s3PollWhileRunning(models, reload);
+    }
+    reload();
   }
 
   // ---------------- Comparador lado a lado ----------------

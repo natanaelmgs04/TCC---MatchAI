@@ -45,7 +45,8 @@ export function cspFor(file, { cacheResult }) {
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob:",
-    "connect-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://prod.spline.design https://*.spline.design",
+    // blob:/data: — o GLTFLoader lê as texturas embutidas no .glb por blob: (Experiência 3D, Estúdio 3D)
+    "connect-src 'self' blob: data: https://unpkg.com https://cdn.jsdelivr.net https://prod.spline.design https://*.spline.design",
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",

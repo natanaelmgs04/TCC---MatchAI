@@ -620,7 +620,72 @@ a.dv-prod:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .dv-proj-summary .summary-item strong { display: block; overflow-wrap: anywhere; line-height: 1.4; }
 .dv-proj-summary .card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .dv-proj-summary-out { margin-top: 14px; }
+.dv-proj-3d { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 0 0 14px; padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, var(--terracotta) 9%, transparent); }
+.dv-proj-3d > div { flex: 1 1 240px; min-width: 0; }
+.dv-proj-3d p { margin: 4px 0 0; font-size: .88rem; line-height: 1.45; overflow-wrap: anywhere; }
+.dv-proj-3d .btn { flex: 0 0 auto; }
 .dv-proj-summary-out:empty { display: none; }
 .dv-proj-summary-note { font-size: .8rem; color: var(--ink-faint); margin: 8px 0 0; }
 .dv-proj-edit-title { margin: 0 0 12px; font-family: var(--font-body); font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
 .project-drawer .dv-proj-summary .summary-grid { grid-template-columns: 1fr; gap: 8px; }
+
+/* ---------- Estúdio 3D (arquiteto) / Modelos 3D (cliente) ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.s3-usage { font-size: .8rem; color: var(--ink-faint); }
+.s3-gen { padding: 22px; margin-bottom: 18px; }
+.s3-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.s3-mode {
+  display: grid; gap: 2px; text-align: left; padding: 12px 14px; border-radius: 14px; cursor: pointer;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 70%, transparent); color: var(--ink);
+  transition: border-color .18s var(--ease-out), background .18s var(--ease-out), transform .18s var(--ease-spring);
+}
+.s3-mode strong { font-size: .9rem; }
+.s3-mode span { font-size: .76rem; color: var(--ink-faint); }
+.s3-mode:hover { border-color: color-mix(in srgb, var(--terracotta) 45%, var(--line)); }
+.s3-mode:active { transform: scale(.98); }
+.s3-mode.active { border-color: var(--terracotta); background: color-mix(in srgb, var(--terracotta) 10%, var(--bg)); box-shadow: 0 0 0 3px rgba(176, 117, 90, .12); }
+.s3-mode.active strong { color: var(--terracotta-dark); }
+.s3-drop {
+  position: relative; display: grid; place-items: center; gap: 8px; min-height: 140px; padding: 16px; border-radius: 14px; cursor: pointer; text-align: center;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent); background: color-mix(in srgb, var(--bg) 70%, transparent);
+  color: var(--ink-faint); font-size: .86rem; transition: border-color .18s ease;
+}
+.s3-drop:hover, .s3-drop:focus-within { border-color: var(--terracotta); }
+.s3-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.s3-drop img { max-height: 180px; max-width: 100%; border-radius: 10px; object-fit: contain; }
+.s3-error { color: #9c3b23; font-size: .86rem; margin: 6px 0 0; min-height: 1.2em; }
+.s3-form-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.s3-note { font-size: .8rem; color: var(--ink-faint); flex: 1 1 260px; }
+
+.s3-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+.s3-empty { grid-column: 1 / -1; color: var(--ink-faint); font-size: .9rem; padding: 18px 4px; }
+.s3-card {
+  display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; text-decoration: none; color: inherit;
+  background: var(--white); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+  transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out);
+}
+.s3-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.s3-thumb {
+  position: relative; aspect-ratio: 4 / 3; display: grid; place-items: center; color: var(--terracotta);
+  background: radial-gradient(90% 80% at 50% 25%, color-mix(in srgb, var(--white) 90%, transparent), transparent 70%), linear-gradient(180deg, var(--bg), var(--bg-alt));
+}
+.s3-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.s3-thumb em { position: absolute; left: 10px; bottom: 10px; font-style: normal; font-size: .72rem; font-weight: 600; padding: 4px 9px; border-radius: 999px; color: var(--ink-soft); background: color-mix(in srgb, var(--white) 80%, transparent); }
+.s3-body { display: grid; gap: 4px; padding: 12px 14px 14px; }
+.s3-body strong { font-size: .92rem; line-height: 1.3; overflow-wrap: anywhere; }
+.s3-meta { font-size: .76rem; color: var(--ink-faint); }
+.s3-status.is-running { display: block; height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.s3-status.is-running i { display: block; height: 100%; background: var(--brand-gradient); transition: width .6s var(--ease-out); }
+.s3-status.is-failed { font-size: .74rem; font-weight: 600; color: #9c3b23; }
+
+@media (max-width: 720px) {
+  .s3-modes { grid-template-columns: 1fr; }
+  .s3-gen { padding: 18px; }
+  .s3-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.s3-unavailable { margin: 0 0 16px; padding: 14px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--terracotta) 35%, transparent); background: color-mix(in srgb, var(--terracotta) 9%, transparent); }
+.s3-unavailable strong { display: block; margin-bottom: 4px; }
+.s3-unavailable p { margin: 0; font-size: .88rem; line-height: 1.5; }
+.s3-gen:has(.s3-unavailable:not([hidden])) .s3-modes,
+.s3-gen:has(.s3-unavailable:not([hidden])) .s3-form { opacity: .5; pointer-events: none; }

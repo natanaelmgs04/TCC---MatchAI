@@ -32,6 +32,8 @@ import hireRoutes from "./routes/hires.js";
 import avatarRoutes from "./routes/avatars.js";
 import adminRoutes from "./routes/admin.js";
 import siteRoutes from "./routes/site.js";
+import model3dRoutes from "./routes/models3d.js";
+import { startModel3dWorker } from "./services/model3dStore.js";
 import User from "./models/User.js";
 import { emailStatus } from "./services/emailService.js";
 
@@ -58,7 +60,8 @@ app.use(cors());
 // /api/assistant recebe fotos em base64 e tem o próprio parser (limite maior,
 // ver routes/assistant.js) — o global de 100kb barraria a foto antes dela.
 const jsonParser = express.json({ limit: "100kb" });
-app.use((req, res, next) => (req.path.startsWith("/api/assistant") ? next() : jsonParser(req, res, next)));
+// /api/models3d também (foto/planta em base64; ver routes/models3d.js).
+app.use((req, res, next) => (req.path.startsWith("/api/assistant") || req.path.startsWith("/api/models3d") ? next() : jsonParser(req, res, next)));
 app.use(
   "/api/auth",
   rateLimit({ windowMs: 15 * 60 * 1000, limit: 40 }),
@@ -88,6 +91,7 @@ app.use("/api/hires", hireRoutes);
 app.use("/api/avatars", avatarRoutes);
 app.use("/api/admin", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600 }), adminRoutes);
 app.use("/api/site", siteRoutes);
+app.use("/api/models3d", model3dRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Site (front-end) servido pelo mesmo processo/porta que a API.
@@ -174,6 +178,7 @@ connectDatabase({ allowLocal: true })
     app.listen(process.env.PORT || 3000, () => {
       console.log(`Arkitetum running at http://localhost:${process.env.PORT || 3000}`);
       console.log(`E-mail: ${emailStatus()}`);
+      startModel3dWorker();
     }),
   )
   .catch((error) => {

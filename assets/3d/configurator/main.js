@@ -28,7 +28,7 @@ CustomEase.create('matchSpring', '.34,1.56,.64,1'); // = --ease-spring (só peç
 const LIVING_CENTER = new THREE.Vector3(-2.4, 0, -1.6);
 const WAVE_SPEED = 8.5; // m/s — mesma frente de onda para todas as superfícies
 
-export async function mount(host, { initial, projectName, glbUrl, onProgress, onChange, onFinish, onBack } = {}) {
+export async function mount(host, { initial, projectName, glbUrl, mode = 'create', onProgress, onChange, onFinish, onBack } = {}) {
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const quality = detectQuality();
   const stage = host.querySelector('[data-x3-stage]');
@@ -177,6 +177,7 @@ export async function mount(host, { initial, projectName, glbUrl, onProgress, on
   const roomById = (id) => house.rooms.find((r) => r.id === id);
   const api = {
     store, house, ctx, gsap, reduceMotion, quality, projectName,
+    mode, // 'create' (novo projeto) ou 'edit' (cliente voltou a um projeto que já existe)
     pickSurface: (x, y) => interaction.pickSurface(x, y),
     hover,
     project(v) {

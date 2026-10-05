@@ -115,6 +115,28 @@ o que saiu do site; produtos cadastrados à mão nunca são apagados. O servidor
 só acessa endereços públicos (bloqueio de IPs internos) e no máximo uma
 importação por minuto por loja.
 
+### Estúdio 3D (arquitetos) — opcional
+
+Painel do arquiteto → **Estúdio 3D**: gera um modelo 3D a partir de texto ou
+foto (Tripo) ou de uma planta baixa (MeltFlex), guarda no banco e compartilha
+com clientes com quem ele já conversou ou que pediram contratação. Os dois
+abrem `modelo-3d.html`, giram o modelo e comentam. O cliente vê em
+Painel → **Modelos 3D**.
+
+1. **Tripo** (objeto por texto/foto): crie a conta em https://platform.tripo3d.ai,
+   gere a chave em API Keys (há créditos grátis no cadastro) e coloque em
+   `TRIPO_API_KEY` no Render.
+2. **MeltFlex** (planta → 3D): assine um plano em https://www.meltflexai.com,
+   copie a chave em Profile → API Key e coloque em `MELTFLEX_API_KEY`.
+   Cada planta em 3D custa 100 créditos deles.
+3. `MODEL3D_DAILY_LIMIT` (padrão 5) limita quantos modelos cada arquiteto gera
+   a cada 24 h — é o controle de gasto de créditos.
+
+Sem as chaves, em produção a opção aparece como "não configurada" (o resto do
+site não muda). No computador de desenvolvimento roda em modo demonstração,
+devolvendo um modelo de exemplo. Os arquivos `.glb` ficam no MongoDB (GridFS):
+de olho no limite de 512 MB do Atlas M0 se o uso crescer.
+
 ## 6. Antes de abrir para o público
 
 - **Contas de demonstração**: a senha delas (`MatchIA@Demo2026`) está pública no

@@ -121,6 +121,7 @@
           <button type="button" class="profile-tab" data-profile-panel="match" role="tab" aria-selected="false">Compatibilidade</button>
           <button type="button" class="profile-tab" data-profile-panel="favoritos" role="tab" aria-selected="false">Favoritos</button>
           <button type="button" class="profile-tab" data-profile-panel="mensagens" role="tab" aria-selected="false">Mensagens <span class="unread-badge" id="clientUnreadBadge" style="display:none;"></span></button>
+          <button type="button" class="profile-tab" data-profile-panel="modelos3d" role="tab" aria-selected="false">Modelos 3D</button>
           <button type="button" class="profile-tab" data-profile-panel="conta" role="tab" aria-selected="false">Conta</button>
         </div>
 
@@ -230,6 +231,18 @@
               <div class="chat-shell" id="clientChatShell"><div class="chat-empty">Selecione uma conversa ou envie uma mensagem a partir do perfil de um arquiteto.</div></div>
             </div>
           </div>
+
+          <div class="profile-panel" data-profile-panel-content="modelos3d" hidden>
+            <header class="dv-head">
+              <span class="dv-head-ico" data-dv-icon="modelos3d"></span>
+              <div class="dv-head-text">
+                <span class="eyebrow">Painel do cliente</span>
+                <h2>Modelos 3D</h2>
+                <p>Modelos que os arquitetos compartilharam com você. Abra para girar, ver de perto e comentar.</p>
+              </div>
+            </header>
+            <div class="s3-grid" id="clientModels3d"></div>
+          </div>
         </div>
       </div>
 
@@ -241,6 +254,7 @@
           <button type="button" class="profile-tab" data-profile-panel="contratacoes" role="tab" aria-selected="false">Contratações <span class="unread-badge" id="hireRequestsBadge" style="display:none;"></span></button>
           <button type="button" class="profile-tab" data-profile-panel="perfil" role="tab" aria-selected="false">Perfil</button>
           <button type="button" class="profile-tab" data-profile-panel="portfolio" role="tab" aria-selected="false">Portfólio</button>
+          <button type="button" class="profile-tab" data-profile-panel="modelos3d" role="tab" aria-selected="false">Estúdio 3D</button>
           <button type="button" class="profile-tab" data-profile-panel="avaliacoes" role="tab" aria-selected="false">Avaliações</button>
           <button type="button" class="profile-tab" data-profile-panel="metricas" role="tab" aria-selected="false">Métricas</button>
           <button type="button" class="profile-tab" data-profile-panel="comissoes" role="tab" aria-selected="false">Comissões</button>
@@ -341,6 +355,60 @@
               <p class="card-lead">Depois que o resumo do projeto é confirmado pelos dois lados, proponha um case pra exibir no seu perfil público — imagens, descrição e o testemunho do cliente.</p>
               <div id="caseStudiesList"></div>
             </div>
+          </div>
+
+          <div class="profile-panel" data-profile-panel-content="modelos3d" hidden>
+            <header class="dv-head">
+              <span class="dv-head-ico" data-dv-icon="modelos3d"></span>
+              <div class="dv-head-text">
+                <span class="eyebrow">Estúdio 3D</span>
+                <h2>Gere modelos 3D e compartilhe com o cliente</h2>
+                <p>Descreva um objeto, envie a foto de uma referência ou a imagem de uma planta baixa. O modelo fica salvo aqui, e você compartilha com o cliente para os dois comentarem no mesmo 3D.</p>
+              </div>
+              <div class="dv-head-actions"><span class="s3-usage" id="s3Usage"></span></div>
+            </header>
+
+            <section class="dash-card s3-gen" aria-labelledby="s3GenTitle">
+              <h3 id="s3GenTitle" class="sr-only">Novo modelo</h3>
+              <div class="s3-unavailable" id="s3Unavailable" role="status" hidden>
+                <strong>Geração de 3D indisponível no momento</strong>
+                <p>Gerar modelos 3D com IA depende de um serviço pago que ainda não cabe no orçamento da match.IA. O recurso será liberado quando a empresa crescer e virar uma startup de verdade.</p>
+              </div>
+              <div class="s3-modes" role="tablist" aria-label="Tipo de modelo">
+                <button type="button" class="s3-mode active" role="tab" aria-selected="true" data-s3-mode="text"><strong>Objeto por texto</strong><span>Móvel, luminária, peça, maquete</span></button>
+                <button type="button" class="s3-mode" role="tab" aria-selected="false" data-s3-mode="image"><strong>Objeto por foto</strong><span>Uma foto da referência</span></button>
+                <button type="button" class="s3-mode" role="tab" aria-selected="false" data-s3-mode="floorplan"><strong>Planta baixa → 3D</strong><span>Imagem da planta</span></button>
+              </div>
+              <form class="s3-form" id="s3Form" novalidate>
+                <div class="form-grid">
+                  <div class="form-field full">
+                    <label for="s3Title">Nome do modelo</label>
+                    <input type="text" id="s3Title" maxlength="80" placeholder="Ex.: Poltrona da sala — proposta 1" required>
+                  </div>
+                  <div class="form-field full" data-s3-for="text">
+                    <label for="s3Prompt">Descrição</label>
+                    <textarea id="s3Prompt" rows="3" maxlength="1000" placeholder="Ex.: Poltrona de madeira freijó com assento em linho cru, linhas retas, estilo contemporâneo brasileiro"></textarea>
+                    <span class="hint">Diga forma, material, cor e estilo. Em inglês os resultados costumam ser um pouco melhores.</span>
+                  </div>
+                  <div class="form-field full" data-s3-for="image" hidden>
+                    <label for="s3Image" id="s3ImageLabel">Imagem</label>
+                    <label class="s3-drop" id="s3Drop">
+                      <input type="file" id="s3Image" accept="image/png,image/jpeg,image/webp">
+                      <img id="s3ImagePreview" alt="" hidden>
+                      <span id="s3DropText">Clique para escolher a imagem (PNG, JPG ou WebP)</span>
+                    </label>
+                    <span class="hint" id="s3ImageHint">Foto do objeto com fundo limpo e bem iluminada dá o melhor resultado.</span>
+                  </div>
+                </div>
+                <p class="s3-error" id="s3Error" role="alert"></p>
+                <div class="s3-form-foot">
+                  <span class="s3-note" id="s3Note"></span>
+                  <button type="submit" class="btn btn-primary" id="s3Submit">Gerar modelo 3D</button>
+                </div>
+              </form>
+            </section>
+
+            <div class="s3-grid" id="s3Gallery"></div>
           </div>
 
           <div class="profile-panel" data-profile-panel-content="avaliacoes" hidden>

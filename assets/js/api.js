@@ -89,8 +89,55 @@ const MatchAPI = (() => {
     });
   }
 
+  /**
+   * Foto/planta para o Estúdio 3D: mantém a proporção, lado maior até
+   * `maxSide` px, JPEG (aceito pelos dois provedores). Fundo branco para PNG
+   * com transparência (planta exportada do CAD).
+   */
+  function prepareImage(file, maxSide = 2048) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\/(png|jpe?g|webp)$/i.test(file.type)) return reject(new Error('Escolha uma imagem PNG, JPG ou WebP.'));
+      if (file.size > 25 * 1024 * 1024) return reject(new Error('Imagem grande demais (máx. 25 MB).'));
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        if (Math.min(img.naturalWidth, img.naturalHeight) < 256) return reject(new Error('Imagem pequena demais (mínimo 256 px).'));
+        const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não consegui abrir esta imagem.')); };
+      img.src = url;
+    });
+  }
+
+  /** Arquivo protegido (modelo .glb, prévia) baixado com o login, como Blob. */
+  async function authBlob(path) {
+    const t = token();
+    const res = await fetch(`${base()}${path}`, { headers: t ? { Authorization: `Bearer ${t}` } : {} });
+    if (!res.ok) throw new Error(res.status === 404 ? 'Arquivo não encontrado.' : 'Não foi possível baixar o arquivo.');
+    return res.blob();
+  }
+
   return {
-    avatarSrc, prepareAvatar,
+    avatarSrc, prepareAvatar, prepareImage, authBlob,
+    models3dStatus: () => request('/models3d/status', { auth: true }),
+    models3d: () => request('/models3d', { auth: true }),
+    model3d: (id) => request(`/models3d/${encodeURIComponent(id)}`, { auth: true }),
+    createModel3d: (payload) => request('/models3d', { method: 'POST', auth: true, body: payload }),
+    renameModel3d: (id, title) => request(`/models3d/${encodeURIComponent(id)}`, { method: 'PATCH', auth: true, body: { title } }),
+    deleteModel3d: (id) => request(`/models3d/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }),
+    model3dCandidates: () => request('/models3d/share-candidates', { auth: true }),
+    shareModel3d: (id, clientId) => request(`/models3d/${encodeURIComponent(id)}/share`, { method: 'POST', auth: true, body: { clientId } }),
+    unshareModel3d: (id, clientId) => request(`/models3d/${encodeURIComponent(id)}/share/${encodeURIComponent(clientId)}`, { method: 'DELETE', auth: true }),
+    commentModel3d: (id, text) => request(`/models3d/${encodeURIComponent(id)}/comments`, { method: 'POST', auth: true, body: { text } }),
     base, setBase, token, setSession, clearSession, currentUser,
     health: () => request('/health'),
     stats: () => request('/stats'),

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('matchia_theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo 3D — match.IA</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<meta name="theme-color" content="#B0755A">
+<!-- Import map: só o que o visualizador usa, com as mesmas integridades do import map canônico (assets/3d/dev/env-check.html). -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.186.1/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.186.1/examples/jsm/"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.186.1/build/three.module.js": "sha384-m8JoFX52V6NGv2usipnlLJKnJfL7IE8dbniPDDCSGSQv3Hm4n6PjfV6syVwfuoRc",
+    "https://unpkg.com/three@0.186.1/build/three.core.js": "sha384-mdKeCwPEcbDvzaxwhm+MVuLoMou+E7jQqrs4tmu/n8HBYPGI1kZt0MkJxlMR4zFM",
+    "https://unpkg.com/three@0.186.1/examples/jsm/controls/OrbitControls.js": "sha384-LSqANrugPGTgf0eYsQTloqKWy926dOOXo2iZ9y6wLMIDEQoU9AaCLJF1Vcc7oJXr",
+    "https://unpkg.com/three@0.186.1/examples/jsm/loaders/GLTFLoader.js": "sha384-jmhN0si8z6E7+h0t9KiwQ71oyrC3PhTpols1FXeN/vODuFa/L4bPIe9sLbOlhjq7",
+    "https://unpkg.com/three@0.186.1/examples/jsm/utils/BufferGeometryUtils.js": "sha384-Rm97j4mcjlLkGsYC2LX3nZG9VU2R8lgK0QE+DmBr4thue+H7J+SHm+68If2ZLBVg",
+    "https://unpkg.com/three@0.186.1/examples/jsm/utils/SkeletonUtils.js": "sha384-Pozn8j5+YFr3ak8Pm90ayqDrGYn/DV7vVs/YIIqzJhzeJT0LQksoS1fZQ5lfsYlw",
+    "https://unpkg.com/three@0.186.1/examples/jsm/loaders/DRACOLoader.js": "sha384-6vtmq3WPvctEi9PzdgMxiAGLRIRtWQSrgL9Pxy26rq+Lu2s8qY/tRpq2Ked1wfLW",
+    "https://unpkg.com/three@0.186.1/examples/jsm/environments/RoomEnvironment.js": "sha384-/H49oz0ZtMgJNgMZ+OhhuMuKBOsaiC3kY0/PZSvgJJXAOJJwmSBJjzlV5lJul3MB"
+  }
+}
+</script>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/modelo-3d.css">
+</head>
+<body class="m3-page">
+<a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="index.html" class="logo">
+      <img src="assets/img/mark.png" alt="" width="32" height="32">
+      <span class="logo-word">match<span class="ia">.IA</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html#como-funciona">Como funciona</a></li>
+      <li><a href="projetos.html" data-page="projetos.html">Projetos</a></li>
+      <li><a href="destaques.html" data-page="destaques.html">Arquitetos</a></li>
+      <li><a href="planos.html" data-page="planos.html">Planos</a></li>
+      <li><a href="sobre.html" data-page="sobre.html">Sobre</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="dashboard.html" class="login-link" id="m3Back">Voltar ao painel</a>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema" type="button"></button>
+    <button class="nav-toggle" aria-label="Abrir menu"><span></span><span></span><span></span></button>
+  </nav>
+</header>
+
+<main id="main-content" class="m3-shell">
+  <p class="m3-state" id="m3State"><span class="spinner"></span> Carregando o modelo…</p>
+
+  <div class="m3-layout" id="m3Layout" hidden>
+    <section class="m3-stage-wrap" aria-labelledby="m3Title">
+      <header class="m3-head">
+        <span class="eyebrow" id="m3Kind">Modelo 3D</span>
+        <h1 id="m3Title">—</h1>
+        <p class="m3-meta" id="m3Meta"></p>
+      </header>
+      <div class="m3-stage" id="m3Stage">
+        <div class="m3-stage-msg" id="m3StageMsg"></div>
+        <div class="m3-hint" id="m3Hint" hidden>Arraste para girar · role ou pince para aproximar</div>
+      </div>
+      <div class="m3-actions" id="m3Actions"></div>
+    </section>
+
+    <aside class="m3-side">
+      <section class="dash-card m3-card" id="m3Share" hidden aria-labelledby="m3ShareTitle">
+        <h2 id="m3ShareTitle">Compartilhar com cliente</h2>
+        <p class="card-lead">O cliente vê o modelo em Painel → Modelos 3D, recebe um aviso na conversa e pode comentar aqui.</p>
+        <div class="m3-share-row">
+          <select id="m3ShareSelect" aria-label="Cliente"></select>
+          <button type="button" class="btn btn-primary btn-sm" id="m3ShareBtn">Compartilhar</button>
+        </div>
+        <ul class="m3-people" id="m3People"></ul>
+      </section>
+
+      <section class="dash-card m3-card" aria-labelledby="m3CommentsTitle">
+        <h2 id="m3CommentsTitle">Comentários</h2>
+        <ol class="m3-comments" id="m3Comments" aria-live="polite"></ol>
+        <form class="m3-comment-form" id="m3CommentForm">
+          <label class="sr-only" for="m3CommentText">Seu comentário</label>
+          <textarea id="m3CommentText" rows="3" maxlength="1000" placeholder="Ex.: Dá para trocar a madeira por algo mais claro?"></textarea>
+          <button type="submit" class="btn btn-primary btn-sm">Comentar</button>
+        </form>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/site.js"></script>
+<script type="module" src="assets/js/modelo-3d.js"></script>
+</body>
+</html>
