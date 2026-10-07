@@ -100,8 +100,36 @@
       <form id="cadastroForm" novalidate>
         <div class="form-grid">
           <div class="form-field full" id="storeNameField" style="display:none;">
-            <label for="storeName">Nome da loja</label>
-            <input type="text" id="storeName" placeholder="Como sua loja aparece pros clientes">
+            <fieldset class="partner-kind">
+              <legend>Que tipo de parceiro você é?</legend>
+              <label><input type="radio" name="partnerKind" value="store" checked> Loja (vendo produtos)</label>
+              <label><input type="radio" name="partnerKind" value="service"> Prestador de serviço (executo a obra)</label>
+            </fieldset>
+            <label for="storeName">Nome da loja ou empresa</label>
+            <input type="text" id="storeName" placeholder="Como você aparece para arquitetos e clientes">
+          </div>
+          <div class="form-field full" id="tradesField" style="display:none;">
+            <fieldset class="trades">
+              <legend>Seus ofícios (até 6)</legend>
+              <div class="trade-chips">
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Marcenaria"> Marcenaria</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Elétrica"> Elétrica</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Hidráulica"> Hidráulica</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Pintura"> Pintura</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Gesso e drywall"> Gesso e drywall</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Marmoraria"> Marmoraria</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Vidraçaria"> Vidraçaria</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Serralheria"> Serralheria</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Paisagismo"> Paisagismo</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Ar-condicionado"> Ar-condicionado</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Iluminação técnica"> Iluminação técnica</label>
+              <label class="trade-chip"><input type="checkbox" name="trades" value="Pedreiro e acabamento"> Pedreiro e acabamento</label>
+              </div>
+            </fieldset>
+            <div class="partner-where">
+              <div><label for="partnerCity">Cidade</label><input type="text" id="partnerCity" maxlength="80" placeholder="Onde você atende"></div>
+              <div><label for="partnerState">UF</label><input type="text" id="partnerState" maxlength="2" placeholder="SP"></div>
+            </div>
           </div>
           <div class="form-field full">
             <label for="name">Nome completo</label>

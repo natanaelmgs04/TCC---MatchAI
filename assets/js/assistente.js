@@ -357,7 +357,7 @@ const MatchAssistant = (() => {
                   <div class="ai-tools">
                     <button type="button" class="ai-tool" data-ref="attach" aria-label="Anexar fotos do espaço" title="Anexar fotos do espaço">${ICONS.paperclip}</button>
                     <button type="button" class="ai-tool" data-ref="commands" aria-label="Abrir comandos" aria-expanded="false" title="Comandos (digite /)">${ICONS.command}</button>
-                    <input type="file" data-ref="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+                    <input type="file" data-ref="file" accept="image/jpeg,image/png,image/webp" multiple hidden aria-label="Anexar fotos à mensagem">
                   </div>
                   <textarea class="ai-input" data-ref="input" rows="1" maxlength="1500"
                             placeholder="Pergunte qualquer coisa sobre o projeto…" aria-label="Mensagem para o assistente"></textarea>

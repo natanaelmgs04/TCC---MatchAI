@@ -237,3 +237,55 @@ export async function revokeConsents(req, res) {
   const r = await StoreReferral.updateMany({ client: req.user.id, shareContact: true }, { $set: { shareContact: false, consentRevokedAt: new Date() } });
   res.json({ revoked: r.modifiedCount });
 }
+
+// ---------------------------------------------------------------------------
+// Prestadores de serviço (parceiros "service"): diretório para o arquiteto
+// montar a equipe de obra e, para o prestador, as indicações recebidas.
+// ---------------------------------------------------------------------------
+async function ratingsByProvider(ids) {
+  const rows = await Project.aggregate([
+    { $unwind: "$crew" },
+    { $match: { "crew.provider": { $in: ids }, "crew.rating": { $gte: 1 } } },
+    { $group: { _id: "$crew.provider", avg: { $avg: "$crew.rating" }, count: { $sum: 1 } } },
+  ]);
+  return new Map(rows.map((r) => [String(r._id), { avg: Math.round(r.avg * 10) / 10, count: r.count }]));
+}
+
+/** GET /api/stores/providers?trade=&state= — só arquitetos (montando a equipe de obra). */
+export async function listProviders(req, res) {
+  const q = { role: "store", "storeProfile.kind": "service", status: { $ne: "suspended" } };
+  if (typeof req.query.trade === "string" && req.query.trade) q["storeProfile.trades"] = req.query.trade;
+  if (typeof req.query.state === "string" && /^[a-z]{2}$/i.test(req.query.state)) q["storeProfile.state"] = req.query.state.toUpperCase();
+  const providers = await User.find(q).select("name storeProfile").limit(60);
+  const ratings = await ratingsByProvider(providers.map((p) => p._id));
+  res.json(providers.map((p) => ({
+    id: String(p._id),
+    name: p.storeProfile?.storeName || p.name,
+    trades: p.storeProfile?.trades || [],
+    city: p.storeProfile?.city || "",
+    state: p.storeProfile?.state || "",
+    description: p.storeProfile?.description || "",
+    rating: ratings.get(String(p._id)) || null,
+  })).sort((a, b) => (b.rating?.avg || 0) - (a.rating?.avg || 0)));
+}
+
+/** GET /api/stores/me/crew — o prestador vê onde foi indicado (sem dados do cliente — LGPD). */
+export async function myCrewRequests(req, res) {
+  const projects = await Project.find({ "crew.provider": req.user._id }).select("crew architect city state").populate("architect", "name");
+  const out = [];
+  for (const p of projects) {
+    for (const c of p.crew.filter((x) => String(x.provider) === String(req.user._id))) {
+      out.push({
+        id: String(c._id),
+        architect: p.architect?.name || "Arquiteto(a)",
+        trade: c.trade,
+        where: [p.city, p.state].filter(Boolean).join("/"),
+        status: c.status,
+        rating: c.rating || null,
+        addedAt: c.addedAt,
+      });
+    }
+  }
+  const ratings = (await ratingsByProvider([req.user._id])).get(String(req.user._id)) || null;
+  res.json({ requests: out.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt)), rating: ratings });
+}

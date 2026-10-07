@@ -736,3 +736,14 @@ a.dv-prod:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
 /* .btn define display e passava por cima do atributo hidden */
 .btn[hidden] { display: none !important; }
+
+.hire-proposal { margin: 8px 0 0; font-size: .84rem; }
+.hire-proposal a, a.hire-chip { color: var(--terracotta-dark); font-weight: 600; }
+
+/* Painel do parceiro */
+.partner-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: .86rem; color: var(--ink-faint); }
+.crew-rating { font-weight: 600; margin: 0 0 10px; }
+.crew-req { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.crew-req li { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); font-size: .88rem; }
+.crew-req li span { color: var(--ink-soft); }
+.crew-req-status { margin-left: auto; font-weight: 600; }

@@ -31,6 +31,7 @@ const projectSchema = new mongoose.Schema(
     // contratação. Regras em services/workspaceRules.js.
     targetDate: Date, // meta de fechar o projeto (padrão: 12 semanas, até o executivo)
     workspaceStartedAt: Date, // no plano Gratuito o arquiteto edita só o espaço ativo mais antigo
+    contract: { type: mongoose.Schema.Types.ObjectId, ref: "Proposal" }, // contrato assinado pelos dois, se houver
     stages: [
       {
         key: String,
@@ -40,6 +41,7 @@ const projectSchema = new mongoose.Schema(
         submittedAt: Date,
         approvedAt: Date,
         revisionRounds: { type: Number, default: 0 },
+        closesDesign: Boolean, // etapa que "fecha o projeto" (meta e relatório contam até ela)
         // Honorários da etapa (cobrança simulada — TCC): o arquiteto define o
         // valor; aprovar a etapa abre a cobrança e o cliente marca como paga.
         fee: Number,
@@ -70,6 +72,46 @@ const projectSchema = new mongoose.Schema(
         quantity: { type: Number, default: 1 },
         unit: String,
         purchased: { type: Boolean, default: false },
+        addedAt: { type: Date, default: Date.now },
+        // Cotações do item em lojas diferentes; a escolhida vira o preço/loja da lista de compras.
+        quotes: [
+          {
+            storeName: String,
+            price: Number,
+            purchaseUrl: String,
+            product: { type: mongoose.Schema.Types.ObjectId, ref: "StoreProduct" },
+            store: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            note: String,
+            chosen: { type: Boolean, default: false },
+            addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          },
+        ],
+      },
+    ],
+    // Equipe do escritório: outros arquitetos convidados pelo arquiteto do projeto.
+    team: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, addedAt: { type: Date, default: Date.now }, _id: false }],
+    // Diário de obra: registros datados (texto + fotos) que o cliente acompanha.
+    diary: [
+      {
+        author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        date: Date,
+        text: { type: String, maxlength: 2000 },
+        files: [{ type: mongoose.Schema.Types.ObjectId, ref: "ProjectFile" }],
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Equipe de obra: prestadores parceiros (marcenaria, elétrica…) ou contatos do arquiteto.
+    crew: [
+      {
+        provider: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        name: String,
+        trade: String,
+        contact: String, // só para prestador cadastrado à mão (fora da plataforma)
+        quote: Number,
+        status: { type: String, enum: ["cotando", "contratado", "concluido"], default: "cotando" },
+        note: String,
+        rating: Number,
+        ratedAt: Date,
         addedAt: { type: Date, default: Date.now },
       },
     ],

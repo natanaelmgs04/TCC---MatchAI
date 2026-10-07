@@ -12,6 +12,7 @@ const projectFileSchema = new mongoose.Schema(
     project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true, index: true },
     uploader: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     stage: String,
+    kind: { type: String, enum: ["doc", "diary"], default: "doc" }, // diary = foto do diário de obra
     name: { type: String, required: true },
     ext: String,
     mime: String,

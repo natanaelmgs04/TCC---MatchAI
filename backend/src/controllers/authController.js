@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import { welcomeEmail, passwordResetEmail, publicBaseUrl } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
 import { parseAvatar } from "../services/avatar.js";
+import { normalizeTrades } from "../services/workspaceRules.js";
 
 const hashToken = (raw) => crypto.createHash("sha256").update(raw).digest("hex");
 
@@ -52,7 +53,15 @@ export async function register(req, res) {
     role === "architect"
       ? { bio: req.body.bio }
       : role === "store"
-        ? { storeName: req.body.storeName, description: req.body.bio }
+        ? {
+            storeName: req.body.storeName,
+            description: req.body.bio,
+            // parceiro de serviço (marcenaria, elétrica…) ou loja de produtos
+            kind: req.body.partnerKind === "service" ? "service" : "store",
+            trades: req.body.partnerKind === "service" ? normalizeTrades(req.body.trades) : [],
+            city: typeof req.body.city === "string" ? req.body.city.trim().slice(0, 80) : undefined,
+            state: typeof req.body.state === "string" && /^[a-z]{2}$/i.test(req.body.state.trim()) ? req.body.state.trim().toUpperCase() : undefined,
+          }
         : {};
 
   let referrer = null;

@@ -348,7 +348,7 @@
               <h3>Compartilhar perfil</h3>
               <p class="card-lead">Divulgue seu perfil match.IA nas redes sociais ou no seu site.</p>
               <div class="share-row">
-                <input type="text" id="shareLinkInput" readonly>
+                <input type="text" id="shareLinkInput" readonly aria-label="Link do seu perfil público">
                 <button id="copyShareLinkBtn" class="btn btn-secondary btn-sm">Copiar link</button>
                 <img id="shareQrCode" class="qr-code" alt="QR code do perfil">
               </div>
@@ -527,6 +527,40 @@
               </div>
             </header>
 
+            <section class="dash-card spotlight partner-card" id="partnerKindCard">
+              <h3>Seu tipo de parceria</h3>
+              <p class="card-lead">Prestadores de serviço aparecem para os arquitetos montarem a equipe de obra e recebem avaliação no fim de cada serviço.</p>
+              <form id="partnerKindForm" novalidate>
+                <fieldset class="partner-kind">
+                  <legend class="sr-only">Tipo de parceiro</legend>
+                  <label><input type="radio" name="pkKind" value="store"> Loja (vendo produtos)</label>
+                  <label><input type="radio" name="pkKind" value="service"> Prestador de serviço</label>
+                </fieldset>
+                <fieldset class="trades" id="pkTrades">
+                  <legend>Ofícios (até 6)</legend>
+                  <div class="trade-chips">
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Marcenaria"> Marcenaria</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Elétrica"> Elétrica</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Hidráulica"> Hidráulica</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Pintura"> Pintura</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Gesso e drywall"> Gesso e drywall</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Marmoraria"> Marmoraria</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Vidraçaria"> Vidraçaria</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Serralheria"> Serralheria</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Paisagismo"> Paisagismo</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Ar-condicionado"> Ar-condicionado</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Iluminação técnica"> Iluminação técnica</label>
+              <label class="trade-chip"><input type="checkbox" name="pkTrade" value="Pedreiro e acabamento"> Pedreiro e acabamento</label>
+                  </div>
+                </fieldset>
+                <div class="partner-where">
+                  <div><label for="pkCity">Cidade</label><input type="text" id="pkCity" maxlength="80"></div>
+                  <div><label for="pkState">UF</label><input type="text" id="pkState" maxlength="2"></div>
+                </div>
+                <div class="partner-actions"><button type="submit" class="btn btn-primary btn-sm">Salvar</button><span id="pkStatus" role="status" aria-live="polite"></span></div>
+              </form>
+            </section>
+
             <!-- Importar do site: preenchido por dashboard.js (setupCatalogImport) -->
             <section class="dash-card dv-import" id="catalogImport" aria-labelledby="catalogImportTitle">
               <div class="dv-import-head">
@@ -566,6 +600,12 @@
                 <div class="stat"><strong id="referralCount">0</strong><span>indicações</span></div>
               </div>
               <div id="referralsList"></div>
+            </div>
+            <div class="dash-card spotlight" id="crewRequestsCard" hidden>
+              <h3>Indicações para obras</h3>
+              <p class="card-lead">Arquitetos que colocaram você na equipe de obra de um projeto. Por privacidade (LGPD), você vê o ofício, a cidade e quem indicou — o arquiteto entra em contato pelo seu cadastro.</p>
+              <p class="crew-rating" id="crewRating"></p>
+              <div id="crewRequestsList"></div>
             </div>
           </div>
         </div>

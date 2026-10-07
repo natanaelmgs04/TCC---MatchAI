@@ -91,6 +91,13 @@ const userSchema = new mongoose.Schema(
         default: "available",
       },
       portfolio: [projectSchema],
+      // Modelos de etapas salvos pelo arquiteto (Espaço do projeto → Etapas).
+      stageTemplates: [
+        {
+          name: String,
+          stages: [{ name: String, weeks: Number, closesDesign: Boolean, _id: false }],
+        },
+      ],
       // "Assinatura" do arquiteto: o jeito dele de projetar, escrito por ele.
       // Orienta o assistente de IA e a biblioteca de cada projeto (ver workspaceRules.js).
       signature: {
@@ -117,6 +124,9 @@ const userSchema = new mongoose.Schema(
       },
     },
     storeProfile: {
+      // Parceiro: loja (produtos) ou prestador de serviço (marcenaria, elétrica…)
+      kind: { type: String, enum: ["store", "service"], default: "store" },
+      trades: [String],
       storeName: String,
       description: String,
       logoUrl: String,

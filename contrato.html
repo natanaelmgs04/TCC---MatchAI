@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<script>try{var t=localStorage.getItem('matchia_theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposta e contrato — match.IA</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<meta name="theme-color" content="#B0755A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/contrato.css">
+</head>
+<body class="ct-page">
+<a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+
+<header class="site-header">
+  <nav class="nav">
+    <a href="index.html" class="logo">
+      <img src="assets/img/mark.png" alt="" width="32" height="32">
+      <span class="logo-word">match<span class="ia">.IA</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html#como-funciona">Como funciona</a></li>
+      <li><a href="projetos.html" data-page="projetos.html">Projetos</a></li>
+      <li><a href="destaques.html" data-page="destaques.html">Arquitetos</a></li>
+      <li><a href="planos.html" data-page="planos.html">Planos</a></li>
+      <li><a href="sobre.html" data-page="sobre.html">Sobre</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="dashboard.html" class="login-link" id="ctBack">Voltar ao painel</a>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema" type="button"></button>
+    <button class="nav-toggle" aria-label="Abrir menu"><span></span><span></span><span></span></button>
+  </nav>
+</header>
+
+<main id="main-content" class="ct-shell">
+  <p class="ct-state" id="ctState"><span class="spinner"></span> Carregando…</p>
+  <div id="ctApp" hidden></div>
+</main>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/theme.js"></script>
+<script src="assets/js/site.js"></script>
+<script src="assets/js/contrato.js"></script>
+</body>
+</html>

@@ -272,5 +272,153 @@ const MatchFileViewer = (() => {
     load();
   }
 
-  return { open };
+  // ------------------------------------------------------------------ comparar versões
+  /** Abre um arquivo (blob) para desenhar em canvas: PDF (pdf.js) ou imagem. */
+  async function openDoc(blob, ext) {
+    if (ext === 'pdf') {
+      const pdfjs = await loadPdfjs();
+      const pdf = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()), isEvalSupported: false, standardFontDataUrl: `${PDFJS}/standard_fonts/`, cMapUrl: `${PDFJS}/cmaps/`, wasmUrl: `${PDFJS}/wasm/` }).promise;
+      return { pages: pdf.numPages, pdf, destroy: () => pdf.destroy() };
+    }
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return { pages: 1, img, destroy: () => URL.revokeObjectURL(url) };
+  }
+
+  /** Desenha a página no canvas cabendo em maxW × maxH (px de CSS). */
+  async function drawPage(doc, canvas, page, maxW, maxH) {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    if (doc.pdf) {
+      const p = await doc.pdf.getPage(Math.min(page, doc.pages));
+      const base = p.getViewport({ scale: 1 });
+      const scale = Math.max(0.2, Math.min(maxW / base.width, maxH / base.height));
+      const vp = p.getViewport({ scale: scale * ratio });
+      canvas.width = Math.floor(vp.width);
+      canvas.height = Math.floor(vp.height);
+      canvas.style.width = `${Math.floor(vp.width / ratio)}px`;
+      canvas.style.height = `${Math.floor(vp.height / ratio)}px`;
+      await p.render({ canvas, canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      return;
+    }
+    const { naturalWidth: w, naturalHeight: h } = doc.img;
+    const scale = Math.min(maxW / w, maxH / h);
+    canvas.width = Math.floor(w * scale * ratio);
+    canvas.height = Math.floor(h * scale * ratio);
+    canvas.style.width = `${Math.floor(w * scale)}px`;
+    canvas.style.height = `${Math.floor(h * scale)}px`;
+    canvas.getContext('2d').drawImage(doc.img, 0, 0, canvas.width, canvas.height);
+  }
+
+  /**
+   * compare({ workspaceId, older, newer }) — as duas versões lado a lado ou
+   * sobrepostas com uma régua deslizante (bom para ver o que mudou na planta).
+   */
+  function compare({ workspaceId, older, newer }) {
+    const API = MatchAPI;
+    const dateOf = (f) => new Date(f.createdAt).toLocaleDateString('pt-BR');
+    let mode = 'side';
+    let page = 1;
+    let pages = 1;
+    let docs = [];
+    let timer = null;
+    const dlg = document.createElement('dialog');
+    dlg.className = 'fv fv-compare';
+    dlg.setAttribute('aria-labelledby', 'fvcTitle');
+    dlg.innerHTML = `
+      <header class="fv-head">
+        <div class="fv-title"><strong id="fvcTitle">Comparar versões: ${esc(newer.name)}</strong><span>v${older.version} (${dateOf(older)}) × v${newer.version} (${dateOf(newer)})</span></div>
+        <div class="fvc-modes" role="radiogroup" aria-label="Modo de comparação">
+          <button type="button" class="fv-btn is-on" role="radio" aria-checked="true" data-mode="side">Lado a lado</button>
+          <button type="button" class="fv-btn" role="radio" aria-checked="false" data-mode="overlay">Sobrepor</button>
+        </div>
+        <div class="fv-pages" data-fvc-pages hidden>
+          <button type="button" class="fv-btn" data-fvc="prev" aria-label="Página anterior">‹</button>
+          <span data-fvc-page>1 / 1</span>
+          <button type="button" class="fv-btn" data-fvc="next" aria-label="Próxima página">›</button>
+        </div>
+        <button type="button" class="fv-btn fv-close" data-fvc="close" aria-label="Fechar">✕</button>
+      </header>
+      <div class="fvc-body" data-fvc-body>
+        <p class="fv-loading"><span class="spinner"></span> Abrindo as duas versões…</p>
+      </div>`;
+    document.body.appendChild(dlg);
+    const body = dlg.querySelector('[data-fvc-body]');
+
+    async function paint() {
+      if (docs.length < 2) return;
+      const w = body.clientWidth - 32;
+      const h = body.clientHeight - (mode === 'overlay' ? 80 : 60);
+      if (mode === 'side') {
+        body.innerHTML = `
+          <div class="fvc-side">
+            <figure><figcaption>v${older.version} · antes</figcaption><canvas data-c="0"></canvas></figure>
+            <figure><figcaption>v${newer.version} · depois</figcaption><canvas data-c="1"></canvas></figure>
+          </div>`;
+        const half = window.matchMedia('(max-width: 820px)').matches ? w : (w - 16) / 2;
+        await Promise.all(docs.map((d, i) => drawPage(d, body.querySelector(`[data-c="${i}"]`), page, half, h)));
+      } else {
+        body.innerHTML = `
+          <div class="fvc-overlay">
+            <div class="fvc-stack" data-stack>
+              <canvas data-c="0"></canvas>
+              <canvas data-c="1" class="fvc-top"></canvas>
+              <span class="fvc-line" aria-hidden="true"></span>
+            </div>
+            <label class="fvc-slider">v${older.version} <input type="range" min="0" max="100" value="50" data-slider aria-label="Mostrar mais da versão antiga ou da nova"> v${newer.version}</label>
+          </div>`;
+        const [a, b] = [body.querySelector('[data-c="0"]'), body.querySelector('[data-c="1"]')];
+        await drawPage(docs[0], a, page, w, h);
+        await drawPage(docs[1], b, page, parseFloat(a.style.width), parseFloat(a.style.height)); // mesmo tamanho para alinhar
+        b.style.width = a.style.width;
+        b.style.height = a.style.height;
+        const stack = body.querySelector('[data-stack]');
+        const set = (v) => { stack.style.setProperty('--cut', `${v}%`); };
+        set(50);
+        body.querySelector('[data-slider]').addEventListener('input', (e) => set(e.target.value));
+      }
+      dlg.querySelector('[data-fvc-page]').textContent = `${page} / ${pages}`;
+      dlg.querySelector('[data-fvc="prev"]').disabled = page <= 1;
+      dlg.querySelector('[data-fvc="next"]').disabled = page >= pages;
+    }
+
+    (async () => {
+      try {
+        const blobs = await Promise.all([older, newer].map((f) => API.workspaceFileBlob(workspaceId, f.id)));
+        docs = await Promise.all(blobs.map((b, i) => openDoc(b, [older, newer][i].ext)));
+        pages = Math.max(docs[0].pages, docs[1].pages);
+        dlg.querySelector('[data-fvc-pages]').hidden = pages <= 1;
+        await paint();
+      } catch (err) {
+        body.innerHTML = `<p class="fv-loading">${esc(err?.message || 'Não foi possível abrir as versões.')}</p>`;
+      }
+    })();
+
+    dlg.addEventListener('click', async (e) => {
+      const t = e.target.closest('[data-fvc], [data-mode]');
+      if (!t) return;
+      if (t.dataset.fvc === 'close') { dlg.close(); return; }
+      if (t.dataset.mode) {
+        mode = t.dataset.mode;
+        dlg.querySelectorAll('[data-mode]').forEach((b) => { const on = b === t; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on)); });
+      }
+      if (t.dataset.fvc === 'prev' && page > 1) page -= 1;
+      if (t.dataset.fvc === 'next' && page < pages) page += 1;
+      await paint();
+    });
+    let lastW = 0;
+    const watch = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (Math.abs(w - lastW) < 8) return;
+      lastW = w;
+      clearTimeout(timer);
+      timer = setTimeout(paint, 200);
+    });
+    watch.observe(body);
+    dlg.addEventListener('close', () => { watch.disconnect(); docs.forEach((d) => d.destroy()); dlg.remove(); });
+    dlg.showModal();
+  }
+
+  return { open, compare };
 })();

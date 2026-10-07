@@ -38,6 +38,7 @@ import adminRoutes from "./routes/admin.js";
 import siteRoutes from "./routes/site.js";
 import model3dRoutes from "./routes/models3d.js";
 import workspaceRoutes from "./routes/workspace.js";
+import proposalRoutes from "./routes/proposals.js";
 
 const app = express(),
   root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
@@ -95,6 +96,7 @@ app.use("/api/admin", rateLimit({ windowMs: 15 * 60 * 1000, limit: 600 }), admin
 app.use("/api/site", siteRoutes);
 app.use("/api/models3d", model3dRoutes);
 app.use("/api/workspace", workspaceRoutes);
+app.use("/api/proposals", proposalRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Site (front-end) servido pelo mesmo processo/porta que a API.

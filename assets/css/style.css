@@ -2937,3 +2937,20 @@ body::before {
 /* Perfil ilustrativo (arquitetos de demonstração da fase inicial) */
 .badge-demo { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-soft); border: 1px dashed color-mix(in srgb, var(--ink) 28%, transparent); }
 .tag.tag-demo { border-style: dashed; color: var(--ink-soft); }
+
+/* Cadastro de parceiro (cadastro.html): loja ou prestador de serviço */
+.partner-kind { border: 0; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.partner-kind legend { font-size: .86rem; font-weight: 600; margin-bottom: 6px; }
+.partner-kind label { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem; cursor: pointer; }
+.trades { border: 0; padding: 0; margin: 0 0 10px; }
+.trades[hidden] { display: none; }
+.trades legend { font-size: .86rem; font-weight: 600; margin-bottom: 6px; }
+.trade-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.trade-chip { display: inline-flex; gap: 6px; align-items: center; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: .84rem; cursor: pointer; }
+.trade-chip:has(input:checked) { border-color: var(--terracotta); background: color-mix(in srgb, var(--terracotta) 12%, transparent); }
+.partner-where { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+.partner-where label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 4px; }
+.partner-where input { width: 100%; }
+/* os campos do formulário (.form-field input) esticavam o rádio/caixa e quebravam os chips */
+.partner-kind input, .trade-chip input { width: auto !important; min-width: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; border: 0 !important; box-shadow: none !important; flex: 0 0 auto; accent-color: var(--terracotta); }
+.partner-kind label, .trade-chip { width: auto !important; margin: 0 !important; white-space: nowrap; flex: 0 0 auto; }

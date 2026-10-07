@@ -198,6 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     DashUI.autoHeads(document.getElementById('storePanel'), 'Painel da loja parceira');
     setupStoreProducts(me);
     renderStoreReferrals();
+    setupPartnerKind(me);
   }
 
   setupProfileEdit(me);
@@ -1230,6 +1231,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         : `<span class="hire-muted">Este projeto já foi contratado com ${escapeHtml(accepted.architect.name)}.</span>`;
     }
     if (pending) {
+      const prop = pending.proposal;
+      if (pending.architect.id === architectId && prop?.status === 'sent') {
+        return `<span class="status-pill badge-pending">📝 ${escapeHtml(firstName(architectName))} enviou uma proposta</span>
+           <a class="btn btn-primary btn-sm" href="contrato.html?id=${encodeURIComponent(prop.id)}">Ver proposta e assinar</a>
+           <button type="button" class="btn btn-tertiary btn-sm" data-hire-cancel="${pending.id}">Cancelar pedido</button>`;
+      }
       return pending.architect.id === architectId
         ? `<span class="status-pill badge-pending">⏳ Pedido enviado: aguardando resposta de ${escapeHtml(firstName(architectName))}</span>
            <button type="button" class="btn btn-tertiary btn-sm" data-hire-cancel="${pending.id}">Cancelar pedido</button>`
@@ -1266,6 +1273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const accepted = list.find(h => h.status === 'accepted');
     if (accepted) return `<span class="hire-chip is-closed">✓ Contratado: ${escapeHtml(accepted.architect.name)}</span>`;
     const pending = list.find(h => h.status === 'pending');
+    if (pending?.proposal?.status === 'sent') return `<a class="hire-chip" href="contrato.html?id=${encodeURIComponent(pending.proposal.id)}">📝 Proposta de ${escapeHtml(firstName(pending.architect.name))}: assinar</a>`;
     if (pending) return `<span class="hire-chip">⏳ Aguardando ${escapeHtml(firstName(pending.architect.name))}</span>`;
     return '';
   }
@@ -2252,6 +2260,58 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ---------------- Indicações de venda simulada (loja parceira) ----------------
+  // ---------------- Parceiro: loja ou prestador de serviço ----------------
+  function setupPartnerKind(user) {
+    const form = document.getElementById('partnerKindForm');
+    if (!form) return;
+    const sp = user.storeProfile || {};
+    const kind = sp.kind || 'store';
+    form.querySelector(`input[name="pkKind"][value="${kind}"]`).checked = true;
+    form.querySelectorAll('input[name="pkTrade"]').forEach((c) => { c.checked = (sp.trades || []).includes(c.value); });
+    document.getElementById('pkCity').value = sp.city || '';
+    document.getElementById('pkState').value = sp.state || '';
+    const sync = () => {
+      const service = form.querySelector('input[name="pkKind"]:checked').value === 'service';
+      document.getElementById('pkTrades').hidden = !service;
+      document.getElementById('roleLabel').textContent = service ? 'Painel do prestador parceiro' : 'Painel da loja parceira';
+    };
+    form.querySelectorAll('input[name="pkKind"]').forEach((r) => r.addEventListener('change', sync));
+    sync();
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('pkStatus');
+      const k = form.querySelector('input[name="pkKind"]:checked').value;
+      const trades = [...form.querySelectorAll('input[name="pkTrade"]:checked')].map((c) => c.value).slice(0, 6);
+      if (k === 'service' && !trades.length) { status.textContent = 'Escolha pelo menos um ofício.'; return; }
+      status.textContent = 'Salvando…';
+      try {
+        const updated = await MatchAPI.updateMe({ storeProfile: { kind: k, trades, city: document.getElementById('pkCity').value.trim(), state: document.getElementById('pkState').value.trim().toUpperCase() } });
+        user.storeProfile = updated.storeProfile || user.storeProfile;
+        status.textContent = 'Salvo.';
+        renderCrewRequests(user);
+      } catch (err) { status.textContent = err.message || 'Não foi possível salvar.'; }
+    });
+    renderCrewRequests(user);
+  }
+
+  async function renderCrewRequests(user) {
+    const card = document.getElementById('crewRequestsCard');
+    if (!card) return;
+    card.hidden = (user.storeProfile?.kind || 'store') !== 'service';
+    if (card.hidden) return;
+    const list = document.getElementById('crewRequestsList');
+    try {
+      const { requests, rating } = await MatchAPI.myCrewRequests();
+      document.getElementById('crewRating').textContent = rating ? `Sua avaliação: ★ ${String(rating.avg).replace('.', ',')} (${rating.count} ${rating.count === 1 ? 'serviço avaliado' : 'serviços avaliados'})` : 'Você ainda não tem avaliações.';
+      const label = { cotando: 'Em cotação', contratado: 'Contratado', concluido: 'Concluído' };
+      list.innerHTML = requests.length ? `<ul class="crew-req">${requests.map((r) => `
+        <li><strong>${escapeHtml(r.trade || 'Serviço')}</strong><span>${escapeHtml(r.architect)}${r.where ? ` · ${escapeHtml(r.where)}` : ''} · ${new Date(r.addedAt).toLocaleDateString('pt-BR')}</span><span class="crew-req-status">${label[r.status] || r.status}${r.rating ? ` · ${'★'.repeat(r.rating)}` : ''}</span></li>`).join('')}</ul>`
+        : emptyStateHtml('Nenhuma indicação ainda. Quando um arquiteto colocar você na equipe de obra, ela aparece aqui.');
+    } catch (err) {
+      list.innerHTML = `<p class="hire-empty">${escapeHtml(err.message || 'Não foi possível carregar as indicações.')}</p>`;
+    }
+  }
+
   async function renderStoreReferrals() {
     const list = document.getElementById('referralsList');
     try {
@@ -2664,8 +2724,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${hireProjectSummary(h)}
         ${h.message ? `<blockquote class="hire-message">${escapeHtml(h.message)}</blockquote>` : ''}
         <textarea data-hire-response="${h.id}" maxlength="1000" rows="2" placeholder="Resposta para o cliente (opcional)"></textarea>
+        ${h.proposal ? `<p class="hire-proposal">${{ sent: '📝 Proposta enviada — aguardando a assinatura do cliente.', declined: '✎ O cliente pediu mudanças na proposta.', signed: '✓ Contrato assinado.', cancelled: '' }[h.proposal.status] || ''} <a href="contrato.html?id=${encodeURIComponent(h.proposal.id)}">Ver proposta</a></p>` : ''}
         <div class="hire-actions">
-          <button type="button" class="btn btn-primary btn-sm" data-hire-accept="${h.id}">Aceitar e fechar projeto</button>
+          <a class="btn btn-primary btn-sm" href="contrato.html?hire=${encodeURIComponent(h.id)}">${h.proposal ? 'Enviar nova versão da proposta' : 'Enviar proposta e contrato'}</a>
+          <button type="button" class="btn btn-secondary btn-sm" data-hire-accept="${h.id}">Aceitar sem contrato</button>
           <button type="button" class="btn btn-secondary btn-sm" data-hire-decline="${h.id}">Recusar</button>
           <button type="button" class="btn btn-tertiary btn-sm" data-architect-chat="${h.client.id}" data-architect-chat-name="${escapeHtml(h.client.name)}">Conversar antes</button>
         </div>
@@ -2679,6 +2741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${hireProjectSummary(h)}
         <div class="hire-actions">
           ${h.project?.id ? `<a class="btn btn-primary btn-sm" href="projeto.html?id=${encodeURIComponent(h.project.id)}">Abrir espaço do projeto</a>` : ''}
+          ${h.proposal?.status === 'signed' ? `<a class="btn btn-secondary btn-sm" href="contrato.html?id=${encodeURIComponent(h.proposal.id)}">Ver contrato</a>` : ''}
           <button type="button" class="btn btn-secondary btn-sm" data-architect-chat="${h.client.id}" data-architect-chat-name="${escapeHtml(h.client.name)}">Conversar com o cliente</button>
           <button type="button" class="btn btn-tertiary btn-sm" data-hire-jump="assistente">Desenvolver com a IA</button>
         </div>
@@ -2897,16 +2960,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         <form class="case-study-form" data-case-client="${client.id}" style="margin-top:12px;">
           <div class="form-grid">
             <div class="form-field full">
-              <label>Título do case</label>
-              <input type="text" name="title" value="${cs?.title || ''}" required>
+              <label for="cs-title-${client.id}">Título do case</label>
+              <input type="text" id="cs-title-${client.id}" name="title" value="${escapeHtml(cs?.title || '')}" required>
             </div>
             <div class="form-field full">
-              <label>Descrição</label>
-              <textarea name="description">${cs?.description || ''}</textarea>
+              <label for="cs-desc-${client.id}">Descrição</label>
+              <textarea id="cs-desc-${client.id}" name="description">${escapeHtml(cs?.description || '')}</textarea>
             </div>
             <div class="form-field full">
-              <label>Imagens <span class="hint">(URLs, uma por linha, até 4)</span></label>
-              <textarea name="images" placeholder="https://...">${(cs?.images || []).join('\n')}</textarea>
+              <label for="cs-img-${client.id}">Imagens <span class="hint">(URLs, uma por linha, até 4)</span></label>
+              <textarea id="cs-img-${client.id}" name="images" placeholder="https://...">${escapeHtml((cs?.images || []).join('\n'))}</textarea>
             </div>
           </div>
           <button type="submit" class="btn btn-secondary btn-sm">${cs ? 'Atualizar case' : 'Propor case'}</button>

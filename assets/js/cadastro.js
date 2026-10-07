@@ -19,7 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
     roleButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.role === role));
     submitBtn.textContent = `Criar conta de ${roleLabels[role]}`;
     document.getElementById('storeNameField').style.display = role === 'store' ? '' : 'none';
+    syncPartnerKind();
   }
+  // Parceiro: loja de produtos ou prestador de serviço (marcenaria, elétrica…)
+  const partnerKind = () => document.querySelector('input[name="partnerKind"]:checked')?.value || 'store';
+  function syncPartnerKind() {
+    const field = document.getElementById('tradesField');
+    if (field) field.style.display = role === 'store' && partnerKind() === 'service' ? '' : 'none';
+  }
+  document.querySelectorAll('input[name="partnerKind"]').forEach((r) => r.addEventListener('change', syncPartnerKind));
   roleButtons.forEach((btn) => btn.addEventListener('click', () => setRole(btn.dataset.role)));
 
   const params = new URLSearchParams(location.search);
@@ -96,7 +104,19 @@ document.addEventListener('DOMContentLoaded', () => {
       bio: val('bio') || undefined,
       referredBy: params.get('ref') || undefined,
     };
-    if (role === 'store') payload.storeName = val('storeName');
+    if (role === 'store') {
+      payload.storeName = val('storeName');
+      payload.partnerKind = partnerKind();
+      if (payload.partnerKind === 'service') {
+        payload.trades = [...document.querySelectorAll('input[name="trades"]:checked')].map((c) => c.value).slice(0, 6);
+        payload.city = val('partnerCity') || undefined;
+        payload.state = val('partnerState') || undefined;
+        if (!payload.trades.length) {
+          alert('Escolha pelo menos um ofício.');
+          return;
+        }
+      }
+    }
 
     const registerFn = { client: MatchAPI.registerClient, architect: MatchAPI.registerArchitect, store: MatchAPI.registerStore }[role];
 

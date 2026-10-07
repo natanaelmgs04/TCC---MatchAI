@@ -8,26 +8,119 @@
  * (início → anteprojeto → executivo → obra) e o prazo padrão soma 12 semanas
  * até o executivo: a meta dela de fechar o projeto em 3 meses.
  */
-export const DEFAULT_STAGES = [
-  { key: "briefing", name: "Briefing e levantamento", weeks: 2 },
-  { key: "anteprojeto", name: "Anteprojeto", weeks: 4 },
-  { key: "executivo", name: "Projeto executivo", weeks: 6 },
-  { key: "obra", name: "Obra e acompanhamento", weeks: 0 }, // sem prazo fixo: depende da obra
-];
-export const TARGET_WEEKS = DEFAULT_STAGES.reduce((s, st) => s + st.weeks, 0);
+// Modelos de etapas por tipo de projeto. `closesDesign` marca a etapa que
+// "fecha o projeto" (a meta de prazo e o relatório contam até ela); as
+// semanas somadas até ali viram a meta de entrega.
+export const STAGE_TEMPLATES = {
+  residencial: {
+    label: "Residencial",
+    stages: [
+      { key: "briefing", name: "Briefing e levantamento", weeks: 2 },
+      { key: "anteprojeto", name: "Anteprojeto", weeks: 4 },
+      { key: "executivo", name: "Projeto executivo", weeks: 6, closesDesign: true },
+      { key: "obra", name: "Obra e acompanhamento", weeks: 0 }, // sem prazo fixo: depende da obra
+    ],
+  },
+  interiores: {
+    label: "Interiores",
+    stages: [
+      { name: "Briefing e medição", weeks: 1 },
+      { name: "Conceito e moodboard", weeks: 2 },
+      { name: "Projeto de interiores", weeks: 4 },
+      { name: "Detalhamento e marcenaria", weeks: 3, closesDesign: true },
+      { name: "Obra e montagem", weeks: 0 },
+    ],
+  },
+  comercial: {
+    label: "Comercial (loja, restaurante)",
+    stages: [
+      { name: "Briefing e levantamento", weeks: 1 },
+      { name: "Estudo preliminar", weeks: 2 },
+      { name: "Anteprojeto", weeks: 3 },
+      { name: "Executivo e aprovações", weeks: 4, closesDesign: true },
+      { name: "Obra e inauguração", weeks: 0 },
+    ],
+  },
+  corporativo: {
+    label: "Corporativo",
+    stages: [
+      { name: "Levantamento e programa de necessidades", weeks: 2 },
+      { name: "Layout e estudo de ocupação", weeks: 2 },
+      { name: "Anteprojeto", weeks: 3 },
+      { name: "Executivo e compatibilização", weeks: 5, closesDesign: true },
+      { name: "Obra e mudança", weeks: 0 },
+    ],
+  },
+};
+export const DEFAULT_STAGES = STAGE_TEMPLATES.residencial.stages;
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
-export function defaultStages(start = new Date()) {
+const slug = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "etapa";
+
+/** Semanas até a etapa que fecha o projeto (a meta). */
+export function weeksToClose(stages) {
+  let last = stages.findIndex((s) => s.closesDesign);
+  if (last < 0) last = stages.length - 1;
+  return stages.slice(0, last + 1).reduce((t, s) => t + (Number(s.weeks) || 0), 0);
+}
+export const TARGET_WEEKS = weeksToClose(DEFAULT_STAGES);
+
+/**
+ * Etapas do Espaço a partir de um modelo: [{ key?, name, weeks, fee?, closesDesign? }].
+ * Prazos acumulados a partir de `start`; a primeira já começa em andamento.
+ * Sem etapa marcada como "fecha o projeto", a última com prazo assume.
+ */
+export function stagesFromTemplate(list, start = new Date()) {
+  const used = new Set();
   let t = start.getTime();
-  return DEFAULT_STAGES.map((st, i) => {
-    t += st.weeks * WEEK;
-    return { key: st.key, name: st.name, dueDate: st.weeks ? new Date(t) : undefined, status: i === 0 ? "in_progress" : "pending", revisionRounds: 0 };
+  const hasClose = list.some((s) => s.closesDesign);
+  const lastTimed = [...list].reverse().find((s) => Number(s.weeks) > 0);
+  return list.map((st, i) => {
+    t += (Number(st.weeks) || 0) * WEEK;
+    let key = st.key || slug(st.name);
+    while (used.has(key)) key = `${key}-${i}`;
+    used.add(key);
+    return {
+      key,
+      name: st.name,
+      dueDate: Number(st.weeks) > 0 ? new Date(t) : undefined,
+      status: i === 0 ? "in_progress" : "pending",
+      revisionRounds: 0,
+      fee: Number(st.fee) > 0 ? st.fee : undefined,
+      closesDesign: hasClose ? !!st.closesDesign : st === lastTimed,
+    };
   });
 }
 
-export function targetDate(start = new Date()) {
-  return new Date(start.getTime() + TARGET_WEEKS * WEEK);
+export function defaultStages(start = new Date()) {
+  return stagesFromTemplate(DEFAULT_STAGES, start);
 }
+
+export function targetDate(start = new Date(), list = DEFAULT_STAGES) {
+  return new Date(start.getTime() + weeksToClose(list) * WEEK);
+}
+
+/** Trocar o modelo só enquanto nenhuma etapa foi enviada, aprovada ou cobrada. */
+export function canReplaceStages(stages = []) {
+  return stages.every((s) => !s.submittedAt && !s.approvedAt && !s.revisionRounds && (!s.feeStatus || s.feeStatus === "none"));
+}
+
+/** Modelo próprio do arquiteto (ou etapas de uma proposta): 2 a 10 etapas, 0–52 semanas cada. */
+export function normalizeStageList(list, { withFees = false } = {}) {
+  if (!Array.isArray(list)) return { error: "Informe as etapas." };
+  const stages = list
+    .map((s) => ({
+      name: typeof s?.name === "string" ? s.name.trim().slice(0, 60) : "",
+      weeks: Math.max(0, Math.min(52, Math.round(Number(s?.weeks) || 0))),
+      closesDesign: !!s?.closesDesign,
+      ...(withFees ? { fee: Math.max(0, Math.min(MAX_FEE_LIMIT, Math.round((Number(s?.fee) || 0) * 100) / 100)) } : {}),
+    }))
+    .filter((s) => s.name);
+  if (stages.length < 2 || stages.length > 10) return { error: "Use de 2 a 10 etapas, cada uma com nome." };
+  if (stages.filter((s) => s.closesDesign).length > 1) return { error: "Marque só uma etapa como a que fecha o projeto." };
+  return { stages };
+}
+const MAX_FEE_LIMIT = 10_000_000;
 
 const fail = (status, error) => ({ status, error });
 
@@ -137,7 +230,8 @@ export function feeTotals(stages = []) {
 const days = (a, b) => (new Date(b).getTime() - new Date(a).getTime()) / DAY;
 const round1 = (n) => Math.round(n * 10) / 10;
 const avg = (list) => (list.length ? round1(list.reduce((a, b) => a + b, 0) / list.length) : null);
-const DESIGN_DONE = "executivo"; // "projeto fechado" = executivo aprovado (a obra vem depois)
+// "projeto fechado" = a etapa marcada no modelo (no residencial, o executivo); a obra vem depois
+const closingStage = (stages) => stages.find((s) => s.closesDesign) || stages.find((s) => s.key === "executivo");
 
 /**
  * projects: [{ name, status, workspaceStartedAt, createdAt, targetDate, stages }]
@@ -157,7 +251,7 @@ export function buildReport(projects = [], now = new Date()) {
       stageDays.get(key).values.push(Math.max(0, days(prev, st.approvedAt)));
       prev = st.approvedAt;
     }
-    const design = p.stages.find((s) => s.key === DESIGN_DONE);
+    const design = closingStage(p.stages);
     const closedAt = design?.status === "approved" ? design.approvedAt : null;
     const rounds = p.stages.reduce((t, s) => t + (s.revisionRounds || 0), 0);
     const late = p.stages.filter((s) => s.status !== "approved" && s.dueDate && new Date(s.dueDate) < now).length;
@@ -333,4 +427,62 @@ export function normalizeAnnotation(body = {}) {
   const page = Math.floor(Number(body.page) || 1);
   if (page < 1 || page > 2000) return { error: "Página inválida." };
   return { annotation: { page, x: Math.round(x * 10000) / 10000, y: Math.round(y * 10000) / 10000, text } };
+}
+
+// ---------------------------------------------------------------------------
+// Obra: prestadores, cotações e diário
+// ---------------------------------------------------------------------------
+export const TRADES = ["Marcenaria", "Elétrica", "Hidráulica", "Pintura", "Gesso e drywall", "Marmoraria", "Vidraçaria", "Serralheria", "Paisagismo", "Ar-condicionado", "Iluminação técnica", "Pedreiro e acabamento"];
+export const CREW_STATUS = ["cotando", "contratado", "concluido"];
+
+export function normalizeTrades(v) {
+  return [...new Set((Array.isArray(v) ? v : []).filter((t) => TRADES.includes(t)))].slice(0, 6);
+}
+
+/** Prestador cadastrado à mão pelo arquiteto. */
+export function normalizeCrewInput(body = {}) {
+  const name = typeof body.name === "string" ? body.name.trim().slice(0, 80) : "";
+  if (!name) return { error: "Informe o nome do prestador." };
+  const trade = TRADES.includes(body.trade) ? body.trade : "";
+  if (!trade) return { error: "Escolha o ofício." };
+  return {
+    entry: {
+      name,
+      trade,
+      contact: typeof body.contact === "string" ? body.contact.trim().slice(0, 120) : "",
+      quote: normalizeFee(body.quote) || undefined,
+      note: typeof body.note === "string" ? body.note.trim().slice(0, 300) : "",
+    },
+  };
+}
+
+export function normalizeRating(v) {
+  const n = Math.round(Number(v));
+  return n >= 1 && n <= 5 ? n : null;
+}
+
+/** Cotação manual de um item da lista de compras. */
+export function normalizeQuote(body = {}) {
+  const storeName = typeof body.storeName === "string" ? body.storeName.trim().slice(0, 80) : "";
+  if (!storeName) return { error: "Informe a loja da cotação." };
+  const price = normalizeFee(body.price);
+  if (!price) return { error: "Informe o preço cotado." };
+  let purchaseUrl;
+  if (typeof body.purchaseUrl === "string" && body.purchaseUrl.trim()) {
+    try {
+      const u = new URL(body.purchaseUrl.trim());
+      if (u.protocol === "https:" || u.protocol === "http:") purchaseUrl = u.href.slice(0, 500);
+    } catch { /* link inválido: fica sem */ }
+  }
+  return { quote: { storeName, price, purchaseUrl, note: typeof body.note === "string" ? body.note.trim().slice(0, 200) : "" } };
+}
+
+/** Registro do diário: data (não no futuro) e texto. */
+export function normalizeDiaryEntry(body = {}, now = new Date()) {
+  const text = typeof body.text === "string" ? body.text.trim().slice(0, 2000) : "";
+  if (text.length < 3) return { error: "Escreva o que aconteceu na obra." };
+  const date = body.date ? new Date(body.date) : now;
+  if (Number.isNaN(date.getTime())) return { error: "Data inválida." };
+  if (date.getTime() > now.getTime() + 24 * 60 * 60 * 1000) return { error: "O diário registra o que já aconteceu — escolha uma data até hoje." };
+  return { entry: { text, date } };
 }

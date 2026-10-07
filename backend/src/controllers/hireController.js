@@ -5,6 +5,7 @@ import Project from "../models/Project.js";
 import User from "../models/User.js";
 import Validation from "../models/Validation.js";
 import Commission from "../models/Commission.js";
+import Proposal from "../models/Proposal.js";
 import { canRequestHire, canDecideHire, publicProjectTitle } from "../services/hireRules.js";
 import { notify } from "../services/notificationService.js";
 import { hireRequestEmail, hireDecisionEmail, hireCancelledEmail } from "../services/emailService.js";
@@ -85,7 +86,14 @@ export async function requestHire(req, res) {
 export async function listHires(req, res) {
   const filter = req.user.role === "architect" ? { architect: req.user.id } : { client: req.user.id };
   const hires = await populateAll(Hire.find(filter).sort("-createdAt").limit(200));
-  res.json(hires.map(shape));
+  // proposta mais recente de cada pedido (para "Ver proposta" / "Assinar contrato")
+  const proposals = await Proposal.find({ hire: { $in: hires.map((h) => h._id) } }).sort("-createdAt").select("hire status validUntil").lean();
+  const latest = new Map();
+  proposals.forEach((p) => { if (!latest.has(String(p.hire))) latest.set(String(p.hire), p); });
+  res.json(hires.map((h) => {
+    const p = latest.get(String(h._id));
+    return { ...shape(h), proposal: p ? { id: String(p._id), status: p.status, validUntil: p.validUntil } : null };
+  }));
 }
 
 async function closeProject(hire) {
@@ -148,6 +156,21 @@ async function decide(req, res, action) {
     hireCancelledEmail(await User.findById(updated.architect), req.user, projectName).catch(() => {});
   }
   res.json(shape(await populateAll(Hire.findById(updated.id))));
+}
+
+/**
+ * Aceite que vem do contrato assinado pelos dois (controllers/proposalController.js):
+ * mesmo efeito do botão "Aceitar" do arquiteto. Devolve null se o pedido já foi respondido.
+ */
+export async function acceptHireFromContract(hireId, architect) {
+  const updated = await Hire.findOneAndUpdate(
+    { _id: hireId, status: "pending" },
+    { status: "accepted", decidedAt: new Date(), response: "Contrato assinado pelas duas partes." },
+    { new: true },
+  );
+  if (!updated) return null;
+  await closeProject(updated);
+  return updated;
 }
 
 export const acceptHire = (req, res) => decide(req, res, "accept");

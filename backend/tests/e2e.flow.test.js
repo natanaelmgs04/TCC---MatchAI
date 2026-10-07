@@ -7,60 +7,17 @@
  *   contratar → Espaço do projeto → honorários → etapas → arquivo + comentários
  *   → biblioteca/limites do plano → relatório → linha do tempo → LGPD → lembretes
  *
- * Sem o binário do MongoDB disponível (ex.: outra máquina sem internet), o
- * teste é pulado em vez de falhar. Para pular de propósito: SKIP_E2E=1.
+ * Base (banco em memória, API, cadastro): tests/e2eHarness.js.
  */
-import { test, before, after } from "node:test";
+import { test } from "node:test";
 import assert from "node:assert/strict";
+import { useE2E } from "./e2eHarness.js";
 
-for (const k of ["BREVO_API_KEY", "EMAIL_HOST", "EMAIL_USER", "EMAIL_PASS", "GEMINI_API_KEY", "TRIPO_API_KEY", "MELTFLEX_API_KEY", "UNSPLASH_ACCESS_KEY", "ADMIN_EMAILS"]) process.env[k] = "";
-process.env.JWT_SECRET = "e2e-secret-only-for-tests";
-process.env.MODEL3D_DEMO = "0";
-
-let mongod, mongoose, server, base, skipReason = null;
-const people = {};
-
-before(async () => {
-  if (process.env.SKIP_E2E) { skipReason = "SKIP_E2E definido"; return; }
-  try {
-    const { MongoMemoryServer } = await import("mongodb-memory-server-core");
-    mongod = await MongoMemoryServer.create({ instance: { launchTimeout: 90_000 } }); // Windows + antivírus: o mongod pode demorar a subir
-  } catch (err) {
-    skipReason = `MongoDB em memória indisponível (${err.message.split("\n")[0]})`;
-    return;
-  }
-  mongoose = (await import("mongoose")).default;
-  await mongoose.connect(mongod.getUri("matchia_e2e"));
-  const app = (await import("../src/app.js")).default;
-  await new Promise((resolve) => { server = app.listen(0, "127.0.0.1", resolve); });
-  base = `http://127.0.0.1:${server.address().port}/api`;
-});
-
-after(async () => {
-  await new Promise((resolve) => (server ? server.close(resolve) : resolve()));
-  await mongoose?.disconnect().catch(() => {});
-  await mongod?.stop().catch(() => {});
-});
-
-async function api(path, { method = "GET", as, body, raw, headers = {} } = {}) {
-  const h = { ...headers };
-  if (as) h.Authorization = `Bearer ${people[as].token}`;
-  if (body !== undefined) h["Content-Type"] = "application/json";
-  if (raw) h["Content-Type"] = "application/octet-stream";
-  const res = await fetch(`${base}${path}`, { method, headers: h, body: raw ?? (body !== undefined ? JSON.stringify(body) : undefined) });
-  const data = await res.json().catch(() => null);
-  return { status: res.status, data };
-}
-
-async function register(key, role, extra = {}) {
-  const email = `${key}@e2e.test`;
-  const r = await api(`/auth/register/${role}`, { method: "POST", body: { name: extra.name || `${key} Teste`, email, password: "Senha-e2e-123", confirmPassword: "Senha-e2e-123", ...extra } });
-  assert.equal(r.status, 201, JSON.stringify(r.data));
-  people[key] = { token: r.data.token, id: r.data.user.id, email };
-}
+const e2e = useE2E();
+const { api, register, people } = e2e;
 
 test("fluxo completo: contratação, Espaço do projeto, relatório, LGPD e lembretes", async (t) => {
-  if (skipReason) return t.skip(skipReason);
+  if (e2e.skipReason) return t.skip(e2e.skipReason);
 
   await register("cliente", "client", { name: "Clara Cliente" });
   await register("arquiteta", "architect", { name: "Ana Arquiteta" });
@@ -106,7 +63,7 @@ test("fluxo completo: contratação, Espaço do projeto, relatório, LGPD e lemb
   const up = await api(`/workspace/${pid}/files?stage=anteprojeto`, { method: "POST", as: "arquiteta", raw: pdf, headers: { "X-File-Name": encodeURIComponent("Planta térreo.pdf") } });
   assert.equal(up.status, 200, JSON.stringify(up.data));
   const fid = up.data.files[0].id;
-  const dl = await fetch(`${base}/workspace/${pid}/files/${fid}`, { headers: { Authorization: `Bearer ${people.cliente.token}` } });
+  const dl = await fetch(`${e2e.base}/workspace/${pid}/files/${fid}`, { headers: { Authorization: `Bearer ${people.cliente.token}` } });
   assert.equal(dl.headers.get("content-disposition").startsWith("attachment"), true);
   assert.equal(Buffer.from(await dl.arrayBuffer()).equals(pdf), true);
   assert.equal((await api(`/workspace/${pid}/files/${fid}/annotations`, { method: "POST", as: "cliente", body: { x: 2, y: 0.5, text: "fora" } })).status, 400);

@@ -18,6 +18,12 @@
   let catalog = null; // resultados da busca no catálogo (arquiteto)
   let otherProjects = null; // outros projetos do arquiteto (trazer biblioteca)
   let conceptText = '';
+  let templates = null; // modelos de etapas (arquiteto): { builtIn, mine }
+  const openQuotes = new Set(); // itens da lista de compras com as cotações abertas
+  const quoteHints = new Map(); // sugestões do catálogo por item
+  let providers = null; // prestadores parceiros encontrados (arquiteto)
+  const thumbs = new Map(); // fotos do diário já baixadas (id → URL local)
+  const TRADES = ['Marcenaria', 'Elétrica', 'Hidráulica', 'Pintura', 'Gesso e drywall', 'Marmoraria', 'Vidraçaria', 'Serralheria', 'Paisagismo', 'Ar-condicionado', 'Iluminação técnica', 'Pedreiro e acabamento'];
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—');
@@ -65,7 +71,7 @@
     $('#pjTitle').textContent = W.name;
     document.title = `${W.name} · Espaço do projeto — match.IA`;
     const other = isArchitect() ? W.client : W.architect;
-    $('#pjPeople').innerHTML = `${isArchitect() ? 'Cliente' : 'Arquiteto(a)'}: <strong>${esc(other?.name || '—')}</strong> · <a href="dashboard.html#mensagens">Conversar</a>`;
+    $('#pjPeople').innerHTML = `${isArchitect() ? 'Cliente' : 'Arquiteto(a)'}: <strong>${esc(other?.name || '—')}</strong> · <a href="dashboard.html#mensagens">Conversar</a>${W.contractId ? ` · <a href="contrato.html?id=${esc(W.contractId)}">Contrato assinado</a>` : ''}`;
     const s = W.summary;
     const current = W.stages.find((x) => x.key === s.current);
     const left = W.targetDate ? daysFrom(W.targetDate) : null;
@@ -124,6 +130,59 @@
     return '';
   }
 
+  // Modelos de etapas: trocar enquanto o projeto não andou; salvar as etapas atuais como modelo próprio.
+  function weeksOfStages() {
+    let prev = new Date(W.startedAt).getTime();
+    return W.stages.map((st) => {
+      if (!st.dueDate) return { name: st.name, weeks: 0, closesDesign: st.closesDesign };
+      const due = new Date(st.dueDate).getTime();
+      const weeks = Math.max(0, Math.round((due - prev) / (7 * 864e5)));
+      prev = due;
+      return { name: st.name, weeks, closesDesign: st.closesDesign };
+    });
+  }
+
+  function templatesCard() {
+    if (!templates) return '';
+    const opts = [
+      ...templates.builtIn.map((t) => `<option value="${esc(t.id)}">${esc(t.name)}</option>`),
+      ...templates.mine.map((t) => `<option value="${esc(t.id)}">Meu modelo: ${esc(t.name)}</option>`),
+    ].join('');
+    return `
+      <div class="pj-card pj-templates">
+        <h2>Modelo de etapas</h2>
+        ${W.canChangeTemplate ? `
+        <form class="pj-inline" data-form="apply-template">
+          <label for="pjTpl">Trocar por</label>
+          <select id="pjTpl">${opts}</select>
+          <button type="submit" class="btn btn-secondary btn-sm">Aplicar</button>
+        </form>
+        <p class="pj-muted">Dá para trocar enquanto nenhuma etapa foi enviada, aprovada ou cobrada. Os prazos recomeçam a contar do início do projeto.</p>` : '<p class="pj-muted">O projeto já andou — ajuste as etapas uma a uma em "Ajustar etapa".</p>'}
+        <form class="pj-inline" data-form="save-template">
+          <label for="pjTplName">Salvar estas etapas como meu modelo</label>
+          <input id="pjTplName" maxlength="60" placeholder="Ex.: Reforma de apartamento" required>
+          <button type="submit" class="btn btn-secondary btn-sm">Salvar modelo</button>
+        </form>
+        ${templates.mine.length ? `<p class="pj-muted">Seus modelos: ${templates.mine.map((t) => `${esc(t.name)} <button type="button" class="pj-link pj-danger" data-act="del-template" data-id="${esc(t.id)}" aria-label="Apagar o modelo ${esc(t.name)}">apagar</button>`).join(' · ')}</p>` : ''}
+      </div>`;
+  }
+
+  function teamCard() {
+    const list = W.team.length ? `<ul class="pj-team">${W.team.map((m) => `<li><span>${esc(m.name)}</span>${W.isOwner ? `<button type="button" class="pj-link pj-danger" data-act="team-remove" data-id="${esc(m.id)}">tirar</button>` : ''}</li>`).join('')}</ul>` : '<p class="pj-muted">Ninguém além de você ainda.</p>';
+    return `
+      <div class="pj-card pj-team-card">
+        <h2>Equipe do escritório</h2>
+        <p class="pj-muted">${W.isOwner ? 'Convide sócios, estagiários ou o projetista terceirizado: eles enviam arquivos, comentam as plantas e acompanham a obra. Honorários, meta e modelo de etapas continuam só com você.' : `Você participa da equipe de ${esc(W.architect?.name || 'o arquiteto')} neste projeto.`}</p>
+        ${list}
+        ${W.isOwner ? `
+        <form class="pj-inline" data-form="team">
+          <label for="pjTeamEmail">E-mail do colega (conta de arquiteto)</label>
+          <input id="pjTeamEmail" type="email" maxlength="120" placeholder="colega@escritorio.com" required>
+          <button type="submit" class="btn btn-secondary btn-sm">Convidar</button>
+        </form>` : `<button type="button" class="pj-link pj-danger" data-act="team-leave">Sair da equipe deste projeto</button>`}
+      </div>`;
+  }
+
   function renderStages() {
     const filesBy = (key) => W.files.filter((f) => f.stage === key).length;
     $('#pjPanelEtapas').innerHTML = `
@@ -141,6 +200,8 @@
           <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
         </form>` : ''}
       </div>
+      ${isArchitect() && W.isOwner ? templatesCard() : ''}
+      ${isArchitect() ? teamCard() : ''}
       <ol class="pj-stages">
         ${W.stages.map((st, i) => {
           const days = st.dueDate ? daysFrom(st.dueDate) : null;
@@ -184,6 +245,9 @@
   }
 
   // ------------------------------------------------------------------ arquivos
+  // versão anterior do mesmo arquivo (mesmo nome, mesma etapa)
+  const prevOf = (f) => W.files.filter((x) => x.stage === f.stage && x.name === f.name && x.version < f.version).sort((a, b) => b.version - a.version)[0];
+
   function renderFiles() {
     const stageName = (key) => W.stages.find((s) => s.key === key)?.name || 'Sem etapa';
     const latest = new Map();
@@ -221,6 +285,7 @@
           </div>
           <div class="pj-file-actions">
             ${PREVIEW.has(f.ext) ? `<button type="button" class="btn btn-tertiary btn-sm" data-act="annotate" data-id="${f.id}">Ver e comentar${f.notes?.open ? ` <span class="pj-count">${f.notes.open}</span>` : ''}</button>` : ''}
+            ${isLatest && prevOf(f) && PREVIEW.has(f.ext) && PREVIEW.has(prevOf(f).ext) ? `<button type="button" class="btn btn-tertiary btn-sm" data-act="compare" data-id="${f.id}">Comparar com v${prevOf(f).version}</button>` : ''}
             <button type="button" class="btn btn-secondary btn-sm" data-act="download" data-id="${f.id}">Baixar</button>
             ${mine ? `<button type="button" class="pj-link pj-danger" data-act="delete-file" data-id="${f.id}">Apagar</button>` : ''}
           </div>
@@ -395,12 +460,135 @@
                   <td>${it.quantity} ${esc(it.unit || 'un')}</td>
                   <td>${it.price != null ? money(it.price) : 'sob consulta'}</td>
                   <td>${it.price != null ? money(it.price * it.quantity) : '—'}</td>
-                  <td>${it.purchaseUrl ? `<a href="${esc(it.purchaseUrl)}" target="_blank" rel="noopener noreferrer">Comprar</a>` : ''}</td>
-                </tr>`).join('')}</tbody>
+                  <td>${it.purchaseUrl ? `<a href="${esc(it.purchaseUrl)}" target="_blank" rel="noopener noreferrer">Comprar</a>` : ''}
+                    <button type="button" class="pj-link pj-quote-toggle" data-act="quotes" data-id="${it.id}" aria-expanded="${openQuotes.has(it.id)}">Cotações${it.quotes.length ? ` (${it.quotes.length})` : ''}</button></td>
+                </tr>
+                ${openQuotes.has(it.id) ? `<tr class="pj-quotes-row"><td colspan="7">${quotesHtml(it)}</td></tr>` : ''}`).join('')}</tbody>
             </table>
           </div>
         </section>`;
       }).join('')}` : `<p class="pj-empty">A lista de compras sai da biblioteca do projeto. ${isArchitect() ? 'Adicione itens na aba Biblioteca.' : 'Assim que o arquiteto montar a biblioteca, os itens aparecem aqui, separados por loja e com o total estimado.'}</p>`;
+  }
+
+  function quotesHtml(it) {
+    const hints = quoteHints.get(it.id);
+    return `
+      <div class="pj-quotes">
+        <p class="pj-muted">Compare o mesmo item em lojas diferentes. A cotação escolhida vira a loja, o preço e o link do item na lista.</p>
+        ${it.quotes.length ? `<ul class="pj-quote-list">${it.quotes.map((q) => `
+          <li class="${q.chosen ? 'is-chosen' : ''}">
+            <strong>${esc(q.storeName)}</strong>
+            <span>${money(q.price)} · ${money(q.price * it.quantity)} para ${it.quantity} ${esc(it.unit || 'un')}</span>
+            ${q.purchaseUrl ? `<a href="${esc(q.purchaseUrl)}" target="_blank" rel="noopener noreferrer">ver na loja</a>` : ''}
+            ${q.chosen ? '<span class="pj-chip is-approved">Escolhida</span>' : `<button type="button" class="btn btn-secondary btn-sm" data-act="quote-choose" data-item="${it.id}" data-id="${q.id}">Escolher</button>`}
+            <button type="button" class="pj-link pj-danger" data-act="quote-remove" data-item="${it.id}" data-id="${q.id}" aria-label="Apagar a cotação de ${esc(q.storeName)}">apagar</button>
+          </li>`).join('')}</ul>` : ''}
+        <div class="pj-quote-tools">
+          <button type="button" class="btn btn-tertiary btn-sm" data-act="quote-hints" data-id="${it.id}">Buscar no catálogo das lojas</button>
+          ${hints ? (hints.length ? `<ul class="pj-quote-list">${hints.map((h) => `<li><strong>${esc(h.storeName)}</strong><span>${esc(h.name)} · ${money(h.price)}</span><button type="button" class="btn btn-secondary btn-sm" data-act="quote-add-product" data-item="${it.id}" data-id="${h.id}">Adicionar cotação</button></li>`).join('')}</ul>` : '<p class="pj-muted">Nenhum produto parecido nas lojas parceiras.</p>') : ''}
+          <form class="pj-inline" data-form="quote" data-item="${it.id}">
+            <label class="sr-only" for="qs-${it.id}">Loja</label><input id="qs-${it.id}" name="storeName" maxlength="80" placeholder="Loja" required>
+            <label class="sr-only" for="qp-${it.id}">Preço</label><input id="qp-${it.id}" name="price" type="number" min="0.01" step="0.01" placeholder="Preço (R$)" required>
+            <label class="sr-only" for="qu-${it.id}">Link</label><input id="qu-${it.id}" name="purchaseUrl" type="url" maxlength="500" placeholder="Link (opcional)">
+            <button type="submit" class="btn btn-secondary btn-sm">Adicionar cotação</button>
+          </form>
+        </div>
+      </div>`;
+  }
+
+  // ------------------------------------------------------------------ obra (prestadores + diário)
+  function crewHtml() {
+    const statusLabel = { cotando: 'Em cotação', contratado: 'Contratado', concluido: 'Concluído' };
+    const item = (c) => `
+      <li class="pj-crew-item">
+        <div>
+          <strong>${esc(c.name)}</strong> <span class="pj-muted">${esc(c.trade)}${c.providerId ? ' · parceiro match.IA' : ''}</span>
+          ${c.contact ? `<p class="pj-muted">${esc(c.contact)}</p>` : ''}
+          ${c.note ? `<p class="pj-muted">${esc(c.note)}</p>` : ''}
+        </div>
+        <div class="pj-crew-meta">
+          ${c.quote != null ? `<span>Orçamento: <strong>${money(c.quote)}</strong></span>` : ''}
+          ${isArchitect() ? `
+            <label class="sr-only" for="cs-${c.id}">Situação</label>
+            <select id="cs-${c.id}" data-crew="${c.id}" data-field="status">${Object.entries(statusLabel).map(([k, v]) => `<option value="${k}" ${c.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+            <label class="sr-only" for="cq-${c.id}">Orçamento (R$)</label>
+            <input id="cq-${c.id}" type="number" min="0" step="0.01" data-crew="${c.id}" data-field="quote" value="${c.quote ?? ''}" placeholder="Orçamento (R$)">
+            ${c.status === 'concluido' ? `<label class="sr-only" for="cr-${c.id}">Nota</label><select id="cr-${c.id}" data-crew="${c.id}" data-field="rating"><option value="">Avaliar…</option>${[5, 4, 3, 2, 1].map((n) => `<option value="${n}" ${c.rating === n ? 'selected' : ''}>${'★'.repeat(n)} ${n}</option>`).join('')}</select>` : ''}
+            <button type="button" class="pj-link pj-danger" data-act="crew-remove" data-id="${c.id}" aria-label="Tirar ${esc(c.name)} da equipe de obra">tirar</button>`
+          : `<span class="pj-chip is-${c.status === 'concluido' ? 'approved' : c.status === 'contratado' ? 'in_progress' : 'pending'}">${statusLabel[c.status]}</span>${c.rating ? ` <span>${'★'.repeat(c.rating)}</span>` : ''}`}
+        </div>
+      </li>`;
+    return `
+      <section class="pj-card">
+        <h2>Equipe de obra</h2>
+        <p class="pj-muted">Marceneiro, eletricista, marmorista… quem vai executar o projeto. Prestadores parceiros da match.IA recebem a indicação e ganham avaliação no perfil quando o serviço termina.</p>
+        ${W.crew.length ? `<ul class="pj-crew">${W.crew.map(item).join('')}</ul>` : '<p class="pj-empty">Nenhum prestador ainda.</p>'}
+        ${isArchitect() ? `
+        <form class="pj-inline" data-form="providers">
+          <label for="pjTrade">Buscar parceiros por ofício</label>
+          <select id="pjTrade">${TRADES.map((t) => `<option>${t}</option>`).join('')}</select>
+          <label class="sr-only" for="pjUf">UF</label>
+          <input id="pjUf" maxlength="2" placeholder="UF" value="${esc(W.state || '')}" style="max-width:70px">
+          <button type="submit" class="btn btn-secondary btn-sm">Buscar</button>
+        </form>
+        ${providers ? (providers.length ? `<ul class="pj-quote-list">${providers.map((p) => `
+          <li><strong>${esc(p.name)}</strong><span>${esc(p.trades.join(', '))}${p.city ? ` · ${esc(p.city)}/${esc(p.state)}` : ''}${p.rating ? ` · ★ ${String(p.rating.avg).replace('.', ',')} (${p.rating.count})` : ''}</span>
+          ${W.crew.some((c) => c.providerId === p.id) ? '<span class="pj-chip is-approved">Na equipe</span>' : `<button type="button" class="btn btn-secondary btn-sm" data-act="crew-add-provider" data-id="${p.id}">Adicionar</button>`}</li>`).join('')}</ul>` : '<p class="pj-muted">Nenhum parceiro desse ofício ainda — cadastre o seu de confiança abaixo.</p>') : ''}
+        <details class="pj-edit">
+          <summary>Cadastrar prestador de confiança</summary>
+          <form class="pj-grid-form" data-form="crew">
+            <label>Nome*<input name="name" maxlength="80" required></label>
+            <label>Ofício*<select name="trade">${TRADES.map((t) => `<option>${t}</option>`).join('')}</select></label>
+            <label>Contato<input name="contact" maxlength="120" placeholder="Telefone ou e-mail"></label>
+            <label>Orçamento (R$)<input name="quote" type="number" min="0" step="0.01"></label>
+            <div class="is-wide"><button type="submit" class="btn btn-primary btn-sm">Adicionar à equipe de obra</button></div>
+          </form>
+        </details>` : ''}
+      </section>`;
+  }
+
+  function diaryHtml() {
+    const today = new Date().toISOString().slice(0, 10);
+    return `
+      <section class="pj-card">
+        <h2>Diário de obra</h2>
+        <p class="pj-muted">O que foi feito em cada dia, com fotos do canteiro — para o cliente acompanhar sem precisar ir à obra.</p>
+        <form class="pj-diary-form" data-form="diary">
+          <div class="pj-inline">
+            <label for="pjDiaryDate">Dia</label>
+            <input id="pjDiaryDate" type="date" value="${today}" max="${today}" required style="max-width:180px">
+          </div>
+          <label class="sr-only" for="pjDiaryText">O que aconteceu</label>
+          <textarea id="pjDiaryText" rows="3" maxlength="2000" placeholder="Ex.: Marcenaria instalou os armários da cozinha; amanhã chega a bancada." required></textarea>
+          <div class="pj-inline">
+            <label for="pjDiaryPhotos">Fotos (até 6)</label>
+            <input id="pjDiaryPhotos" type="file" accept=".jpg,.jpeg,.png,.webp" multiple>
+            <button type="submit" class="btn btn-primary btn-sm">Registrar</button>
+          </div>
+        </form>
+        ${W.diary.length ? `<ol class="pj-diary">${W.diary.map((d) => `
+          <li>
+            <time>${fmtDate(d.date)}</time>
+            <div>
+              <p><strong>${esc(d.author?.name || '')}</strong></p>
+              <p class="pj-diary-text">${esc(d.text)}</p>
+              ${d.files.length ? `<div class="pj-diary-photos">${d.files.map((f) => `<button type="button" class="pj-photo" data-act="photo" data-id="${f}" aria-label="Ampliar foto"><img data-thumb="${f}" alt="Foto da obra em ${fmtDate(d.date)}"></button>`).join('')}</div>` : ''}
+              ${d.mine ? `<button type="button" class="pj-link pj-danger" data-act="diary-remove" data-id="${d.id}">apagar registro</button>` : ''}
+            </div>
+          </li>`).join('')}</ol>` : '<p class="pj-empty">Nenhum registro ainda.</p>'}
+      </section>`;
+  }
+
+  function renderObra() {
+    $('#pjPanelObra').innerHTML = crewHtml() + diaryHtml();
+    // fotos do diário: baixadas com o login (protegidas) e guardadas para não baixar de novo
+    $('#pjPanelObra').querySelectorAll('img[data-thumb]').forEach(async (img) => {
+      const id = img.dataset.thumb;
+      try {
+        if (!thumbs.has(id)) thumbs.set(id, URL.createObjectURL(await API.workspaceFileBlob(W.id, id)));
+        img.src = thumbs.get(id);
+      } catch { img.alt = 'Foto indisponível'; }
+    });
   }
 
   function downloadCsv() {
@@ -434,6 +622,7 @@
     renderFiles();
     renderLibrary();
     renderShopping();
+    renderObra();
     renderHistory();
     showTab(tab, false);
   }
@@ -485,6 +674,39 @@
     if (act === 'stage') {
       const labels = { submit: 'Etapa enviada para o cliente aprovar.', approve: 'Etapa aprovada. A próxima já começou.', 'request-changes': 'Pedido de ajustes enviado ao arquiteto.' };
       await run(btn, () => API.workspaceStageAction(W.id, btn.dataset.key, btn.dataset.action, note), labels[btn.dataset.action]);
+    } else if (act === 'quotes') {
+      const id = btn.dataset.id;
+      if (openQuotes.has(id)) openQuotes.delete(id); else openQuotes.add(id);
+      renderShopping();
+    } else if (act === 'quote-hints') {
+      btn.disabled = true;
+      try { quoteHints.set(btn.dataset.id, await API.workspaceQuoteSuggestions(W.id, btn.dataset.id)); renderShopping(); } catch (err) { flash(err.message, true); btn.disabled = false; }
+    } else if (act === 'quote-add-product') {
+      await run(btn, () => API.workspaceAddQuote(W.id, btn.dataset.item, { productId: btn.dataset.id }), 'Cotação adicionada.');
+    } else if (act === 'quote-choose') {
+      await run(btn, () => API.workspaceChooseQuote(W.id, btn.dataset.item, btn.dataset.id), 'Cotação escolhida — a lista de compras foi atualizada.');
+    } else if (act === 'quote-remove') {
+      await run(btn, () => API.workspaceRemoveQuote(W.id, btn.dataset.item, btn.dataset.id), 'Cotação apagada.');
+    } else if (act === 'team-remove') {
+      if (!confirm('Tirar esta pessoa da equipe do projeto?')) return;
+      await run(btn, () => API.workspaceRemoveTeam(W.id, btn.dataset.id), 'Pessoa retirada da equipe.');
+    } else if (act === 'team-leave') {
+      if (!confirm('Sair da equipe deste projeto? Você perde o acesso ao Espaço dele.')) return;
+      try { await API.workspaceRemoveTeam(W.id, W.me); location.href = 'dashboard.html'; } catch (err) { flash(err.message, true); }
+    } else if (act === 'crew-add-provider') {
+      await run(btn, () => API.workspaceAddCrew(W.id, { providerId: btn.dataset.id, trade: $('#pjTrade')?.value }), 'Prestador adicionado — ele recebe a indicação.');
+    } else if (act === 'crew-remove') {
+      if (!confirm('Tirar este prestador da equipe de obra?')) return;
+      await run(btn, () => API.workspaceRemoveCrew(W.id, btn.dataset.id), 'Prestador retirado.');
+    } else if (act === 'diary-remove') {
+      if (!confirm('Apagar este registro do diário (e as fotos dele)?')) return;
+      await run(btn, () => API.workspaceRemoveDiary(W.id, btn.dataset.id), 'Registro apagado.');
+    } else if (act === 'photo') {
+      const url = thumbs.get(btn.dataset.id);
+      if (url) window.open(url, '_blank', 'noopener');
+    } else if (act === 'del-template') {
+      if (!confirm('Apagar este modelo?')) return;
+      try { templates = await API.deleteWorkspaceTemplate(btn.dataset.id); renderStages(); } catch (err) { flash(err.message, true); }
     } else if (act === 'pay') {
       const st = W.stages.find((x) => x.key === btn.dataset.key);
       if (!confirm(`Registrar o pagamento de ${money(st.fee)} dos honorários de "${st.name}"? (simulação — nada é cobrado)`)) return;
@@ -492,6 +714,9 @@
     } else if (act === 'goto-files') {
       showTab('arquivos');
       document.getElementById(`files-${btn.dataset.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (act === 'compare') {
+      const f = W.files.find((x) => x.id === btn.dataset.id);
+      if (f && prevOf(f)) MatchFileViewer.compare({ workspaceId: W.id, older: prevOf(f), newer: f });
     } else if (act === 'annotate') {
       const f = W.files.find((x) => x.id === btn.dataset.id);
       if (f) MatchFileViewer.open({ workspaceId: W.id, file: f, onChange: () => API.workspace(W.id).then((w) => { W = w; renderFiles(); renderHistory(); }).catch(() => {}) });
@@ -532,6 +757,11 @@
       await run(null, () => API.workspaceUpdateItem(W.id, el.dataset.id, { purchased: el.checked }), el.checked ? 'Marcado como comprado.' : 'Compra desmarcada.');
       return;
     }
+    if (el.dataset.crew) {
+      if (el.dataset.field === 'rating' && !el.value) return;
+      await run(null, () => API.workspaceUpdateCrew(W.id, el.dataset.crew, { [el.dataset.field]: el.value }), 'Salvo.');
+      return;
+    }
     const field = el.dataset.field;
     const item = el.closest('[data-item]');
     if (field && item) await run(null, () => API.workspaceUpdateItem(W.id, item.dataset.item, { [field]: el.value }), 'Salvo.');
@@ -546,6 +776,44 @@
     const kind = form.dataset.form;
     if (kind === 'target') {
       await run(btn, () => API.workspaceTarget(W.id, `${$('#pjTarget').value}T12:00:00Z`), 'Meta atualizada.');
+    } else if (kind === 'team') {
+      await run(btn, () => API.workspaceAddTeam(W.id, $('#pjTeamEmail').value.trim()), 'Colega adicionado à equipe — ele recebe um aviso.');
+    } else if (kind === 'quote') {
+      const data = Object.fromEntries(new FormData(form).entries());
+      await run(btn, () => API.workspaceAddQuote(W.id, form.dataset.item, data), 'Cotação adicionada.');
+    } else if (kind === 'providers') {
+      btn.disabled = true;
+      try { providers = await API.providers($('#pjTrade').value, $('#pjUf').value.trim()); renderObra(); } catch (err) { flash(err.message, true); btn.disabled = false; }
+    } else if (kind === 'crew') {
+      const data = Object.fromEntries(new FormData(form).entries());
+      await run(btn, () => API.workspaceAddCrew(W.id, data), `${data.name} adicionado à equipe de obra.`);
+    } else if (kind === 'diary') {
+      const files = [...($('#pjDiaryPhotos').files || [])].slice(0, 6);
+      btn.disabled = true;
+      btn.textContent = files.length ? 'Enviando fotos…' : 'Registrando…';
+      try {
+        const ids = [];
+        for (const f of files) {
+          if (f.size > W.storage.fileMax) throw new Error(`${f.name}: foto grande demais (máximo 15 MB).`);
+          ids.push((await API.workspaceUpload(W.id, f, '', 'diary')).uploaded);
+        }
+        W = await API.workspaceAddDiary(W.id, { date: `${$('#pjDiaryDate').value}T12:00:00Z`, text: $('#pjDiaryText').value, files: ids });
+        render();
+        flash('Registro adicionado ao diário de obra.');
+      } catch (err) {
+        flash(err.message || 'Não deu certo agora.', true);
+        btn.disabled = false;
+        btn.textContent = 'Registrar';
+      }
+    } else if (kind === 'apply-template') {
+      if (!confirm('Trocar as etapas deste projeto pelo modelo escolhido? Nomes, prazos e honorários atuais serão substituídos.')) return;
+      await run(btn, () => API.applyWorkspaceTemplate(W.id, $('#pjTpl').value), 'Modelo aplicado.');
+    } else if (kind === 'save-template') {
+      try {
+        templates = await API.saveWorkspaceTemplate({ name: $('#pjTplName').value, stages: weeksOfStages() });
+        renderStages();
+        flash('Modelo salvo — ele aparece também na proposta de novos clientes.');
+      } catch (err) { flash(err.message, true); }
     } else if (kind === 'stage') {
       const d = form.elements.dueDate.value;
       const payload = { name: form.elements.name.value, dueDate: d ? `${d}T12:00:00Z` : null };
@@ -589,11 +857,12 @@
       return;
     }
     const hash = location.hash.replace('#', '');
-    if (['etapas', 'arquivos', 'biblioteca', 'compras', 'historico'].includes(hash)) tab = hash;
+    if (['etapas', 'arquivos', 'biblioteca', 'compras', 'obra', 'historico'].includes(hash)) tab = hash;
     state.hidden = true;
     app.hidden = false;
     render();
     if (isArchitect()) {
+      API.workspaceTemplates().then((t) => { templates = t; renderStages(); }).catch(() => {});
       API.architectProjects().then((list) => { otherProjects = list.filter((p) => String(p._id) !== W.id); renderLibrary(); }).catch(() => {});
     }
   }

@@ -15,7 +15,8 @@ async function loadProject(req, res) {
     res.status(404).json({ error: "Projeto não encontrado" });
     return null;
   }
-  const project = await Project.findOne({ _id: req.params.projectId, architect: req.user.id }).populate("client", "name city state");
+  // dono do projeto ou colega da equipe do escritório
+  const project = await Project.findOne({ _id: req.params.projectId, $or: [{ architect: req.user.id }, { "team.user": req.user.id }] }).populate("client", "name city state");
   if (!project) res.status(404).json({ error: "Projeto não encontrado" });
   return project;
 }

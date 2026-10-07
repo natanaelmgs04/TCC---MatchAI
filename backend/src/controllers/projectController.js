@@ -89,7 +89,7 @@ export async function deleteProject(req, res) {
 // (ver validationController.createCommissionForClosedValidation) — alimenta
 // a aba "Seus projetos" e o assistente de IA do lado do arquiteto.
 export async function listArchitectProjects(req, res) {
-  const projects = await Project.find({ architect: req.user.id })
+  const projects = await Project.find({ $or: [{ architect: req.user.id }, { "team.user": req.user.id }] })
     .sort("-updatedAt")
     .populate("client", "name city state");
   res.json(
@@ -108,6 +108,7 @@ export async function listArchitectProjects(req, res) {
       stylePicks: p.stylePicks,
       experience: p.experience,
       client: p.client ? { id: p.client.id, name: p.client.name, city: p.client.city, state: p.client.state } : null,
+      asTeam: String(p.architect) !== String(req.user.id), // colega convidado para a equipe do escritório
     })),
   );
 }

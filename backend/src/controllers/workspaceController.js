@@ -11,6 +11,10 @@ import { checkUpload, deleteProjectFile, openBuffer, saveBuffer } from "../servi
 import { fallbackLibraryConcept, generateLibraryConcept } from "../services/geminiService.js";
 import { UPGRADE_HINT, limitsFor, publicLimits, tierOf } from "../services/planLimits.js";
 import {
+  STAGE_TEMPLATES,
+  canReplaceStages,
+  normalizeStageList,
+  stagesFromTemplate,
   ANNOTATION_LIMIT,
   normalizeAnnotation,
   applyStageAction,
@@ -42,12 +46,12 @@ const mb = (b) => Math.round(b / 1024 / 1024);
 const link = (p) => `projeto.html?id=${p._id}`;
 const person = (u) => (u && u._id ? { id: String(u._id), name: u.name, avatar: avatarPath(u) } : null);
 
-async function load(req, res) {
+export async function load(req, res) {
   if (!isId(req.params.id)) {
     res.status(404).json({ error: "Projeto não encontrado." });
     return null;
   }
-  const project = await Project.findOne({ _id: req.params.id, $or: [{ client: req.user.id }, { architect: req.user.id }] });
+  const project = await Project.findOne({ _id: req.params.id, $or: [{ client: req.user.id }, { architect: req.user.id }, { "team.user": req.user.id }] });
   if (!project) {
     res.status(404).json({ error: "Projeto não encontrado." });
     return null;
@@ -57,6 +61,8 @@ async function load(req, res) {
     return null;
   }
   const role = String(project.client) === String(req.user.id) ? "client" : "architect";
+  // arquiteto do projeto (dono) ou colega convidado para a equipe do escritório
+  const isOwner = role === "architect" && String(project.architect) === String(req.user.id);
   if (!project.stages?.length) {
     // Projetos fechados antes do Espaço existir: o prazo conta da contratação.
     const hire = await Hire.findOne({ project: project._id, status: "accepted" }).select("decidedAt");
@@ -67,7 +73,7 @@ async function load(req, res) {
     await project.save();
   }
   // Os limites vêm do plano do ARQUITETO do projeto — o cliente nunca paga nem esbarra em limite.
-  const architect = role === "architect" ? req.user : await User.findById(project.architect).select("architectProfile.subscriptionTier");
+  const architect = isOwner ? req.user : await User.findById(project.architect).select("architectProfile.subscriptionTier");
   const tier = tierOf(architect);
   const limits = limitsFor(architect);
   let locked = false;
@@ -78,24 +84,24 @@ async function load(req, res) {
     const allowed = active.slice(0, limits.activeWorkspaces).map((p) => String(p._id));
     locked = project.status !== "completed" && !allowed.includes(String(project._id));
   }
-  return { project, role, otherId: role === "client" ? project.architect : project.client, tier, limits, locked };
+  return { project, role, isOwner, otherId: role === "client" ? project.architect : project.client, tier, limits, locked };
 }
 
 /** Escrita do arquiteto num espaço além do limite do plano Gratuito: só leitura (o cliente segue normal). */
-function blockedByPlan(ctx, res) {
+export function blockedByPlan(ctx, res) {
   if (ctx.role !== "architect" || !ctx.locked) return false;
   res.status(403).json({ error: `No plano Gratuito você edita o Espaço de ${ctx.limits.activeWorkspaces} projeto ativo por vez — este fica só para leitura até o atual ser concluído. ${UPGRADE_HINT}`, plan: true });
   return true;
 }
 
 /** Sininho + e-mail para a outra pessoa do projeto (eventos que pedem ação dela). */
-async function alertOther(ctx, text, { subject, lines }) {
+export async function alertOther(ctx, text, { subject, lines }) {
   notify(ctx.otherId, "timeline", text, link(ctx.project));
   const other = await User.findById(ctx.otherId).select("name email");
   workspaceEmail(other, { subject, lines, projectId: ctx.project._id }).catch(() => {});
 }
 
-function log(project, userId, kind, text) {
+export function log(project, userId, kind, text) {
   project.activity.push({ by: userId, kind, text: text.slice(0, 300) });
   if (project.activity.length > ACTIVITY_LIMIT) project.activity.splice(0, project.activity.length - ACTIVITY_LIMIT);
 }
@@ -115,6 +121,10 @@ const shapeItem = (it) => ({
   quantity: it.quantity || 1,
   unit: it.unit || "",
   purchased: !!it.purchased,
+  quotes: (it.quotes || []).map((q) => ({
+    id: String(q._id), storeName: q.storeName, price: q.price ?? null, purchaseUrl: q.purchaseUrl || "", note: q.note || "",
+    chosen: !!q.chosen, fromCatalog: !!q.product,
+  })),
 });
 
 const shapeFile = (f) => ({
@@ -133,7 +143,7 @@ const shapeFile = (f) => ({
 async function shape(ctx, userId) {
   const { project, role } = ctx;
   const [parties, files] = await Promise.all([
-    User.find({ _id: { $in: [project.client, project.architect] } }).select("name avatarVersion architectProfile.signature architectProfile.portfolio.styles architectProfile.portfolio.materials"),
+    User.find({ _id: { $in: [project.client, project.architect, ...(project.team || []).map((t) => t.user)] } }).select("name avatarVersion architectProfile.signature architectProfile.portfolio.styles architectProfile.portfolio.materials"),
     ProjectFile.find({ project: project._id }).sort("-createdAt"),
   ]);
   const byId = new Map(parties.map((u) => [String(u._id), u]));
@@ -148,16 +158,30 @@ async function shape(ctx, userId) {
     client: person(byId.get(String(project.client))),
     architect: person(architect),
     targetDate: project.targetDate,
+    startedAt: project.workspaceStartedAt || project.createdAt,
+    city: project.city || "",
+    state: project.state || "",
     stages: project.stages.map((s) => ({
-      key: s.key, name: s.name, dueDate: s.dueDate || null, status: s.status,
+      key: s.key, name: s.name, dueDate: s.dueDate || null, status: s.status, closesDesign: !!s.closesDesign,
       submittedAt: s.submittedAt || null, approvedAt: s.approvedAt || null, revisionRounds: s.revisionRounds || 0,
       fee: s.fee || 0, feeStatus: s.feeStatus || "none", feeDueAt: s.feeDueAt || null, feePaidAt: s.feePaidAt || null,
     })),
     fees: feeTotals(project.stages),
     summary: summarizeStages(project.stages),
+    canChangeTemplate: canReplaceStages(project.stages),
+    contractId: project.contract ? String(project.contract) : null,
     library: items,
     totals: shoppingTotals(items),
-    files: files.map(shapeFile),
+    files: files.filter((f) => f.kind !== "diary").map(shapeFile),
+    isOwner: !!ctx.isOwner,
+    team: (project.team || []).map((t) => person(byId.get(String(t.user)))).filter(Boolean),
+    crew: (project.crew || []).map((c) => ({
+      id: String(c._id), providerId: c.provider ? String(c.provider) : null, name: c.name, trade: c.trade,
+      contact: c.contact || "", quote: c.quote ?? null, status: c.status, note: c.note || "", rating: c.rating || null,
+    })),
+    diary: [...(project.diary || [])].sort((a, b) => new Date(b.date) - new Date(a.date)).map((d) => ({
+      id: String(d._id), date: d.date, text: d.text, files: (d.files || []).map(String), author: person(byId.get(String(d.author))), mine: String(d.author) === String(userId),
+    })),
     storage: { used: files.reduce((s, f) => s + (f.size || 0), 0), quota: ctx.limits.workspaceStorage, fileMax: FILE_MAX },
     plan: { tier: ctx.tier, locked: ctx.locked, limits: publicLimits(ctx.limits) },
     signature: architect?.architectProfile?.signature || null,
@@ -169,7 +193,7 @@ async function shape(ctx, userId) {
   };
 }
 
-const respond = async (res, ctx, req) => res.json(await shape(ctx, req.user.id));
+export const respond = async (res, ctx, req) => res.json(await shape(ctx, req.user.id));
 
 export async function get(req, res) {
   const ctx = await load(req, res);
@@ -203,6 +227,9 @@ export async function updateStage(req, res) {
     stage.remindedLateAt = undefined;
     changes.push(d ? `mudou o prazo de "${stage.name}" para ${d.toLocaleDateString("pt-BR", { timeZone: "UTC" })}` : `tirou o prazo de "${stage.name}"`);
   }
+  if (req.body?.fee !== undefined && (stage.fee || 0) !== normalizeFee(req.body.fee) && !ctx.isOwner) {
+    return res.status(403).json({ error: "Só o arquiteto responsável pelo projeto define os honorários." });
+  }
   if (req.body?.fee !== undefined) {
     const fee = normalizeFee(req.body.fee);
     if (fee === null) return res.status(400).json({ error: "Valor de honorário inválido." });
@@ -221,7 +248,7 @@ export async function updateStage(req, res) {
 export async function updateTarget(req, res) {
   const ctx = await load(req, res);
   if (!ctx) return;
-  if (ctx.role !== "architect") return res.status(403).json({ error: "Só o arquiteto ajusta a meta." });
+  if (!ctx.isOwner) return res.status(403).json({ error: "Só o arquiteto responsável ajusta a meta." });
   if (blockedByPlan(ctx, res)) return;
   const d = new Date(req.body?.targetDate);
   if (Number.isNaN(d.getTime())) return res.status(400).json({ error: "Data inválida." });
@@ -295,6 +322,60 @@ export async function report(req, res) {
   res.json(buildReport(projects));
 }
 
+// ---------------------------------------------------------------- modelos de etapas
+const builtInTemplates = () => Object.entries(STAGE_TEMPLATES).map(([id, t]) => ({ id, name: t.label, builtIn: true, stages: t.stages.map(({ key, ...st }) => st) }));
+const myTemplates = (user) => (user.architectProfile?.stageTemplates || []).map((t) => ({ id: String(t._id), name: t.name, stages: t.stages }));
+
+export async function listTemplates(req, res) {
+  if (req.user.role !== "architect") return res.status(403).json({ error: "Modelos de etapas são do arquiteto." });
+  res.json({ builtIn: builtInTemplates(), mine: myTemplates(req.user) });
+}
+
+export async function saveTemplate(req, res) {
+  if (req.user.role !== "architect") return res.status(403).json({ error: "Modelos de etapas são do arquiteto." });
+  const name = typeof req.body?.name === "string" ? req.body.name.trim().slice(0, 60) : "";
+  if (!name) return res.status(400).json({ error: "Dê um nome ao modelo." });
+  const r = normalizeStageList(req.body?.stages);
+  if (r.error) return res.status(400).json({ error: r.error });
+  const list = req.user.architectProfile.stageTemplates || (req.user.architectProfile.stageTemplates = []);
+  if (list.length >= 10) return res.status(409).json({ error: "Você já tem 10 modelos. Apague um para salvar outro." });
+  list.push({ name, stages: r.stages });
+  await req.user.save();
+  res.status(201).json({ builtIn: builtInTemplates(), mine: myTemplates(req.user) });
+}
+
+export async function deleteTemplate(req, res) {
+  if (req.user.role !== "architect") return res.status(403).json({ error: "Modelos de etapas são do arquiteto." });
+  const t = req.user.architectProfile?.stageTemplates?.id(req.params.templateId);
+  if (!t) return res.status(404).json({ error: "Modelo não encontrado." });
+  t.deleteOne();
+  await req.user.save();
+  res.json({ builtIn: builtInTemplates(), mine: myTemplates(req.user) });
+}
+
+/** Aplica um modelo ao projeto — só enquanto nenhuma etapa foi enviada, aprovada ou cobrada. */
+export async function applyTemplate(req, res) {
+  const ctx = await load(req, res);
+  if (!ctx) return;
+  if (!ctx.isOwner) return res.status(403).json({ error: "Só o arquiteto responsável escolhe o modelo de etapas." });
+  if (blockedByPlan(ctx, res)) return;
+  if (!canReplaceStages(ctx.project.stages)) return res.status(409).json({ error: "O projeto já andou (etapa enviada, aprovada ou cobrada): ajuste as etapas uma a uma." });
+  const id = String(req.body?.template || "");
+  let template = STAGE_TEMPLATES[id] ? { name: STAGE_TEMPLATES[id].label, stages: STAGE_TEMPLATES[id].stages } : null;
+  if (!template && isId(id)) {
+    const owner = await User.findById(ctx.project.architect).select("architectProfile.stageTemplates");
+    const mine = owner?.architectProfile?.stageTemplates?.id(id);
+    if (mine) template = { name: mine.name, stages: mine.stages.map((s) => s.toObject()) };
+  }
+  if (!template) return res.status(404).json({ error: "Modelo não encontrado." });
+  const start = ctx.project.workspaceStartedAt || new Date();
+  ctx.project.stages = stagesFromTemplate(template.stages, start);
+  ctx.project.targetDate = targetDate(start, template.stages);
+  log(ctx.project, req.user.id, "stage", `aplicou o modelo de etapas "${template.name}"`);
+  await ctx.project.save();
+  await respond(res, ctx, req);
+}
+
 // ---------------------------------------------------------------- arquivos
 export async function uploadFile(req, res) {
   const ctx = await load(req, res);
@@ -308,6 +389,8 @@ export async function uploadFile(req, res) {
   const checked = checkUpload(rawName, buffer);
   if (checked.error) return res.status(400).json({ error: checked.error });
   const stageKey = ctx.project.stages.some((s) => s.key === req.query.stage) ? req.query.stage : "";
+  const kind = req.query.kind === "diary" ? "diary" : "doc";
+  if (kind === "diary" && !["png", "jpg", "jpeg", "webp"].includes(checked.ext)) return res.status(400).json({ error: "No diário de obra vão fotos (PNG, JPG ou WebP)." });
 
   const used = (await ProjectFile.aggregate([{ $match: { project: ctx.project._id } }, { $group: { _id: null, n: { $sum: "$size" } } }]))[0]?.n || 0;
   if (used + buffer.length > ctx.limits.workspaceStorage) {
@@ -315,16 +398,18 @@ export async function uploadFile(req, res) {
     return res.status(413).json({ error: `O espaço de arquivos deste projeto está cheio (${mb(ctx.limits.workspaceStorage)} MB). Apague versões antigas para enviar novas.${extra}` });
   }
 
-  const prev = await ProjectFile.findOne({ project: ctx.project._id, stage: stageKey, name: checked.name }).sort("-version").select("version");
+  const prev = await ProjectFile.findOne({ project: ctx.project._id, stage: stageKey, name: checked.name, kind: { $ne: "diary" } }).sort("-version").select("version");
   const fileId = await saveBuffer(buffer, { filename: checked.name, owner: req.user.id, project: ctx.project._id });
   const doc = await ProjectFile.create({
     project: ctx.project._id, uploader: req.user.id, stage: stageKey, name: checked.name, ext: checked.ext,
-    mime: checked.mime, size: buffer.length, version: (prev?.version || 0) + 1, file: fileId,
+    mime: checked.mime, size: buffer.length, version: kind === "diary" ? 1 : (prev?.version || 0) + 1, file: fileId, kind,
   });
-  log(ctx.project, req.user.id, "file", `enviou ${checked.name}${doc.version > 1 ? ` (versão ${doc.version})` : ""}`);
-  await ctx.project.save();
-  notify(ctx.otherId, "timeline", `${req.user.name} enviou o arquivo ${checked.name} no projeto "${ctx.project.name}"`, link(ctx.project));
-  await respond(res, ctx, req);
+  if (kind === "doc") {
+    log(ctx.project, req.user.id, "file", `enviou ${checked.name}${doc.version > 1 ? ` (versão ${doc.version})` : ""}`);
+    await ctx.project.save();
+    notify(ctx.otherId, "timeline", `${req.user.name} enviou o arquivo ${checked.name} no projeto "${ctx.project.name}"`, link(ctx.project));
+  }
+  res.json({ ...(await shape(ctx, req.user.id)), uploaded: String(doc._id) });
 }
 
 export async function downloadFile(req, res) {

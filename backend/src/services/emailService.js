@@ -214,12 +214,23 @@ export function hireCancelledEmail(architect, client, projectName) {
 
 // ---- Espaço do projeto (ver controllers/workspaceController.js e services/workspaceReminders.js) ----
 /** Aviso do Espaço do projeto: `lines` já vem em texto puro (é escapado aqui). */
-export function workspaceEmail(recipient, { subject, lines, projectId, cta = "Abrir o espaço do projeto" }) {
+export function workspaceEmail(recipient, { subject, lines, projectId, cta = "Abrir o espaço do projeto", path }) {
   if (!recipient?.email) return Promise.resolve({ simulated: true });
   return sendEmail({
     to: recipient.email,
     subject,
     html: `<p>Olá, ${escapeHtml(recipient.name)}!</p>${lines.map((l) => `<p style="white-space:pre-wrap">${escapeHtml(l)}</p>`).join("")}`,
-    cta: { label: cta, path: `projeto.html?id=${projectId}` },
+    cta: { label: cta, path: path || `projeto.html?id=${projectId}` },
+  });
+}
+
+// ---- Proposta e contrato (ver controllers/proposalController.js) ----
+export function proposalEmail(recipient, { subject, lines, proposalId }) {
+  if (!recipient?.email) return Promise.resolve({ simulated: true });
+  return sendEmail({
+    to: recipient.email,
+    subject,
+    html: `<p>Olá, ${escapeHtml(recipient.name)}!</p>${lines.map((l) => `<p style="white-space:pre-wrap">${escapeHtml(l)}</p>`).join("")}`,
+    cta: { label: "Abrir a proposta", path: `contrato.html?id=${proposalId}` },
   });
 }

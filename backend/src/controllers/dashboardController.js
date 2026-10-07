@@ -9,11 +9,19 @@ import CaseStudy from "../models/CaseStudy.js";
 import ProfileView from "../models/ProfileView.js";
 import StoreProduct from "../models/StoreProduct.js";
 import StoreReferral from "../models/StoreReferral.js";
+import Hire from "../models/Hire.js";
+import Notification from "../models/Notification.js";
+import AssistantChat from "../models/AssistantChat.js";
+import ArchitectAssistantChat from "../models/ArchitectAssistantChat.js";
+import Model3D from "../models/Model3D.js";
+import ProjectFile from "../models/ProjectFile.js";
+import Proposal from "../models/Proposal.js";
 import { notify } from "../services/notificationService.js";
 import { recomputeProfileFromPortfolio } from "../services/portfolioProfile.js";
 import { parseAvatar } from "../services/avatar.js";
 import { deleteUserCascade } from "../services/accountDeletion.js";
 import { PLAN_LIMITS } from "../services/planLimits.js";
+import { normalizeTrades } from "../services/workspaceRules.js";
 
 export function getMe(req, res) {
   res.json(req.user);
@@ -25,17 +33,39 @@ export function getMe(req, res) {
  */
 export async function exportMyData(req, res) {
   const userId = req.user.id;
+  const me = req.user._id;
+  const role = req.user.role;
   const [messages, matchHistory, validations, projects, reviewsGiven, reviewsReceived, favorites, timelines, caseStudies] =
     await Promise.all([
       Message.find({ $or: [{ from: userId }, { to: userId }] }).sort("createdAt"),
-      req.user.role === "client" ? MatchHistory.find({ client: userId }).sort("createdAt") : [],
+      role === "client" ? MatchHistory.find({ client: userId }).sort("createdAt") : [],
       Validation.find({ $or: [{ client: userId }, { architect: userId }] }),
-      req.user.role === "client" ? Project.find({ client: userId }) : [],
-      req.user.role === "client" ? Review.find({ client: userId }) : [],
-      req.user.role === "architect" ? Review.find({ architect: userId }) : [],
-      req.user.role === "client" ? Favorite.find({ client: userId }) : [],
+      role === "client" ? Project.find({ client: userId }) : [],
+      role === "client" ? Review.find({ client: userId }) : [],
+      role === "architect" ? Review.find({ architect: userId }) : [],
+      role === "client" ? Favorite.find({ client: userId }) : [],
       Timeline.find({ $or: [{ client: userId }, { architect: userId }] }),
       CaseStudy.find({ $or: [{ client: userId }, { architect: userId }] }),
+    ]);
+  // Tudo que entrou depois: Espaço do projeto, contratos, IA, Estúdio 3D, lojas e prestadores.
+  const [hires, proposals, notifications, assistantChats, architectChats, models3d, filesSent, annotations, architectProjects, referrals, storeProducts, crewRequests] =
+    await Promise.all([
+      Hire.find({ $or: [{ client: userId }, { architect: userId }] }).sort("createdAt"),
+      Proposal.find({ $or: [{ client: userId }, { architect: userId }] }).sort("createdAt"),
+      Notification.find({ user: userId }).sort("createdAt"),
+      role === "client" ? AssistantChat.find({ client: userId }) : [],
+      role === "architect" ? ArchitectAssistantChat.find({ architect: userId }) : [],
+      Model3D.find({ $or: [{ owner: userId }, { "comments.author": userId }] }).select("-file -preview"),
+      ProjectFile.find({ uploader: userId }).select("project name ext size version stage kind review createdAt"),
+      ProjectFile.aggregate([
+        { $unwind: "$annotations" },
+        { $match: { "annotations.author": me } },
+        { $project: { _id: 0, project: 1, arquivo: "$name", versao: "$version", pagina: "$annotations.page", x: "$annotations.x", y: "$annotations.y", texto: "$annotations.text", resolvido: "$annotations.resolved", em: "$annotations.createdAt" } },
+      ]),
+      role === "architect" ? Project.find({ $or: [{ architect: userId }, { "team.user": userId }] }) : [],
+      role === "client" ? StoreReferral.find({ client: userId }).populate("store", "name storeProfile.storeName").populate("product", "name") : StoreReferral.find({ store: userId }),
+      role === "store" ? StoreProduct.find({ store: userId }) : [],
+      role === "store" ? Project.find({ "crew.provider": me }).select("crew architect city state") : [],
     ]);
 
   res.setHeader("Content-Disposition", "attachment; filename=matchia-meus-dados.json");
@@ -43,7 +73,26 @@ export async function exportMyData(req, res) {
     exportedAt: new Date().toISOString(),
     conta: req.user,
     projetos: projects,
+    projetosComoArquiteto: architectProjects,
+    contratacoes: hires,
+    propostasEContratos: proposals,
+    arquivosEnviados: filesSent,
+    comentariosEmArquivos: annotations,
     mensagens: messages,
+    notificacoes: notifications,
+    conversasComOAssistente: assistantChats,
+    conversasDoArquitetoComOAssistente: architectChats,
+    modelos3d: models3d,
+    indicacoesDeLojas: referrals.map((r) => ({
+      loja: r.store?.storeProfile?.storeName || r.store?.name || String(r.store || ""),
+      produto: r.product?.name || String(r.product || ""),
+      contatoCompartilhado: !!r.shareContact,
+      consentimentoEm: r.consentAt || null,
+      consentimentoRevogadoEm: r.consentRevokedAt || null,
+      em: r.createdAt,
+    })),
+    produtosDaLoja: storeProducts,
+    indicacoesComoPrestador: crewRequests.flatMap((p) => p.crew.filter((c) => String(c.provider) === userId).map((c) => ({ oficio: c.trade, situacao: c.status, nota: c.rating || null, em: c.addedAt }))),
     historicoDeBuscas: matchHistory,
     validacoesDeResumo: validations,
     avaliacoesEnviadas: reviewsGiven,
@@ -51,6 +100,7 @@ export async function exportMyData(req, res) {
     arquitetosFavoritados: favorites,
     timelinesDeProjeto: timelines,
     casesDeSucesso: caseStudies,
+    observacao: "O conteúdo dos arquivos (plantas, fotos) não vai neste JSON por tamanho: baixe cada um pelo Espaço do projeto.",
   });
 }
 
@@ -67,7 +117,7 @@ export async function deleteMyAccount(req, res) {
 const EDITABLE_PROFILE_FIELDS = {
   client: ["preferredStyles", "preferredMaterials", "budget", "propertyType", "familySize", "projectGoals", "preferences"],
   architect: ["styles", "specialties", "yearsExperience", "workingAreas", "priceRange", "favoriteMaterials", "bio", "website", "instagram", "availability"],
-  store: ["storeName", "description", "logoUrl", "city", "state", "categories"],
+  store: ["storeName", "description", "logoUrl", "city", "state", "categories", "kind", "trades"],
 };
 
 export async function updateMe(req, res) {
@@ -104,6 +154,10 @@ export async function updateMe(req, res) {
     const patch = {};
     for (const key of EDITABLE_PROFILE_FIELDS[req.user.role] || []) {
       if (incoming[key] !== undefined) patch[key] = incoming[key];
+    }
+    if (req.user.role === "store") {
+      if (patch.kind !== undefined) patch.kind = patch.kind === "service" ? "service" : "store";
+      if (patch.trades !== undefined) patch.trades = normalizeTrades(patch.trades);
     }
     if (req.user.role === "architect" && incoming.cauVerification?.number !== undefined) {
       const number = String(incoming.cauVerification.number || "").trim().slice(0, 30);
