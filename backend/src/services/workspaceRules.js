@@ -59,11 +59,137 @@ export function applyStageAction(stages, key, action, role, now = new Date()) {
     }
     stage.status = "approved";
     stage.approvedAt = now;
+    if (stage.fee > 0 && stage.feeStatus !== "paid") {
+      stage.feeStatus = "due"; // aprovou a etapa: abre a cobrança dos honorários dela
+      stage.feeDueAt = now;
+    }
     const next = stages[i + 1];
     if (next && next.status === "pending") next.status = "in_progress";
     return { stage, next, done: stages.every((s) => s.status === "approved") };
   }
   return fail(400, "Ação inválida.");
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+export const REMINDER_DAYS = 3;
+
+/**
+ * Lembretes de prazo devidos agora (cada um sai uma vez por prazo):
+ *   soon — faltam até 3 dias; vai para quem está com a etapa na mão
+ *          (arquiteto em andamento, cliente quando aguarda aprovação);
+ *   late — passou do prazo; vai para os dois.
+ */
+export function dueReminders(stages, now = new Date()) {
+  const out = [];
+  for (const st of stages) {
+    if (!st.dueDate || !["in_progress", "awaiting_approval"].includes(st.status)) continue;
+    const left = new Date(st.dueDate).getTime() - now.getTime();
+    if (left < 0) {
+      if (!st.remindedLateAt) out.push({ key: st.key, kind: "late", to: ["architect", "client"] });
+    } else if (left <= REMINDER_DAYS * DAY && !st.remindedSoonAt) {
+      out.push({ key: st.key, kind: "soon", to: [st.status === "awaiting_approval" ? "client" : "architect"], days: Math.max(1, Math.ceil(left / DAY)) });
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Honorários por etapa (cobrança simulada)
+// ---------------------------------------------------------------------------
+export const MAX_FEE = 10_000_000;
+
+/** Valor de honorário vindo do formulário: número ≥ 0, com centavos; vazio = sem honorário. */
+export function normalizeFee(v) {
+  if (v === "" || v === null || v === undefined) return 0;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.min(MAX_FEE, Math.round(n * 100) / 100);
+}
+
+/** O arquiteto só muda o valor antes da etapa ser aprovada (depois, a cobrança já existe). */
+export function canEditFee(stage) {
+  return stage.status !== "approved" && stage.feeStatus !== "paid";
+}
+
+/** Cliente marca a cobrança aberta como paga. */
+export function payFee(stage, role, now = new Date()) {
+  if (role !== "client") return { status: 403, error: "Só o cliente registra o pagamento." };
+  if (stage.feeStatus !== "due") return { status: 409, error: "Não há cobrança aberta nesta etapa." };
+  stage.feeStatus = "paid";
+  stage.feePaidAt = now;
+  return { stage };
+}
+
+export function feeTotals(stages = []) {
+  const sum = (f) => Math.round(stages.filter(f).reduce((t, s) => t + (s.fee || 0), 0) * 100) / 100;
+  return {
+    total: sum(() => true),
+    paid: sum((s) => s.feeStatus === "paid"),
+    due: sum((s) => s.feeStatus === "due"),
+    upcoming: sum((s) => (s.fee || 0) > 0 && (!s.feeStatus || s.feeStatus === "none")),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Relatório de resultado do arquiteto (a meta da arquiteta do desafio: fechar
+// o projeto em 3 meses, sem retrabalho)
+// ---------------------------------------------------------------------------
+const days = (a, b) => (new Date(b).getTime() - new Date(a).getTime()) / DAY;
+const round1 = (n) => Math.round(n * 10) / 10;
+const avg = (list) => (list.length ? round1(list.reduce((a, b) => a + b, 0) / list.length) : null);
+const DESIGN_DONE = "executivo"; // "projeto fechado" = executivo aprovado (a obra vem depois)
+
+/**
+ * projects: [{ name, status, workspaceStartedAt, createdAt, targetDate, stages }]
+ * Devolve os números do relatório e uma linha por projeto.
+ */
+export function buildReport(projects = [], now = new Date()) {
+  const rows = [];
+  const stageDays = new Map();
+  for (const p of projects) {
+    if (!p.stages?.length) continue;
+    const start = p.workspaceStartedAt || p.createdAt;
+    let prev = start;
+    for (const st of p.stages) {
+      if (st.status !== "approved" || !st.approvedAt) break;
+      const key = st.key;
+      if (!stageDays.has(key)) stageDays.set(key, { name: st.name, values: [] });
+      stageDays.get(key).values.push(Math.max(0, days(prev, st.approvedAt)));
+      prev = st.approvedAt;
+    }
+    const design = p.stages.find((s) => s.key === DESIGN_DONE);
+    const closedAt = design?.status === "approved" ? design.approvedAt : null;
+    const rounds = p.stages.reduce((t, s) => t + (s.revisionRounds || 0), 0);
+    const late = p.stages.filter((s) => s.status !== "approved" && s.dueDate && new Date(s.dueDate) < now).length;
+    rows.push({
+      id: String(p._id || p.id || ""),
+      name: p.name,
+      status: p.status,
+      startedAt: start,
+      targetDate: p.targetDate || null,
+      closedAt,
+      daysToClose: closedAt ? round1(days(start, closedAt)) : null,
+      onTarget: closedAt && p.targetDate ? new Date(closedAt) <= new Date(p.targetDate) : null,
+      revisionRounds: rounds,
+      lateStages: late,
+      fees: feeTotals(p.stages),
+    });
+  }
+  const closed = rows.filter((r) => r.closedAt);
+  return {
+    projects: rows.length,
+    closed: closed.length,
+    avgDaysToClose: avg(closed.map((r) => r.daysToClose)),
+    onTargetRate: closed.filter((r) => r.onTarget !== null).length
+      ? Math.round((closed.filter((r) => r.onTarget).length / closed.filter((r) => r.onTarget !== null).length) * 100)
+      : null,
+    avgRevisionRounds: avg(rows.map((r) => r.revisionRounds)),
+    noReworkRate: rows.length ? Math.round((rows.filter((r) => r.revisionRounds === 0).length / rows.length) * 100) : null,
+    lateNow: rows.reduce((t, r) => t + r.lateStages, 0),
+    stageAverages: [...stageDays.entries()].map(([key, v]) => ({ key, name: v.name, avgDays: avg(v.values), count: v.values.length })),
+    fees: rows.reduce((t, r) => ({ total: t.total + r.fees.total, paid: t.paid + r.fees.paid, due: t.due + r.fees.due }), { total: 0, paid: 0, due: 0 }),
+    rows,
+  };
 }
 
 /** Números para o painel: etapa atual, atraso, rodadas de ajuste e progresso. */
@@ -190,4 +316,21 @@ export function signatureToText(signature, derived) {
   if (derived?.styles?.length) lines.push(`estilos mais presentes no portfólio: ${derived.styles.map((s) => s.name).join(", ")}`);
   if (derived?.materials?.length) lines.push(`materiais que mais repete no portfólio: ${derived.materials.map((s) => s.name).join(", ")}`);
   return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Comentários marcados no arquivo
+// ---------------------------------------------------------------------------
+export const ANNOTATION_LIMIT = 200;
+
+/** Valida um comentário novo: ponto dentro do arquivo (0–1), página ≥ 1 e texto. */
+export function normalizeAnnotation(body = {}) {
+  const text = typeof body.text === "string" ? body.text.trim().slice(0, 600) : "";
+  if (!text) return { error: "Escreva o comentário." };
+  const x = Number(body.x);
+  const y = Number(body.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) return { error: "Marque um ponto dentro do arquivo." };
+  const page = Math.floor(Number(body.page) || 1);
+  if (page < 1 || page > 2000) return { error: "Página inválida." };
+  return { annotation: { page, x: Math.round(x * 10000) / 10000, y: Math.round(y * 10000) / 10000, text } };
 }

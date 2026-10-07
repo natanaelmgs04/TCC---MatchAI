@@ -18,6 +18,20 @@ const projectFileSchema = new mongoose.Schema(
     size: Number,
     version: { type: Number, default: 1 },
     file: { type: mongoose.Schema.Types.ObjectId, required: true },
+    // Comentários marcados num ponto do arquivo (imagem ou página do PDF):
+    // x/y em fração da largura/altura, para valer em qualquer tamanho de tela.
+    annotations: [
+      {
+        author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+        page: { type: Number, default: 1 },
+        x: Number,
+        y: Number,
+        text: { type: String, maxlength: 600 },
+        resolved: { type: Boolean, default: false },
+        resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     review: {
       status: { type: String, enum: ["none", "approved", "changes"], default: "none" },
       comment: String,

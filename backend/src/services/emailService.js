@@ -124,7 +124,11 @@ export function welcomeEmail(user) {
   return sendEmail({
     to: user.email,
     subject: "Bem-vindo(a) ao match.IA",
-    html: `<p>Olá, ${escapeHtml(user.name)}!</p><p>Sua conta de ${user.role === "architect" ? "arquiteto" : "cliente"} no match.IA foi criada com sucesso. ${user.role === "client" ? "Complete seu perfil e rode seu primeiro match com IA." : "Complete seu portfólio para aparecer nos resultados de match."}</p>`,
+    html: `<p>Olá, ${escapeHtml(user.name)}!</p><p>Sua conta de ${{ architect: "arquiteto", store: "loja parceira", client: "cliente" }[user.role] || "cliente"} no match.IA foi criada com sucesso. ${{
+      client: "Complete seu perfil e rode seu primeiro match com IA.",
+      architect: "Complete seu portfólio para aparecer nos resultados de match.",
+      store: "Cadastre ou importe seus produtos para eles aparecerem nas sugestões dos projetos.",
+    }[user.role] || ""}</p>`,
     cta: { label: "Abrir meu painel", path: "dashboard.html" },
   });
 }
@@ -205,5 +209,17 @@ export function hireCancelledEmail(architect, client, projectName) {
     to: architect.email,
     subject: `Pedido de contratação cancelado — match.IA`,
     html: `<p>Olá, ${escapeHtml(architect.name)}!</p><p>${escapeHtml(client.name)} cancelou o pedido de contratação do projeto <strong>${escapeHtml(projectName)}</strong>.</p>`,
+  });
+}
+
+// ---- Espaço do projeto (ver controllers/workspaceController.js e services/workspaceReminders.js) ----
+/** Aviso do Espaço do projeto: `lines` já vem em texto puro (é escapado aqui). */
+export function workspaceEmail(recipient, { subject, lines, projectId, cta = "Abrir o espaço do projeto" }) {
+  if (!recipient?.email) return Promise.resolve({ simulated: true });
+  return sendEmail({
+    to: recipient.email,
+    subject,
+    html: `<p>Olá, ${escapeHtml(recipient.name)}!</p>${lines.map((l) => `<p style="white-space:pre-wrap">${escapeHtml(l)}</p>`).join("")}`,
+    cta: { label: cta, path: `projeto.html?id=${projectId}` },
   });
 }

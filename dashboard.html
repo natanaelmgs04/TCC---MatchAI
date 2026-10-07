@@ -288,6 +288,16 @@
               <p class="card-lead">Projetos que você aceitou pela plataforma. Use a aba Assistente para desenvolver cada um com a IA.</p>
               <div id="closedProjectsList" class="hire-list"><p class="hire-empty">Carregando…</p></div>
             </div>
+            <div class="dash-card spotlight wr-card" id="workspaceReportCard">
+              <div class="wr-head">
+                <div>
+                  <h3>Resultado dos seus projetos</h3>
+                  <p class="card-lead">Medido nas etapas do Espaço do projeto: quanto tempo cada projeto leva até o executivo aprovado (meta: 3 meses), quantas rodadas de ajuste houve e o que foi pago de honorários.</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="workspaceReportPrint" hidden>Imprimir relatório</button>
+              </div>
+              <div id="workspaceReport" aria-live="polite"><p class="hire-empty">Carregando…</p></div>
+            </div>
           </div>
 
           <div class="profile-panel" data-profile-panel-content="perfil" hidden>
@@ -627,6 +637,10 @@
               <div class="dv-set-row">
                 <div><strong>Exportar meus dados</strong><span>Arquivo JSON com perfil, projetos, mensagens e histórico.</span></div>
                 <button type="button" id="exportDataBtn" class="btn btn-secondary btn-sm">Baixar meus dados</button>
+              </div>
+              <div class="dv-set-row" id="storeConsents" hidden>
+                <div><strong>Lojas parceiras</strong><span data-consent-text>Carregando…</span></div>
+                <button type="button" class="btn btn-secondary btn-sm" hidden>Revogar compartilhamento</button>
               </div>
             </section>
 

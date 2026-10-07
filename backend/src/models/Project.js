@@ -40,6 +40,15 @@ const projectSchema = new mongoose.Schema(
         submittedAt: Date,
         approvedAt: Date,
         revisionRounds: { type: Number, default: 0 },
+        // Honorários da etapa (cobrança simulada — TCC): o arquiteto define o
+        // valor; aprovar a etapa abre a cobrança e o cliente marca como paga.
+        fee: Number,
+        feeStatus: { type: String, enum: ["none", "due", "paid"], default: "none" },
+        feeDueAt: Date,
+        feePaidAt: Date,
+        // lembretes de prazo já enviados (zeram quando o prazo muda)
+        remindedSoonAt: Date,
+        remindedLateAt: Date,
       },
     ],
     // Biblioteca do arquiteto para ESTE projeto: produtos das lojas parceiras

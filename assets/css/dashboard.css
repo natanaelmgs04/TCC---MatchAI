@@ -702,3 +702,37 @@ a.dv-prod:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 @media (max-width: 640px) { .sig-form { grid-template-columns: 1fr; } }
 
 .ai-project-ws { align-self: flex-start; margin: -2px 0 8px 14px; font-size: .8rem; font-weight: 600; color: var(--terracotta-dark); }
+
+/* Relatório de resultado (Contratações) */
+.wr-head { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: flex-start; }
+.wr-head > div { flex: 1 1 360px; }
+.wr-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 14px 0 6px; }
+.wr-tile { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 70%, transparent); display: grid; gap: 2px; }
+.wr-tile span { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+.wr-tile strong { font-size: 1.2rem; }
+.wr-tile small { font-size: .76rem; color: var(--ink-faint); line-height: 1.4; }
+.wr-sub { margin: 18px 0 8px; font-size: .92rem; }
+.wr-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wr-bars li { display: grid; grid-template-columns: minmax(120px, 200px) 1fr 56px; gap: 10px; align-items: center; font-size: .84rem; }
+.wr-bars i { display: block; height: 8px; border-radius: 999px; background: var(--line); position: relative; overflow: hidden; }
+.wr-bars i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--w); border-radius: inherit; background: var(--brand-gradient); }
+.wr-bars b { text-align: right; font-weight: 600; }
+.wr-table-wrap { overflow-x: auto; }
+.wr-table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: .84rem; }
+.wr-table th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.wr-table td { padding: 9px 8px; border-bottom: 1px solid var(--line); }
+.wr-table a { color: var(--terracotta-dark); font-weight: 600; }
+@media (max-width: 560px) { .wr-bars li { grid-template-columns: 1fr 48px; } .wr-bars li i { grid-column: 1 / -1; grid-row: 2; } }
+
+/* LGPD: consentimento antes de compartilhar o contato com uma loja */
+.consent-dialog { max-width: min(460px, calc(100vw - 32px)); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 22px; background: var(--bg); color: var(--ink); box-shadow: var(--shadow-lg); }
+.consent-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.consent-dialog h3 { margin: 0 0 8px; }
+.consent-dialog p { margin: 0 0 12px; font-size: .9rem; line-height: 1.5; }
+.consent-check { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--sage) 12%, transparent); font-size: .88rem; line-height: 1.5; cursor: pointer; }
+.consent-check input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--sage); }
+.consent-note { color: var(--ink-faint); font-size: .8rem !important; margin-top: 10px !important; }
+.consent-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* .btn define display e passava por cima do atributo hidden */
+.btn[hidden] { display: none !important; }

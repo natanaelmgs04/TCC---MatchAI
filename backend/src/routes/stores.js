@@ -12,6 +12,8 @@ import {
   getCatalogStatus,
   importProducts,
   clearImportedProducts,
+  myConsents,
+  revokeConsents,
 } from "../controllers/storeController.js";
 
 const router = Router();
@@ -24,6 +26,8 @@ router.post("/me/catalog/import", requireAuth, requireRole("store"), asyncHandle
 router.delete("/me/catalog", requireAuth, requireRole("store"), asyncHandler(clearImportedProducts));
 router.get("/me/referrals", requireAuth, requireRole("store"), asyncHandler(listMyReferrals));
 router.post("/referrals", requireAuth, requireRole("client"), asyncHandler(createReferral));
+router.get("/consents", requireAuth, requireRole("client"), asyncHandler(myConsents));
+router.post("/consents/revoke", requireAuth, requireRole("client"), asyncHandler(revokeConsents));
 router.get("/:id", asyncHandler(getStoreProfile));
 
 export default router;

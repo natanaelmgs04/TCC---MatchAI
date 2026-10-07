@@ -168,6 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupProfileTabs('architectProfileTabs', 'architectPanel');
     setupStudio3d();
     setupSignature();
+    renderWorkspaceReport(me);
     DashUI.decorateTabs(document.getElementById('architectProfileTabs'));
     DashUI.autoHeads(document.getElementById('architectPanel'), 'Painel do arquiteto');
     document.getElementById('architectStatRating').style.display = '';
@@ -360,6 +361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       paintAvatar(document.getElementById('avatarInitials'), user);
       paintAvatar(document.getElementById('accountAvatar'), user);
       remove.hidden = !user.avatar;
+      if (user.role === 'architect') renderOnboardingChecklist(user);
     };
     remove.hidden = !user.avatar;
     input.addEventListener('change', async () => {
@@ -412,6 +414,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---------------- Privacidade / LGPD ----------------
   function setupPrivacyActions(user) {
+    // Lojas com quem o cliente autorizou compartilhar o contato (LGPD: ver e revogar)
+    const consentBox = document.getElementById('storeConsents');
+    if (consentBox && user.role === 'client') {
+      consentBox.hidden = false;
+      const paint = async () => {
+        let list = [];
+        try { list = await MatchAPI.myStoreConsents(); } catch { /* sem lista: mostra vazio */ }
+        consentBox.querySelector('[data-consent-text]').textContent = list.length
+          ? `Seu nome e e-mail foram compartilhados com: ${[...new Set(list.map((c) => c.store))].join(', ')}.`
+          : 'Você não compartilhou seus dados de contato com nenhuma loja parceira.';
+        consentBox.querySelector('button').hidden = !list.length;
+      };
+      consentBox.querySelector('button').addEventListener('click', async (e) => {
+        if (!confirm('Revogar o compartilhamento do seu nome e e-mail com todas as lojas parceiras?')) return;
+        e.currentTarget.disabled = true;
+        try { await MatchAPI.revokeStoreConsents(); } catch (err) { alert(err.message || 'Não foi possível revogar agora.'); }
+        e.currentTarget.disabled = false;
+        paint();
+      });
+      paint();
+    }
     document.getElementById('exportDataBtn').addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       btn.disabled = true;
@@ -894,10 +917,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>`;
       box.querySelectorAll('[data-simulate-buy]').forEach(btn => {
         btn.addEventListener('click', async () => {
+          const product = products.find((x) => String(x.id) === btn.dataset.simulateBuy) || {};
+          const choice = await askStoreConsent(product.storeName || 'a loja parceira');
+          if (!choice) return;
           btn.disabled = true;
           try {
-            const { purchaseUrl } = await MatchAPI.createStoreReferral(btn.dataset.simulateBuy, project._id);
-            alert('Compra simulada registrada! Nenhuma cobrança real acontece (projeto acadêmico).' + (purchaseUrl ? `\n\nLink do produto: ${purchaseUrl}` : ''));
+            const { purchaseUrl } = await MatchAPI.createStoreReferral(btn.dataset.simulateBuy, project._id, choice.shareContact);
+            alert('Compra simulada registrada! Nenhuma cobrança real acontece (projeto acadêmico).'
+              + (choice.shareContact ? '' : '\n\nSeu nome e e-mail NÃO foram compartilhados com a loja.')
+              + (purchaseUrl ? `\n\nLink do produto: ${purchaseUrl}` : ''));
           } catch (err) {
             alert(err.message || 'Não foi possível simular a compra agora.');
             btn.disabled = false;
@@ -907,6 +935,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch {
       box.innerHTML = '';
     }
+  }
+
+  /**
+   * LGPD: antes de registrar a indicação, o cliente decide se a loja pode
+   * receber o nome e o e-mail dele. Desmarcado por padrão; revogável em Conta.
+   */
+  function askStoreConsent(storeName) {
+    return new Promise((resolve) => {
+      const dlg = document.createElement('dialog');
+      dlg.className = 'consent-dialog';
+      dlg.setAttribute('aria-labelledby', 'consentTitle');
+      dlg.innerHTML = `
+        <form method="dialog">
+          <h3 id="consentTitle">Simular compra</h3>
+          <p>A compra é simulada: nada é cobrado. Você decide se ${escapeHtml(storeName)} pode receber os seus dados de contato.</p>
+          <label class="consent-check"><input type="checkbox" name="share">
+            <span>Autorizo a match.IA a compartilhar meu <strong>nome e e-mail</strong> com ${escapeHtml(storeName)} para a loja me atender sobre este produto. Posso revogar quando quiser em Conta → Privacidade.</span></label>
+          <p class="consent-note">Sem marcar, a loja só fica sabendo que "um cliente do match.IA" se interessou — os dados do seu projeto nunca são enviados.</p>
+          <div class="consent-actions">
+            <button type="submit" value="cancel" class="btn btn-secondary btn-sm">Cancelar</button>
+            <button type="submit" value="ok" class="btn btn-primary btn-sm">Confirmar</button>
+          </div>
+        </form>`;
+      document.body.appendChild(dlg);
+      dlg.addEventListener('close', () => {
+        const ok = dlg.returnValue === 'ok';
+        const share = dlg.querySelector('[name="share"]').checked;
+        dlg.remove();
+        resolve(ok ? { shareContact: share } : null);
+      });
+      dlg.showModal();
+    });
   }
 
   function openProjectsDrawer(user, openId) {
@@ -1267,7 +1327,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const TIMELINE_PHASES = ['Contato inicial', 'Briefing', 'Conceito', 'Desenvolvimento', 'Entrega'];
-  function timelineHtml(architectId, phase) {
+  function timelineHtml(architectId, phase, workspace) {
+    // contratado: as etapas de verdade (com prazo e aprovação) ficam no Espaço do projeto
+    if (workspace) {
+      return `<span class="mock-label">Projeto contratado</span>
+        <p style="font-size:0.84rem; color:var(--ink-soft); margin:6px 0 10px;">As etapas de "${escapeHtml(workspace.name)}", com prazo e aprovação, ficam no Espaço do projeto.</p>
+        <a class="btn btn-primary btn-sm" href="projeto.html?id=${encodeURIComponent(workspace.id)}">Abrir espaço do projeto</a>`;
+    }
     const steps = TIMELINE_PHASES.map((label, i) => `
       <div class="mini-step${i <= phase ? ' done' : ''}${i === phase ? ' current' : ''}">
         <span class="mini-step-dot"></span>
@@ -1364,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       box.style.display = 'block';
       timelineBtn.textContent = 'Ocultar linha do tempo';
       MatchAPI.getTimeline(archId)
-        .then(({ phase }) => { box.innerHTML = timelineHtml(archId, phase); })
+        .then(({ phase, workspace }) => { box.innerHTML = timelineHtml(archId, phase, workspace); })
         .catch(err => { box.innerHTML = `<p style="font-size:0.84rem; color:var(--ink-faint);">${err.message || 'Não foi possível carregar a linha do tempo.'}</p>`; });
       return;
     }
@@ -1797,6 +1863,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const p = user.architectProfile || {};
     const styleProfile = MatchExtras.getStyleProfile(uid(user));
     const items = [
+      // sem foto própria o perfil mostra um retrato ilustrativo — a foto real passa mais confiança
+      { done: Boolean(user.avatar), label: 'Adicione sua foto de perfil (Conta → Trocar foto)' },
       { done: Boolean(p.bio?.trim()), label: 'Escreva uma bio curta sobre seu jeito de projetar' },
       { done: (p.portfolio?.length || 0) > 0, label: 'Adicione ao menos 1 projeto no portfólio' },
       { done: (p.favoriteMaterials?.length || 0) > 0, label: 'Cadastre seus materiais favoritos' },
@@ -2196,7 +2264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="info" style="padding:0;">
               <span class="cat">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</span>
               <h4>${r.productName || 'Produto'}</h4>
-              <p style="font-size:0.82rem; color:var(--ink-faint); margin:4px 0;">Indicado a ${r.clientName || 'um cliente'} — R$${r.simulatedAmount} simulado</p>
+              <p style="font-size:0.82rem; color:var(--ink-faint); margin:4px 0;">${r.shareContact ? `Indicado a ${escapeHtml(r.clientName || 'um cliente')}${r.clientEmail ? ` (${escapeHtml(r.clientEmail)})` : ''}` : 'Um cliente do match.IA — não autorizou compartilhar o contato'} — R$${r.simulatedAmount} simulado</p>
             </div>
           </div>`).join('')}</div>`
         : emptyStateHtml('Nenhuma indicação simulada ainda.');
@@ -2616,6 +2684,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </article>`;
   }
+  // ---------------- Relatório de resultado (Espaço do projeto) ----------------
+  function workspaceReportHtml(r, { forPrint = false } = {}) {
+    const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const val = (v, suffix = '') => (v === null || v === undefined ? '—' : `${String(v).replace('.', ',')}${suffix}`);
+    const tiles = [
+      ['Projetos no Espaço', r.projects, `${r.closed} com o executivo aprovado`],
+      ['Tempo até fechar', val(r.avgDaysToClose, ' dias'), 'média até o executivo · meta 84 dias'],
+      ['Dentro da meta', val(r.onTargetRate, '%'), 'dos projetos fechados'],
+      ['Rodadas de ajuste', val(r.avgRevisionRounds), `por projeto · ${val(r.noReworkRate, '%')} sem retrabalho`],
+      ['Etapas atrasadas', r.lateNow, 'agora, nos projetos em andamento'],
+      ['Honorários', brl(r.fees.paid), `recebidos · ${brl(r.fees.due)} a receber`],
+    ];
+    const maxDays = Math.max(1, ...r.stageAverages.map((s) => s.avgDays || 0));
+    return `
+      <div class="wr-tiles">${tiles.map(([k, v, sub]) => `<div class="wr-tile"><span>${k}</span><strong>${escapeHtml(String(v))}</strong><small>${escapeHtml(sub)}</small></div>`).join('')}</div>
+      ${r.stageAverages.length ? `
+      <h4 class="wr-sub">Dias por etapa (média das etapas aprovadas)</h4>
+      <ul class="wr-bars">${r.stageAverages.map((s) => `<li><span>${escapeHtml(s.name)}</span><i style="--w:${Math.round(((s.avgDays || 0) / maxDays) * 100)}%"></i><b>${val(s.avgDays)} d</b></li>`).join('')}</ul>` : ''}
+      <h4 class="wr-sub">Projetos</h4>
+      <div class="wr-table-wrap"><table class="wr-table">
+        <thead><tr><th>Projeto</th><th>Início</th><th>Fechado</th><th>Dias</th><th>Meta</th><th>Ajustes</th><th>Honorários pagos</th></tr></thead>
+        <tbody>${r.rows.map((p) => `
+          <tr>
+            <td>${forPrint ? escapeHtml(p.name) : `<a href="projeto.html?id=${encodeURIComponent(p.id)}">${escapeHtml(p.name)}</a>`}</td>
+            <td>${new Date(p.startedAt).toLocaleDateString('pt-BR')}</td>
+            <td>${p.closedAt ? new Date(p.closedAt).toLocaleDateString('pt-BR') : 'em andamento'}</td>
+            <td>${val(p.daysToClose)}</td>
+            <td>${p.onTarget === null ? '—' : p.onTarget ? '✓ dentro' : 'fora'}</td>
+            <td>${p.revisionRounds}</td>
+            <td>${brl(p.fees.paid)}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+  }
+
+  async function renderWorkspaceReport(user) {
+    const box = document.getElementById('workspaceReport');
+    if (!box) return;
+    let r;
+    try { r = await MatchAPI.workspaceReport(); } catch (err) { box.innerHTML = `<p class="hire-empty">${escapeHtml(err.message || 'Não foi possível carregar o relatório.')}</p>`; return; }
+    if (!r.projects) { box.innerHTML = '<p class="hire-empty">Os números aparecem quando você conduzir o primeiro projeto pelo Espaço do projeto (abre depois que um cliente contrata você).</p>'; return; }
+    box.innerHTML = workspaceReportHtml(r);
+    const btn = document.getElementById('workspaceReportPrint');
+    btn.hidden = false;
+    btn.onclick = () => {
+      document.getElementById('printTitle').textContent = `Resultado dos projetos — ${user.name}`;
+      document.getElementById('printDate').textContent = new Date().toLocaleDateString('pt-BR');
+      document.getElementById('printableContent').innerHTML = workspaceReportHtml(r, { forPrint: true });
+      window.print();
+    };
+  }
+
   async function renderHires(user) {
     const reqList = document.getElementById('hireRequestsList');
     const closedList = document.getElementById('closedProjectsList');
@@ -2864,7 +2983,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const otherId = advanceBtn.dataset.advanceTimeline;
       advanceBtn.disabled = true;
       MatchAPI.advanceTimeline(otherId)
-        .then(({ phase }) => { document.getElementById(`chatTimeline-${shellId}`).innerHTML = timelineHtml(otherId, phase); })
+        .then(({ phase, workspace }) => { document.getElementById(`chatTimeline-${shellId}`).innerHTML = timelineHtml(otherId, phase, workspace); })
         .catch(err => { alert(err.message || 'Não foi possível avançar a etapa agora.'); advanceBtn.disabled = false; });
     });
     loadConversations(user, listId, shellId);
@@ -2874,8 +2993,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const el = document.getElementById(containerId);
     if (!el) return;
     try {
-      const { phase } = await MatchAPI.getTimeline(otherId);
-      el.innerHTML = timelineHtml(otherId, phase);
+      const { phase, workspace } = await MatchAPI.getTimeline(otherId);
+      el.innerHTML = timelineHtml(otherId, phase, workspace);
     } catch { el.innerHTML = ''; }
   }
 

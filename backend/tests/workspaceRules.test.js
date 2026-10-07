@@ -94,3 +94,65 @@ test("conceito sem IA usa só a biblioteca, agrupada por ambiente", () => {
   assert.match(text, /Sala: Sofá Linho/);
   assert.match(text, /Geral: Piso de demolição/);
 });
+
+import { dueReminders, normalizeFee, payFee, canEditFee, feeTotals, buildReport, normalizeAnnotation } from "../src/services/workspaceRules.js";
+
+test("lembretes: 3 dias antes para quem está com a etapa, atraso para os dois, uma vez cada", () => {
+  const now = new Date("2026-03-10T12:00:00Z");
+  const st = [
+    { key: "a", status: "in_progress", dueDate: new Date("2026-03-12T12:00:00Z") },
+    { key: "b", status: "awaiting_approval", dueDate: new Date("2026-03-11T12:00:00Z") },
+    { key: "c", status: "in_progress", dueDate: new Date("2026-03-09T12:00:00Z") },
+    { key: "d", status: "approved", dueDate: new Date("2026-03-01T12:00:00Z") },
+    { key: "e", status: "in_progress", dueDate: new Date("2026-03-30T12:00:00Z") },
+    { key: "f", status: "in_progress", dueDate: new Date("2026-03-09T12:00:00Z"), remindedLateAt: now },
+  ];
+  const r = dueReminders(st, now);
+  assert.deepEqual(r.map((x) => [x.key, x.kind, x.to.join("+")]), [["a", "soon", "architect"], ["b", "soon", "client"], ["c", "late", "architect+client"]]);
+});
+
+test("honorários: valor válido, cobrança abre ao aprovar, só o cliente paga e não muda depois", () => {
+  assert.equal(normalizeFee(""), 0);
+  assert.equal(normalizeFee("-1"), null);
+  assert.equal(normalizeFee("1500.555"), 1500.56);
+  const st = defaultStages();
+  st[0].fee = 1000;
+  applyStageAction(st, "briefing", "submit", "architect");
+  applyStageAction(st, "briefing", "approve", "client");
+  assert.equal(st[0].feeStatus, "due");
+  assert.equal(canEditFee(st[0]), false);
+  assert.equal(payFee(st[0], "architect").status, 403);
+  assert.equal(payFee(st[0], "client").stage.feeStatus, "paid");
+  assert.equal(payFee(st[0], "client").status, 409);
+  st[1].fee = 2000;
+  assert.deepEqual(feeTotals(st), { total: 3000, paid: 1000, due: 0, upcoming: 2000 });
+});
+
+test("relatório: dias até o executivo, meta e rodadas de ajuste", () => {
+  const start = new Date("2026-01-01T00:00:00Z");
+  const d = (n) => new Date(start.getTime() + n * 864e5);
+  const stages = [
+    { key: "briefing", name: "Briefing", status: "approved", approvedAt: d(10), revisionRounds: 1 },
+    { key: "anteprojeto", name: "Anteprojeto", status: "approved", approvedAt: d(40) },
+    { key: "executivo", name: "Executivo", status: "approved", approvedAt: d(80) },
+    { key: "obra", name: "Obra", status: "in_progress" },
+  ];
+  const r = buildReport([
+    { _id: "p1", name: "A", workspaceStartedAt: start, targetDate: d(84), stages },
+    { _id: "p2", name: "B", workspaceStartedAt: start, targetDate: d(84), stages: [{ key: "briefing", name: "Briefing", status: "in_progress", dueDate: d(5) }] },
+  ], d(20));
+  assert.equal(r.projects, 2);
+  assert.equal(r.closed, 1);
+  assert.equal(r.avgDaysToClose, 80);
+  assert.equal(r.onTargetRate, 100);
+  assert.equal(r.avgRevisionRounds, 0.5);
+  assert.equal(r.noReworkRate, 50);
+  assert.equal(r.lateNow, 1);
+  assert.deepEqual(r.stageAverages.map((s) => [s.key, s.avgDays]), [["briefing", 10], ["anteprojeto", 30], ["executivo", 40]]);
+});
+
+test("comentário no arquivo: ponto dentro do arquivo e texto obrigatórios", () => {
+  assert.ok(normalizeAnnotation({ x: 0.5, y: 0.5 }).error);
+  assert.ok(normalizeAnnotation({ x: 1.2, y: 0.5, text: "a" }).error);
+  assert.deepEqual(normalizeAnnotation({ x: "0.123456", y: 0, page: "3", text: " Abrir aqui " }).annotation, { page: 3, x: 0.1235, y: 0, text: "Abrir aqui" });
+});

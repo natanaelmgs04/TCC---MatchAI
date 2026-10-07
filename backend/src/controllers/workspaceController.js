@@ -6,11 +6,19 @@ import Hire from "../models/Hire.js";
 import User from "../models/User.js";
 import { avatarPath } from "../services/avatar.js";
 import { notify } from "../services/notificationService.js";
+import { workspaceEmail } from "../services/emailService.js";
 import { checkUpload, deleteProjectFile, openBuffer, saveBuffer } from "../services/projectFileStore.js";
 import { fallbackLibraryConcept, generateLibraryConcept } from "../services/geminiService.js";
 import { UPGRADE_HINT, limitsFor, publicLimits, tierOf } from "../services/planLimits.js";
 import {
+  ANNOTATION_LIMIT,
+  normalizeAnnotation,
   applyStageAction,
+  buildReport,
+  canEditFee,
+  feeTotals,
+  normalizeFee,
+  payFee,
   defaultStages,
   deriveSignature,
   normalizeCustomItem,
@@ -80,6 +88,13 @@ function blockedByPlan(ctx, res) {
   return true;
 }
 
+/** Sininho + e-mail para a outra pessoa do projeto (eventos que pedem ação dela). */
+async function alertOther(ctx, text, { subject, lines }) {
+  notify(ctx.otherId, "timeline", text, link(ctx.project));
+  const other = await User.findById(ctx.otherId).select("name email");
+  workspaceEmail(other, { subject, lines, projectId: ctx.project._id }).catch(() => {});
+}
+
 function log(project, userId, kind, text) {
   project.activity.push({ by: userId, kind, text: text.slice(0, 300) });
   if (project.activity.length > ACTIVITY_LIMIT) project.activity.splice(0, project.activity.length - ACTIVITY_LIMIT);
@@ -111,6 +126,7 @@ const shapeFile = (f) => ({
   version: f.version,
   uploader: String(f.uploader),
   review: { status: f.review?.status || "none", comment: f.review?.comment || "", at: f.review?.at || null },
+  notes: { total: (f.annotations || []).length, open: (f.annotations || []).filter((a) => !a.resolved).length },
   createdAt: f.createdAt,
 });
 
@@ -135,7 +151,9 @@ async function shape(ctx, userId) {
     stages: project.stages.map((s) => ({
       key: s.key, name: s.name, dueDate: s.dueDate || null, status: s.status,
       submittedAt: s.submittedAt || null, approvedAt: s.approvedAt || null, revisionRounds: s.revisionRounds || 0,
+      fee: s.fee || 0, feeStatus: s.feeStatus || "none", feeDueAt: s.feeDueAt || null, feePaidAt: s.feePaidAt || null,
     })),
+    fees: feeTotals(project.stages),
     summary: summarizeStages(project.stages),
     library: items,
     totals: shoppingTotals(items),
@@ -167,17 +185,34 @@ export async function updateStage(req, res) {
   const stage = ctx.project.stages.find((s) => s.key === req.params.key);
   if (!stage) return res.status(404).json({ error: "Etapa não encontrada." });
   const changes = [];
-  if (typeof req.body?.name === "string" && req.body.name.trim()) {
-    stage.name = req.body.name.trim().slice(0, 60);
+  const newName = typeof req.body?.name === "string" ? req.body.name.trim().slice(0, 60) : "";
+  if (newName && newName !== stage.name) {
+    stage.name = newName;
     changes.push(`renomeou a etapa para "${stage.name}"`);
   }
+  const sameDay = (a, b) => (a ? new Date(a).toISOString().slice(0, 10) : "") === (b ? b.toISOString().slice(0, 10) : "");
   if (req.body?.dueDate !== undefined) {
     const d = req.body.dueDate ? new Date(req.body.dueDate) : null;
     if (d && Number.isNaN(d.getTime())) return res.status(400).json({ error: "Data inválida." });
+  }
+  // o formulário manda o prazo junto sempre: só conta (e zera lembretes) quando muda de verdade
+  if (req.body?.dueDate !== undefined && !sameDay(stage.dueDate, req.body.dueDate ? new Date(req.body.dueDate) : null)) {
+    const d = req.body.dueDate ? new Date(req.body.dueDate) : null;
     stage.dueDate = d || undefined;
+    stage.remindedSoonAt = undefined; // prazo novo, lembretes novos
+    stage.remindedLateAt = undefined;
     changes.push(d ? `mudou o prazo de "${stage.name}" para ${d.toLocaleDateString("pt-BR", { timeZone: "UTC" })}` : `tirou o prazo de "${stage.name}"`);
   }
-  if (!changes.length) return res.status(400).json({ error: "Nada para mudar." });
+  if (req.body?.fee !== undefined) {
+    const fee = normalizeFee(req.body.fee);
+    if (fee === null) return res.status(400).json({ error: "Valor de honorário inválido." });
+    if ((stage.fee || 0) !== fee) {
+      if (!canEditFee(stage)) return res.status(409).json({ error: "Os honorários desta etapa já foram cobrados — não dá para mudar o valor." });
+      stage.fee = fee;
+      changes.push(fee ? `definiu os honorários de "${stage.name}" em R$ ${fee.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : `tirou os honorários de "${stage.name}"`);
+    }
+  }
+  if (!changes.length) return respond(res, ctx, req); // nada mudou de verdade
   log(ctx.project, req.user.id, "stage", changes.join(" e "));
   await ctx.project.save();
   await respond(res, ctx, req);
@@ -212,17 +247,52 @@ export async function stageAction(req, res) {
   const who = req.user.name;
   if (action === "submit") {
     log(ctx.project, req.user.id, "submit", `enviou "${stage.name}" para aprovação${text ? `: ${text}` : ""}`);
-    notify(ctx.otherId, "timeline", `${who} enviou a etapa "${stage.name}" para a sua aprovação`, link(ctx.project));
+    await alertOther(ctx, `${who} enviou a etapa "${stage.name}" para a sua aprovação`, {
+      subject: `Aprovação pendente: ${stage.name} — match.IA`,
+      lines: [`${who} enviou a etapa "${stage.name}" do projeto "${ctx.project.name}" para você aprovar.`, ...(text ? [`Recado: ${text}`] : []), "Confira os arquivos da etapa e aprove ou peça ajustes — o projeto só avança com a sua resposta."],
+    });
   } else if (action === "approve") {
     log(ctx.project, req.user.id, "approve", `aprovou "${stage.name}"${text ? `: ${text}` : ""}`);
-    notify(ctx.otherId, "timeline", `${who} aprovou a etapa "${stage.name}"${next ? ` — "${next.name}" começou` : ""}`, link(ctx.project));
+    await alertOther(ctx, `${who} aprovou a etapa "${stage.name}"${next ? ` — "${next.name}" começou` : ""}`, {
+      subject: `Etapa aprovada: ${stage.name} — match.IA`,
+      lines: [`${who} aprovou a etapa "${stage.name}" do projeto "${ctx.project.name}".`, ...(text ? [`Comentário: ${text}`] : []), next ? `A próxima etapa, "${next.name}", já começou.` : "Todas as etapas foram aprovadas: projeto concluído."],
+    });
     if (done) ctx.project.status = "completed";
   } else {
     log(ctx.project, req.user.id, "changes", `pediu ajustes em "${stage.name}": ${text}`);
-    notify(ctx.otherId, "timeline", `${who} pediu ajustes na etapa "${stage.name}"`, link(ctx.project));
+    await alertOther(ctx, `${who} pediu ajustes na etapa "${stage.name}"`, {
+      subject: `Ajustes pedidos: ${stage.name} — match.IA`,
+      lines: [`${who} pediu ajustes na etapa "${stage.name}" do projeto "${ctx.project.name}":`, text],
+    });
   }
   await ctx.project.save();
   await respond(res, ctx, req);
+}
+
+/** Pagamento simulado dos honorários de uma etapa aprovada (nenhum dinheiro de verdade). */
+export async function payStageFee(req, res) {
+  const ctx = await load(req, res);
+  if (!ctx) return;
+  const stage = ctx.project.stages.find((s) => s.key === req.params.key);
+  if (!stage) return res.status(404).json({ error: "Etapa não encontrada." });
+  const r = payFee(stage, ctx.role);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  const value = `R$ ${stage.fee.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  log(ctx.project, req.user.id, "fee", `registrou o pagamento de ${value} dos honorários de "${stage.name}" (simulado)`);
+  await ctx.project.save();
+  await alertOther(ctx, `${req.user.name} pagou ${value} dos honorários de "${stage.name}"`, {
+    subject: `Honorários pagos: ${stage.name} — match.IA`,
+    lines: [`${req.user.name} registrou o pagamento de ${value} dos honorários da etapa "${stage.name}" do projeto "${ctx.project.name}".`, "Pagamento simulado (projeto acadêmico): nenhum valor foi cobrado de verdade."],
+  });
+  await respond(res, ctx, req);
+}
+
+/** Relatório de resultado do arquiteto: todos os projetos dele com Espaço do projeto. */
+export async function report(req, res) {
+  if (req.user.role !== "architect") return res.status(403).json({ error: "Relatório disponível para arquitetos." });
+  const projects = await Project.find({ architect: req.user.id, "stages.0": { $exists: true } })
+    .select("name status workspaceStartedAt createdAt targetDate stages").sort("-createdAt").lean();
+  res.json(buildReport(projects));
 }
 
 // ---------------------------------------------------------------- arquivos
@@ -302,8 +372,84 @@ export async function reviewFile(req, res) {
   const label = `${f.name}${f.version > 1 ? ` (v${f.version})` : ""}`;
   log(ctx.project, req.user.id, decision === "approved" ? "approve" : "changes", decision === "approved" ? `aprovou ${label}` : `pediu ajustes em ${label}: ${comment}`);
   await ctx.project.save();
-  notify(ctx.otherId, "timeline", decision === "approved" ? `${req.user.name} aprovou ${label}` : `${req.user.name} pediu ajustes em ${label}`, link(ctx.project));
+  if (decision === "approved") notify(ctx.otherId, "timeline", `${req.user.name} aprovou ${label}`, link(ctx.project));
+  else await alertOther(ctx, `${req.user.name} pediu ajustes em ${label}`, { subject: `Ajustes pedidos em ${f.name} — match.IA`, lines: [`${req.user.name} pediu ajustes no arquivo ${label} do projeto "${ctx.project.name}":`, comment] });
   await respond(res, ctx, req);
+}
+
+// ---------------------------------------------------------------- comentários no arquivo
+async function loadFile(req, res, ctx) {
+  if (!isId(req.params.fileId)) {
+    res.status(404).json({ error: "Arquivo não encontrado." });
+    return null;
+  }
+  const f = await ProjectFile.findOne({ _id: req.params.fileId, project: ctx.project._id });
+  if (!f) res.status(404).json({ error: "Arquivo não encontrado." });
+  return f;
+}
+
+async function annotationsOut(f, ctx) {
+  const people = await User.find({ _id: { $in: [ctx.project.client, ctx.project.architect] } }).select("name avatarVersion");
+  const byId = new Map(people.map((u) => [String(u._id), u]));
+  return {
+    fileId: String(f._id),
+    annotations: f.annotations.map((a, i) => ({
+      id: String(a._id), n: i + 1, page: a.page, x: a.x, y: a.y, text: a.text, resolved: !!a.resolved,
+      createdAt: a.createdAt, author: person(byId.get(String(a.author))), mine: String(a.author) === String(ctx.me),
+    })),
+  };
+}
+
+export async function listAnnotations(req, res) {
+  const ctx = await load(req, res);
+  if (!ctx) return;
+  const f = await loadFile(req, res, ctx);
+  if (!f) return;
+  res.json(await annotationsOut(f, { ...ctx, me: req.user.id }));
+}
+
+export async function addAnnotation(req, res) {
+  const ctx = await load(req, res);
+  if (!ctx) return;
+  const f = await loadFile(req, res, ctx);
+  if (!f) return;
+  const r = normalizeAnnotation(req.body);
+  if (r.error) return res.status(400).json({ error: r.error });
+  if (f.annotations.length >= ANNOTATION_LIMIT) return res.status(409).json({ error: "Este arquivo já tem comentários demais. Resolva e envie uma nova versão." });
+  f.annotations.push({ ...r.annotation, author: req.user.id });
+  await f.save();
+  const where = `${f.name}${f.version > 1 ? ` (v${f.version})` : ""}${r.annotation.page > 1 ? `, página ${r.annotation.page}` : ""}`;
+  log(ctx.project, req.user.id, "note", `comentou em ${where}: ${r.annotation.text}`);
+  await ctx.project.save();
+  notify(ctx.otherId, "timeline", `${req.user.name} comentou em ${where}`, `${link(ctx.project)}#arquivos`);
+  res.status(201).json(await annotationsOut(f, { ...ctx, me: req.user.id }));
+}
+
+export async function updateAnnotation(req, res) {
+  const ctx = await load(req, res);
+  if (!ctx) return;
+  const f = await loadFile(req, res, ctx);
+  if (!f) return;
+  const a = f.annotations.id(req.params.annotationId);
+  if (!a) return res.status(404).json({ error: "Comentário não encontrado." });
+  if (typeof req.body?.resolved !== "boolean") return res.status(400).json({ error: "Nada para mudar." });
+  a.resolved = req.body.resolved;
+  a.resolvedBy = a.resolved ? req.user.id : undefined;
+  await f.save();
+  res.json(await annotationsOut(f, { ...ctx, me: req.user.id }));
+}
+
+export async function removeAnnotation(req, res) {
+  const ctx = await load(req, res);
+  if (!ctx) return;
+  const f = await loadFile(req, res, ctx);
+  if (!f) return;
+  const a = f.annotations.id(req.params.annotationId);
+  if (!a) return res.status(404).json({ error: "Comentário não encontrado." });
+  if (String(a.author) !== String(req.user.id)) return res.status(403).json({ error: "Só quem escreveu pode apagar o comentário." });
+  a.deleteOne();
+  await f.save();
+  res.json(await annotationsOut(f, { ...ctx, me: req.user.id }));
 }
 
 // ---------------------------------------------------------------- biblioteca

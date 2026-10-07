@@ -42,7 +42,8 @@ export function cspFor(file, { cacheResult }) {
     `script-src 'self' https://unpkg.com https://cdn.jsdelivr.net 'wasm-unsafe-eval' ${hashes.join(" ")}`.trim(),
     "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
+    // cdn.jsdelivr.net: fontes-padrão que o pdf.js usa para desenhar textos de PDF (Espaço do projeto → Ver e comentar)
+    "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
     "img-src 'self' data: blob: https:",
     "media-src 'self' data: blob:",
     // blob:/data: — o GLTFLoader lê as texturas embutidas no .glb por blob: (Experiência 3D, Estúdio 3D)

@@ -85,6 +85,24 @@
   }
 
   // ------------------------------------------------------------------ etapas
+  function feeChip(st) {
+    if (!st.fee) return '';
+    const v = money(st.fee);
+    if (st.feeStatus === 'paid') return `<span class="pj-chip is-approved">Honorários ${v} · pagos em ${fmtDate(st.feePaidAt)}</span>`;
+    if (st.feeStatus === 'due') return `<span class="pj-chip is-awaiting_approval">Honorários ${v} · a pagar</span>`;
+    return `<span>Honorários: ${v} (cobrados ao aprovar)</span>`;
+  }
+
+  function feeAction(st) {
+    if (st.feeStatus !== 'due') return '';
+    if (isArchitect()) return `<p class="pj-muted">Cobrança de ${money(st.fee)} aberta desde ${fmtDate(st.feeDueAt)} — aguardando o pagamento do cliente.</p>`;
+    return `
+      <div class="pj-fee-due">
+        <p><strong>Honorários desta etapa: ${money(st.fee)}</strong><br><span class="pj-muted">Pagamento simulado — projeto acadêmico, nenhum valor é cobrado de verdade.</span></p>
+        <button type="button" class="btn btn-primary btn-sm" data-act="pay" data-key="${st.key}">Pagar ${money(st.fee)}</button>
+      </div>`;
+  }
+
   function stageActions(st) {
     if (isArchitect()) {
       if (st.status === 'in_progress') return `
@@ -113,6 +131,8 @@
         <div>
           <h2>Meta: projeto fechado em ${fmtDate(W.targetDate)}</h2>
           <p class="pj-muted">O padrão soma 12 semanas até o projeto executivo (3 meses). Cada etapa só avança com a aprovação do cliente, e cada pedido de ajuste fica registrado no histórico.</p>
+          ${W.fees?.total ? `<p class="pj-fees-line">Honorários: <strong>${money(W.fees.total)}</strong> no total · ${money(W.fees.paid)} pagos · ${money(W.fees.due)} a pagar · ${money(W.fees.upcoming)} nas próximas etapas</p>`
+            : isArchitect() ? '<p class="pj-muted">Defina os honorários de cada etapa em "Ajustar etapa": a cobrança abre quando o cliente aprova a etapa.</p>' : ''}
         </div>
         ${isArchitect() ? `
         <form class="pj-inline" data-form="target">
@@ -138,19 +158,23 @@
                   ${late ? `<span class="pj-chip is-late">Atrasada ${-days} ${-days === 1 ? 'dia' : 'dias'}</span>` : ''}
                   ${st.revisionRounds ? `<span>${st.revisionRounds} ${st.revisionRounds === 1 ? 'rodada' : 'rodadas'} de ajuste</span>` : ''}
                   ${st.approvedAt ? `<span>Aprovada em ${fmtDate(st.approvedAt)}</span>` : ''}
+                  ${feeChip(st)}
                   ${n ? `<button type="button" class="pj-link" data-act="goto-files" data-key="${st.key}">${n} ${n === 1 ? 'arquivo' : 'arquivos'}</button>` : ''}
                 </p>
               </div>
             </div>
             ${stageActions(st)}
+            ${feeAction(st)}
             ${isArchitect() ? `
             <details class="pj-edit">
-              <summary>Ajustar nome e prazo</summary>
+              <summary>Ajustar etapa (nome, prazo e honorários)</summary>
               <form class="pj-inline" data-form="stage" data-key="${st.key}">
                 <label class="sr-only" for="sn-${st.key}">Nome da etapa</label>
                 <input id="sn-${st.key}" name="name" maxlength="60" value="${esc(st.name)}">
                 <label class="sr-only" for="sd-${st.key}">Prazo</label>
                 <input type="date" id="sd-${st.key}" name="dueDate" value="${inputDate(st.dueDate)}">
+                <label class="sr-only" for="sf-${st.key}">Honorários (R$)</label>
+                <input type="number" id="sf-${st.key}" name="fee" min="0" step="0.01" placeholder="Honorários (R$)" value="${st.fee || ''}" ${st.status === 'approved' ? 'disabled title="Etapa aprovada: a cobrança já foi aberta"' : ''}>
                 <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
               </form>
             </details>` : ''}
@@ -182,6 +206,7 @@
             <strong>${esc(f.name)}</strong>
             <span class="pj-muted">v${f.version}${isLatest ? '' : ' (versão anterior)'} · ${fileSize(f.size)} · ${esc(by || '')} · ${fmtDate(f.createdAt)}</span>
             ${reviewChip(f)}
+            ${f.notes?.total ? `<span class="pj-muted">${f.notes.open ? `${f.notes.open} ${f.notes.open === 1 ? 'comentário aberto' : 'comentários abertos'}` : 'comentários resolvidos'} no arquivo</span>` : ''}
             ${f.review.comment ? `<p class="pj-file-comment">“${esc(f.review.comment)}”</p>` : ''}
             ${canReview ? `
             <details class="pj-edit">
@@ -195,7 +220,7 @@
             </details>` : ''}
           </div>
           <div class="pj-file-actions">
-            ${PREVIEW.has(f.ext) ? `<button type="button" class="btn btn-tertiary btn-sm" data-act="view" data-id="${f.id}">Ver</button>` : ''}
+            ${PREVIEW.has(f.ext) ? `<button type="button" class="btn btn-tertiary btn-sm" data-act="annotate" data-id="${f.id}">Ver e comentar${f.notes?.open ? ` <span class="pj-count">${f.notes.open}</span>` : ''}</button>` : ''}
             <button type="button" class="btn btn-secondary btn-sm" data-act="download" data-id="${f.id}">Baixar</button>
             ${mine ? `<button type="button" class="pj-link pj-danger" data-act="delete-file" data-id="${f.id}">Apagar</button>` : ''}
           </div>
@@ -460,9 +485,16 @@
     if (act === 'stage') {
       const labels = { submit: 'Etapa enviada para o cliente aprovar.', approve: 'Etapa aprovada. A próxima já começou.', 'request-changes': 'Pedido de ajustes enviado ao arquiteto.' };
       await run(btn, () => API.workspaceStageAction(W.id, btn.dataset.key, btn.dataset.action, note), labels[btn.dataset.action]);
+    } else if (act === 'pay') {
+      const st = W.stages.find((x) => x.key === btn.dataset.key);
+      if (!confirm(`Registrar o pagamento de ${money(st.fee)} dos honorários de "${st.name}"? (simulação — nada é cobrado)`)) return;
+      await run(btn, () => API.workspacePayFee(W.id, btn.dataset.key), 'Pagamento registrado.');
     } else if (act === 'goto-files') {
       showTab('arquivos');
       document.getElementById(`files-${btn.dataset.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (act === 'annotate') {
+      const f = W.files.find((x) => x.id === btn.dataset.id);
+      if (f) MatchFileViewer.open({ workspaceId: W.id, file: f, onChange: () => API.workspace(W.id).then((w) => { W = w; renderFiles(); renderHistory(); }).catch(() => {}) });
     } else if (act === 'view' || act === 'download') {
       openFile(btn.dataset.id, act);
     } else if (act === 'delete-file') {
@@ -516,7 +548,9 @@
       await run(btn, () => API.workspaceTarget(W.id, `${$('#pjTarget').value}T12:00:00Z`), 'Meta atualizada.');
     } else if (kind === 'stage') {
       const d = form.elements.dueDate.value;
-      await run(btn, () => API.workspaceUpdateStage(W.id, form.dataset.key, { name: form.elements.name.value, dueDate: d ? `${d}T12:00:00Z` : null }), 'Etapa atualizada.');
+      const payload = { name: form.elements.name.value, dueDate: d ? `${d}T12:00:00Z` : null };
+      if (!form.elements.fee.disabled) payload.fee = form.elements.fee.value;
+      await run(btn, () => API.workspaceUpdateStage(W.id, form.dataset.key, payload), 'Etapa atualizada.');
     } else if (kind === 'upload') {
       const file = $('#pjUpFile').files?.[0];
       if (!file) return;

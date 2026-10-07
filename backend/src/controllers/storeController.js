@@ -180,6 +180,7 @@ export async function createReferral(req, res) {
 
   const commissionRate = 0.1;
   const simulatedAmount = Math.round((product.price || 0) * commissionRate);
+  const shareContact = req.body?.shareContact === true; // consentimento explícito, marcado pelo próprio cliente
   const referral = await StoreReferral.create({
     store: product.store,
     product: product.id,
@@ -187,15 +188,18 @@ export async function createReferral(req, res) {
     project: projectId || undefined,
     commissionRate,
     simulatedAmount,
+    shareContact,
+    consentAt: shareContact ? new Date() : undefined,
   });
 
-  notify(product.store, "store", `${req.user.name} simulou a compra de "${product.name}" indicado pela plataforma`, "dashboard.html");
+  const who = shareContact ? req.user.name : "Um cliente do match.IA";
+  notify(product.store, "store", `${who} simulou a compra de "${product.name}" indicado pela plataforma`, "dashboard.html");
   res.status(201).json({ id: referral.id, purchaseUrl: product.purchaseUrl, simulatedAmount });
 }
 
 export async function listMyReferrals(req, res) {
   const referrals = await StoreReferral.find({ store: req.user.id })
-    .populate("client", "name")
+    .populate("client", "name email")
     .populate("product", "name")
     .sort("-createdAt");
   res.json({
@@ -203,10 +207,33 @@ export async function listMyReferrals(req, res) {
     count: referrals.length,
     referrals: referrals.map((r) => ({
       id: r.id,
-      clientName: r.client?.name,
+      // sem consentimento (ou revogado), a loja não recebe nome nem e-mail
+      clientName: r.shareContact ? r.client?.name : null,
+      clientEmail: r.shareContact ? r.client?.email : null,
+      shareContact: !!r.shareContact,
       productName: r.product?.name,
       simulatedAmount: r.simulatedAmount,
       createdAt: r.createdAt,
     })),
   });
+}
+
+/** Cliente: com quais lojas o contato dele foi compartilhado (LGPD — transparência). */
+export async function myConsents(req, res) {
+  const referrals = await StoreReferral.find({ client: req.user.id, shareContact: true })
+    .populate("store", "name storeProfile.storeName")
+    .populate("product", "name")
+    .sort("-createdAt");
+  res.json(referrals.map((r) => ({
+    id: r.id,
+    store: r.store?.storeProfile?.storeName || r.store?.name || "Loja parceira",
+    product: r.product?.name || "Produto",
+    consentAt: r.consentAt || r.createdAt,
+  })));
+}
+
+/** Cliente revoga o compartilhamento do contato com todas as lojas (LGPD, art. 8º, § 5º). */
+export async function revokeConsents(req, res) {
+  const r = await StoreReferral.updateMany({ client: req.user.id, shareContact: true }, { $set: { shareContact: false, consentRevokedAt: new Date() } });
+  res.json({ revoked: r.modifiedCount });
 }

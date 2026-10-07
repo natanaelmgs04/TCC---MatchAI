@@ -17,14 +17,20 @@ const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 60, keyGenera
 const conceptLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 20, keyGenerator: userOrIpKey, message: { error: "Limite de conceitos por hora atingido." } });
 
 router.use(requireAuth);
+router.get("/report/me", asyncHandler(c.report)); // antes de /:id
 router.get("/:id", asyncHandler(c.get));
 router.patch("/:id/target", asyncHandler(c.updateTarget));
 router.patch("/:id/stages/:key", asyncHandler(c.updateStage));
+router.post("/:id/stages/:key/pay", asyncHandler(c.payStageFee));
 router.post("/:id/stages/:key/:action", asyncHandler(c.stageAction));
 router.post("/:id/files", uploadLimiter, rawFile, asyncHandler(c.uploadFile));
 router.get("/:id/files/:fileId", asyncHandler(c.downloadFile));
 router.delete("/:id/files/:fileId", asyncHandler(c.removeFile));
 router.post("/:id/files/:fileId/review", asyncHandler(c.reviewFile));
+router.get("/:id/files/:fileId/annotations", asyncHandler(c.listAnnotations));
+router.post("/:id/files/:fileId/annotations", asyncHandler(c.addAnnotation));
+router.patch("/:id/files/:fileId/annotations/:annotationId", asyncHandler(c.updateAnnotation));
+router.delete("/:id/files/:fileId/annotations/:annotationId", asyncHandler(c.removeAnnotation));
 router.get("/:id/catalog", asyncHandler(c.catalog));
 router.post("/:id/library", asyncHandler(c.addItem));
 router.post("/:id/library/copy-from/:otherId", asyncHandler(c.copyLibrary));

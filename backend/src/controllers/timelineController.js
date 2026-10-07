@@ -1,5 +1,6 @@
 import Timeline from "../models/Timeline.js";
 import User from "../models/User.js";
+import Project from "../models/Project.js";
 import { notify } from "../services/notificationService.js";
 
 const pairFor = (req) => {
@@ -9,14 +10,23 @@ const pairFor = (req) => {
     : { client: otherId, architect: req.user.id };
 };
 
+// Depois da contratação, quem guia o projeto são as etapas do Espaço do
+// projeto (projeto.html) — a linha do tempo da conversa passa a levar até lá.
+async function workspaceFor(pair) {
+  const p = await Project.findOne({ client: pair.client, architect: pair.architect }).sort("-updatedAt").select("_id name");
+  return p ? { id: String(p._id), name: p.name } : null;
+}
+
 export async function getTimeline(req, res) {
   const pair = pairFor(req);
-  const timeline = await Timeline.findOne(pair);
-  res.json({ phase: timeline?.phase || 0, phases: Timeline.PHASES });
+  const [timeline, workspace] = await Promise.all([Timeline.findOne(pair), workspaceFor(pair)]);
+  res.json({ phase: timeline?.phase || 0, phases: Timeline.PHASES, workspace });
 }
 
 export async function advanceTimeline(req, res) {
   const pair = pairFor(req);
+  const workspace = await workspaceFor(pair);
+  if (workspace) return res.status(409).json({ error: "Este projeto já foi contratado: as etapas agora ficam no Espaço do projeto.", workspace });
   const existing = await Timeline.findOne(pair);
   const nextPhase = Math.min((existing?.phase || 0) + 1, Timeline.PHASES.length - 1);
 
