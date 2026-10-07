@@ -42,8 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       || `${a.name} atua${a.city ? ` em ${a.city}` : ''}${a.profile?.yearsExperience ? `, ${a.profile.yearsExperience} anos de experiência` : ''}${a.avgRating ? `, nota ${a.avgRating}` : ''}.`;
     // mesmo retrato do perfil (assets/js/portraits.js); sem o script, cai na lista local
     // foto que o arquiteto enviou; sem foto, o retrato ilustrativo de sempre
-    const photo = a.avatar ? MatchAPI.avatarSrc(a.avatar)
-      : typeof MatchPortraits !== 'undefined' ? MatchPortraits.pick(a.id, a.name).photo : PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length];
+    const photo = typeof MatchPortraits !== 'undefined' ? MatchPortraits.photoFor(a) : PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length];
     return { id: a.id, name: a.name, role, bio, photo };
   });
 

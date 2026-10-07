@@ -50,7 +50,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closed = a.profile?.closedProjectsCount || 0;
     const byline = [style, location || 'Localização não informada', closed ? `${closed} projeto${closed > 1 ? 's' : ''} fechado${closed > 1 ? 's' : ''}` : '']
       .filter(Boolean).join(' · ');
-    const photo = PROFILE_PHOTOS[i % PROFILE_PHOTOS.length];
+    // mesmo rosto em todo o site (assets/js/portraits.js): foto enviada ou o retrato fixo do arquiteto
+    const photo = typeof MatchPortraits !== 'undefined' ? MatchPortraits.photoFor(a) : PROFILE_PHOTOS[i % PROFILE_PHOTOS.length];
     const isMe = me && String(a.id) === String(me);
     const rated = a.avgRating > 0;
     const badges = [

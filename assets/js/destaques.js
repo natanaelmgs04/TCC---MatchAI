@@ -70,8 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const location = esc([a.city, a.state].filter(Boolean).join(' · ') || 'Localização não informada');
     const ratingSuffix = a.reviewCount ? ` · ★ ${a.avgRating}` : '';
     // foto do próprio arquiteto; sem foto, o mesmo retrato ilustrativo do perfil
-    const photo = a.avatar ? MatchAPI.avatarSrc(a.avatar)
-      : typeof MatchPortraits !== 'undefined' ? MatchPortraits.pick(a.id, a.name).photo : PROFILE_PHOTOS[i % PROFILE_PHOTOS.length];
+    const photo = typeof MatchPortraits !== 'undefined' ? MatchPortraits.photoFor(a) : PROFILE_PHOTOS[i % PROFILE_PHOTOS.length];
     return `
       <div class="arch-card">
         <label class="arch-card-compare">

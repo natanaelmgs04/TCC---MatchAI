@@ -211,7 +211,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pic = MatchPortraits.pick(arch.id || id, arch.name);
     // Foto enviada pelo próprio arquiteto: vira um retrato em arco no centro
     // (não há recorte dela), sobre o cinza do estúdio, na frente do nome.
-    const ownPhoto = arch.avatar ? MatchAPI.avatarSrc(arch.avatar) : '';
+    // Retrato ilustrativo sem recorte (cutout null) entra do mesmo jeito.
+    const ownPhoto = arch.avatar ? MatchAPI.avatarSrc(arch.avatar) : pic.cutout ? '' : pic.photo;
     hero.classList.toggle('ap-own-photo', Boolean(ownPhoto));
     cut.alt = `Retrato de ${arch.name}`;
 
