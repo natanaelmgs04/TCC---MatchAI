@@ -18,6 +18,7 @@ import Model3D from "../models/Model3D.js";
 import { deleteModel } from "./model3dStore.js";
 import ProjectFile from "../models/ProjectFile.js";
 import Proposal from "../models/Proposal.js";
+import Briefing from "../models/Briefing.js";
 import { deleteFilesOfProjects, deleteProjectFile } from "./projectFileStore.js";
 
 /**
@@ -39,6 +40,7 @@ export async function deleteUserCascade(userId) {
   await Project.updateMany({ "diary.author": userId }, { $pull: { diary: { author: userId } } });
   await Project.updateMany({ "crew.provider": userId }, { $pull: { crew: { provider: userId } } });
   await Proposal.deleteMany({ $or: [{ client: userId }, { architect: userId }] });
+  await Briefing.deleteMany({ $or: [{ client: userId }, { architect: userId }] });
   await Promise.all([
     Project.deleteMany({ client: userId }),
     Message.deleteMany({ $or: [{ from: userId }, { to: userId }] }),

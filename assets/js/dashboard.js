@@ -203,6 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupProfileEdit(me);
   setupPrivacyActions(me);
+  setupSecurityAndBilling(me);
   setupReferral(me);
 
   // O link "Assistente" do menu do site aponta pra dashboard.html#assistente
@@ -1235,6 +1236,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (pending.architect.id === architectId && prop?.status === 'sent') {
         return `<span class="status-pill badge-pending">📝 ${escapeHtml(firstName(architectName))} enviou uma proposta</span>
            <a class="btn btn-primary btn-sm" href="contrato.html?id=${encodeURIComponent(prop.id)}">Ver proposta e assinar</a>
+           <button type="button" class="btn btn-tertiary btn-sm" data-hire-cancel="${pending.id}">Cancelar pedido</button>`;
+      }
+      if (pending.architect.id === architectId && pending.briefing?.status === 'sent') {
+        return `<span class="status-pill badge-pending">📋 ${escapeHtml(firstName(architectName))} mandou um briefing para conhecer o seu projeto</span>
+           <a class="btn btn-primary btn-sm" href="briefing.html?id=${encodeURIComponent(pending.briefing.id)}">Responder o briefing</a>
            <button type="button" class="btn btn-tertiary btn-sm" data-hire-cancel="${pending.id}">Cancelar pedido</button>`;
       }
       return pending.architect.id === architectId
@@ -2702,6 +2708,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+
+  // ---------------- Conta: segurança (login em duas etapas) e recebimentos (Pix do arquiteto) ----------------
+  function setupSecurityAndBilling(me) {
+    const text = document.getElementById('twoFactorText');
+    const btn = document.getElementById('twoFactorBtn');
+    const codeForm = document.getElementById('twoFactorCodeForm');
+    const note = document.getElementById('securityNote');
+    let state = null;
+    const paint = (s) => {
+      state = s;
+      text.textContent = s.twoFactor
+        ? 'Ligado: em aparelho novo, pedimos também um código enviado ao seu e-mail.'
+        : 'Desligado. Ligue para pedir um código por e-mail sempre que alguém entrar de um aparelho novo.';
+      btn.textContent = s.twoFactor ? 'Desligar' : 'Ligar';
+      btn.disabled = false;
+      document.getElementById('devicesText').textContent = s.devices.length
+        ? s.devices.map((d) => `${d.label} (${new Date(d.lastAt).toLocaleDateString('pt-BR')})`).join(' · ')
+        : 'Nenhum registrado ainda.';
+    };
+    MatchAPI.mySecurity().then(paint).catch(() => { text.textContent = 'Não foi possível carregar agora.'; });
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      note.textContent = '';
+      try {
+        const r = await MatchAPI.securityCode();
+        document.getElementById('twoFactorEmail').textContent = r.email;
+        codeForm.hidden = false;
+        document.getElementById('twoFactorCode').value = '';
+        document.getElementById('twoFactorCode').focus();
+      } catch (err) { note.textContent = err.message; btn.disabled = false; }
+    });
+    codeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const enable = !state.twoFactor;
+        paint(await MatchAPI.setTwoFactor(enable, document.getElementById('twoFactorCode').value.replace(/\D/g, '')));
+        codeForm.hidden = true;
+        note.textContent = enable ? 'Login em duas etapas ligado. Este aparelho já fica reconhecido.' : 'Login em duas etapas desligado.';
+      } catch (err) { note.textContent = err.message; }
+    });
+    document.getElementById('forgetDevicesBtn').addEventListener('click', async () => {
+      if (!confirm('Esquecer todos os aparelhos? Com o login em duas etapas ligado, cada um vai pedir o código de novo.')) return;
+      try { paint(await MatchAPI.forgetDevices()); note.textContent = 'Aparelhos esquecidos.'; } catch (err) { note.textContent = err.message; }
+    });
+
+    if (me.role !== 'architect') return;
+    const card = document.getElementById('billingCard');
+    card.hidden = false;
+    const f = (id) => document.getElementById(id);
+    MatchAPI.myBilling().then((b) => {
+      f('pixType').innerHTML = '<option value="">Sem chave Pix</option>' + Object.entries(b.keyTypes).map(([k, v]) => `<option value="${k}">${escapeHtml(v)}</option>`).join('');
+      f('pixType').value = b.pix?.type || '';
+      f('pixKey').value = b.pix?.key || '';
+      f('pixName').value = b.pix?.name || me.name || '';
+      f('pixCity').value = b.pix?.city || me.city || '';
+      f('taxId').value = b.taxId || '';
+    }).catch(() => {});
+    f('billingSave').addEventListener('click', async (e) => {
+      const save = e.currentTarget;
+      save.disabled = true;
+      f('billingNote').textContent = '';
+      try {
+        const type = f('pixType').value;
+        await MatchAPI.saveBilling({ pix: type ? { type, key: f('pixKey').value, name: f('pixName').value, city: f('pixCity').value } : {}, taxId: f('taxId').value });
+        f('billingNote').textContent = 'Salvo. As próximas cobranças já saem com o QR Code do Pix.';
+      } catch (err) { f('billingNote').textContent = err.message; }
+      save.disabled = false;
+    });
+    if (location.hash === '#recebimentos') {
+      goToAccountTab(me);
+      setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    }
+  }
+
   // ---------------- Contratações (arquiteto) ----------------
   const money = (n) => Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
   function budgetText(b) {
@@ -2724,8 +2804,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         ${hireProjectSummary(h)}
         ${h.message ? `<blockquote class="hire-message">${escapeHtml(h.message)}</blockquote>` : ''}
         <textarea data-hire-response="${h.id}" maxlength="1000" rows="2" placeholder="Resposta para o cliente (opcional)"></textarea>
+        <p class="hire-proposal">${!h.briefing ? `Mande seu briefing antes da proposta: o cliente responde ao seu questionário (programa de necessidades). <a href="briefing.html">Editar meu briefing</a>`
+          : h.briefing.status === 'answered' ? `✓ ${escapeHtml(firstName(h.client.name))} respondeu o briefing. <a href="briefing.html?id=${encodeURIComponent(h.briefing.id)}">Ver respostas</a>`
+          : `📋 Briefing enviado — aguardando as respostas. <a href="briefing.html?id=${encodeURIComponent(h.briefing.id)}">Ver</a>`}</p>
         ${h.proposal ? `<p class="hire-proposal">${{ sent: '📝 Proposta enviada — aguardando a assinatura do cliente.', declined: '✎ O cliente pediu mudanças na proposta.', signed: '✓ Contrato assinado.', cancelled: '' }[h.proposal.status] || ''} <a href="contrato.html?id=${encodeURIComponent(h.proposal.id)}">Ver proposta</a></p>` : ''}
         <div class="hire-actions">
+          ${!h.briefing ? `<button type="button" class="btn btn-secondary btn-sm" data-briefing-send="${h.id}">Enviar briefing</button>` : ''}
           <a class="btn btn-primary btn-sm" href="contrato.html?hire=${encodeURIComponent(h.id)}">${h.proposal ? 'Enviar nova versão da proposta' : 'Enviar proposta e contrato'}</a>
           <button type="button" class="btn btn-secondary btn-sm" data-hire-accept="${h.id}">Aceitar sem contrato</button>
           <button type="button" class="btn btn-secondary btn-sm" data-hire-decline="${h.id}">Recusar</button>
@@ -2831,6 +2915,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       const jump = e.target.closest('[data-hire-jump]');
       if (jump) { activateProfileTab(tabs, scope, jump.dataset.hireJump); return; }
+      const brief = e.target.closest('[data-briefing-send]');
+      if (brief) {
+        if (!confirm('Mandar o seu briefing para o cliente responder? Ele recebe no sininho e por e-mail.')) return;
+        brief.disabled = true;
+        try {
+          await MatchAPI.sendBriefing(brief.dataset.briefingSend, document.querySelector(`[data-hire-response="${brief.dataset.briefingSend}"]`)?.value || '');
+        } catch (err) { alert(err.message || 'Não foi possível enviar agora.'); }
+        await renderHires(user);
+        return;
+      }
       const btn = e.target.closest('[data-hire-accept], [data-hire-decline]');
       if (!btn) return;
       const accept = Boolean(btn.dataset.hireAccept);

@@ -6,6 +6,7 @@ import { asyncHandler } from "../middleware/asyncHandler.js";
 import { userOrIpKey } from "../middleware/rateLimitKey.js";
 import * as c from "../controllers/workspaceController.js";
 import * as x from "../controllers/workspaceExtrasController.js";
+import * as o from "../controllers/workspaceOfficeController.js";
 
 /**
  * Espaço do projeto (cliente + arquiteto contratado). O envio de arquivo
@@ -27,6 +28,8 @@ router.patch("/:id/target", asyncHandler(c.updateTarget));
 router.patch("/:id/stages/:key", asyncHandler(c.updateStage));
 router.post("/:id/stages/template", asyncHandler(c.applyTemplate));
 router.post("/:id/stages/:key/pay", asyncHandler(c.payStageFee));
+router.post("/:id/stages/:key/confirm-payment", asyncHandler(c.confirmStageFee));
+router.get("/:id/stages/:key/receipt", asyncHandler(o.stageReceipt));
 router.post("/:id/stages/:key/:action", asyncHandler(c.stageAction));
 router.post("/:id/files", uploadLimiter, rawFile, asyncHandler(c.uploadFile));
 router.get("/:id/files/:fileId", asyncHandler(c.downloadFile));
@@ -53,4 +56,17 @@ router.delete("/:id/library/:itemId/quotes/:quoteId", asyncHandler(x.removeQuote
 router.post("/:id/crew", asyncHandler(x.addCrew));
 router.patch("/:id/crew/:crewId", asyncHandler(x.updateCrew));
 router.delete("/:id/crew/:crewId", asyncHandler(x.removeCrew));
+router.post("/:id/meetings", asyncHandler(o.addMeeting));
+router.post("/:id/meetings/:meetingId/answer", asyncHandler(o.answerMeeting));
+router.post("/:id/meetings/:meetingId/minutes", asyncHandler(o.saveMinutes));
+router.post("/:id/meetings/:meetingId/cancel", asyncHandler(o.cancelMeeting));
+router.get("/:id/meetings/:meetingId/ics", asyncHandler(o.meetingIcs));
+router.post("/:id/legal-docs", asyncHandler(o.addLegalDoc));
+router.patch("/:id/legal-docs/:key", asyncHandler(o.updateLegalDoc));
+router.delete("/:id/legal-docs/:key", asyncHandler(o.removeLegalDoc));
+router.post("/:id/handover", asyncHandler(o.registerHandover));
+router.post("/:id/maintenance", asyncHandler(o.addMaintenance));
+router.delete("/:id/maintenance/:taskId", asyncHandler(o.removeMaintenance));
+router.post("/:id/maintenance/:taskId/done", asyncHandler(o.maintenanceDone));
+router.post("/:id/review", asyncHandler(o.reviewArchitect));
 export default router;

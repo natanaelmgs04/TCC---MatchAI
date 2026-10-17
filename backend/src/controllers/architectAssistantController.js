@@ -7,6 +7,8 @@ import { MAX_TEXT, MAX_MESSAGES_PER_CHAT, buildHistory } from "../services/assis
 import { deriveSignature, signatureToText } from "../services/workspaceRules.js";
 import { UPGRADE_HINT, limitsFor, tierOf } from "../services/planLimits.js";
 import User from "../models/User.js";
+import Briefing from "../models/Briefing.js";
+import { briefingToText } from "../services/officeRules.js";
 
 const UNAVAILABLE = "O assistente não conseguiu responder agora. Tente de novo em instantes.";
 
@@ -68,6 +70,7 @@ export async function postMessage(req, res) {
     return res.status(400).json({ error: "Esta conversa ficou longa. Reinicie a conversa para continuar." });
 
   const clientChat = await AssistantChat.findOne({ client: project.client?._id, project: project.id });
+  const answered = await Briefing.findOne({ project: project.id, status: "answered" }).sort("-answeredAt").lean();
 
   let reply;
   try {
@@ -79,6 +82,7 @@ export async function postMessage(req, res) {
       text,
       library: project.library || [],
       signatureText: signatureToText(req.user.architectProfile?.signature, deriveSignature(req.user.architectProfile?.portfolio || [])),
+      answersText: answered ? briefingToText(answered.questions, answered.answers) : "",
     });
   } catch (err) {
     console.error("Assistente do arquiteto indisponível:", err.message);

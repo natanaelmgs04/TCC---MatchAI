@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
            ${reviews.map(r => `
              <div class="review-item">
                <div class="review-head">
-                 <span class="review-name">${esc(r.client?.name || 'Cliente')}</span>
+                 <span class="review-name">${esc(r.client?.name || 'Cliente')}${r.verified ? ' <span class="review-verified" title="Este cliente contratou o arquiteto pela match.IA">✓ Contratou pela match.IA</span>' : ''}</span>
                  <span class="star-display">${stars(r.rating)}</span>
                </div>
                ${r.comment ? `<p>${esc(r.comment)}</p>` : ''}

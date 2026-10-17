@@ -186,7 +186,7 @@ function libraryText(library = []) {
     : "(a biblioteca deste projeto ainda está vazia)";
 }
 
-function architectChatSystemInstruction(project, client, clientBriefing, { library = [], signatureText = "" } = {}) {
+function architectChatSystemInstruction(project, client, clientBriefing, { library = [], signatureText = "", answersText = "" } = {}) {
   const briefingTxt = clientBriefing
     ? Object.entries(clientBriefing)
         .filter(([, v]) => v)
@@ -210,6 +210,9 @@ Dados do projeto: ${projectContext(project, client)}
 Briefing que o cliente gerou com o assistente dele:
 ${briefingTxt}
 
+Respostas do cliente ao briefing (programa de necessidades) que o arquiteto enviou:
+${answersText || "(o arquiteto não enviou briefing ou o cliente ainda não respondeu)"}
+
 Assinatura do arquiteto:
 ${signatureText || "(o arquiteto ainda não descreveu a assinatura dele)"}
 
@@ -218,10 +221,10 @@ ${libraryText(library)}`;
 }
 
 /** Uma rodada de conversa do arquiteto sobre um projeto fechado. Lança erro se o Gemini falhar — o controller responde 503. */
-export async function chatAboutProjectForArchitect({ project, client, clientBriefing, history, text, library, signatureText }) {
+export async function chatAboutProjectForArchitect({ project, client, clientBriefing, history, text, library, signatureText, answersText }) {
   if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY ausente");
   const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = ai.getGenerativeModel({ model: CHAT_MODEL, systemInstruction: architectChatSystemInstruction(project, client, clientBriefing, { library, signatureText }) });
+  const model = ai.getGenerativeModel({ model: CHAT_MODEL, systemInstruction: architectChatSystemInstruction(project, client, clientBriefing, { library, signatureText, answersText }) });
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {

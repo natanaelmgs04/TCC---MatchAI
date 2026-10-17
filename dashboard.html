@@ -672,6 +672,56 @@
               <p class="dv-set-note" id="referralBonusCount"></p>
             </section>
 
+            <section class="dash-card dv-set" id="securityCard">
+              <header class="dv-set-head"><span class="dv-set-ico" data-dv-icon="shield"></span><div><h3>Segurança</h3><p>Login em duas etapas e os aparelhos que já entraram na sua conta.</p></div></header>
+              <div class="dv-set-row">
+                <div><strong>Login em duas etapas</strong><span id="twoFactorText">Carregando…</span></div>
+                <button type="button" id="twoFactorBtn" class="btn btn-secondary btn-sm" disabled>Ligar</button>
+              </div>
+              <form class="dv-code-form" id="twoFactorCodeForm" novalidate hidden>
+                <label for="twoFactorCode">Digite o código que enviamos para <span id="twoFactorEmail"></span></label>
+                <div class="dv-copy-row">
+                  <input id="twoFactorCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
+                  <button type="submit" class="btn btn-primary btn-sm">Confirmar</button>
+                </div>
+              </form>
+              <div class="dv-set-row">
+                <div><strong>Aparelhos conhecidos</strong><span id="devicesText">—</span></div>
+                <button type="button" id="forgetDevicesBtn" class="btn btn-tertiary btn-sm">Esquecer aparelhos</button>
+              </div>
+              <p class="dv-set-note" id="securityNote" role="status"></p>
+            </section>
+
+            <section class="dash-card dv-set" id="billingCard" hidden>
+              <header class="dv-set-head"><span class="dv-set-ico" data-dv-icon="wallet"></span><div><h3>Recebimentos</h3><p>Sua chave Pix vira o QR Code de cada cobrança de honorários no Espaço do projeto. O dinheiro vai direto para a sua conta — a match.IA não intermedia.</p></div></header>
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="pixType">Tipo da chave Pix</label>
+                  <select id="pixType"><option value="">Sem chave Pix</option></select>
+                </div>
+                <div class="form-field">
+                  <label for="pixKey">Chave Pix</label>
+                  <input type="text" id="pixKey" maxlength="80" autocomplete="off">
+                </div>
+                <div class="form-field">
+                  <label for="pixName">Nome do recebedor (como no banco)</label>
+                  <input type="text" id="pixName" maxlength="60" autocomplete="off">
+                </div>
+                <div class="form-field">
+                  <label for="pixCity">Cidade do recebedor</label>
+                  <input type="text" id="pixCity" maxlength="60" autocomplete="off">
+                </div>
+                <div class="form-field full">
+                  <label for="taxId">CPF ou CNPJ para os recibos (opcional)</label>
+                  <input type="text" id="taxId" maxlength="18" inputmode="numeric" autocomplete="off">
+                </div>
+              </div>
+              <div class="dv-set-foot">
+                <span class="dv-save-note" id="billingNote" role="status"></span>
+                <button type="button" id="billingSave" class="btn btn-primary btn-sm">Salvar recebimentos</button>
+              </div>
+            </section>
+
             <section class="dash-card dv-set">
               <header class="dv-set-head"><span class="dv-set-ico" data-dv-icon="shield"></span><div><h3>Privacidade (LGPD)</h3><p>Seus dados são seus. Baixe tudo que a plataforma guarda sobre você.</p></div></header>
               <div class="dv-set-row">

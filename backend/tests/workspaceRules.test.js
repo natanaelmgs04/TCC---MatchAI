@@ -95,7 +95,7 @@ test("conceito sem IA usa só a biblioteca, agrupada por ambiente", () => {
   assert.match(text, /Geral: Piso de demolição/);
 });
 
-import { dueReminders, normalizeFee, payFee, canEditFee, feeTotals, buildReport, normalizeAnnotation } from "../src/services/workspaceRules.js";
+import { dueReminders, normalizeFee, reportFee, confirmFee, canEditFee, feeTotals, buildReport, normalizeAnnotation } from "../src/services/workspaceRules.js";
 
 test("lembretes: 3 dias antes para quem está com a etapa, atraso para os dois, uma vez cada", () => {
   const now = new Date("2026-03-10T12:00:00Z");
@@ -111,7 +111,7 @@ test("lembretes: 3 dias antes para quem está com a etapa, atraso para os dois, 
   assert.deepEqual(r.map((x) => [x.key, x.kind, x.to.join("+")]), [["a", "soon", "architect"], ["b", "soon", "client"], ["c", "late", "architect+client"]]);
 });
 
-test("honorários: valor válido, cobrança abre ao aprovar, só o cliente paga e não muda depois", () => {
+test("honorários: valor válido, cobrança abre ao aprovar, cliente avisa o Pix e o arquiteto confirma", () => {
   assert.equal(normalizeFee(""), 0);
   assert.equal(normalizeFee("-1"), null);
   assert.equal(normalizeFee("1500.555"), 1500.56);
@@ -121,11 +121,15 @@ test("honorários: valor válido, cobrança abre ao aprovar, só o cliente paga 
   applyStageAction(st, "briefing", "approve", "client");
   assert.equal(st[0].feeStatus, "due");
   assert.equal(canEditFee(st[0]), false);
-  assert.equal(payFee(st[0], "architect").status, 403);
-  assert.equal(payFee(st[0], "client").stage.feeStatus, "paid");
-  assert.equal(payFee(st[0], "client").status, 409);
+  assert.equal(reportFee(st[0], "architect").status, 403);
+  assert.equal(reportFee(st[0], "client").stage.feeStatus, "reported");
+  assert.equal(reportFee(st[0], "client").status, 409);
   st[1].fee = 2000;
-  assert.deepEqual(feeTotals(st), { total: 3000, paid: 1000, due: 0, upcoming: 2000 });
+  assert.deepEqual(feeTotals(st), { total: 3000, paid: 0, due: 1000, reported: 1000, upcoming: 2000 });
+  assert.equal(confirmFee(st[0], false).status, 403);
+  assert.equal(confirmFee(st[0], true).stage.feeStatus, "paid");
+  assert.equal(confirmFee(st[0], true).status, 409);
+  assert.deepEqual(feeTotals(st), { total: 3000, paid: 1000, due: 0, reported: 0, upcoming: 2000 });
 });
 
 test("relatório: dias até o executivo, meta e rodadas de ajuste", () => {

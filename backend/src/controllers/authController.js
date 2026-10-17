@@ -5,6 +5,7 @@ import { welcomeEmail, passwordResetEmail, publicBaseUrl } from "../services/ema
 import { notify } from "../services/notificationService.js";
 import { parseAvatar } from "../services/avatar.js";
 import { normalizeTrades } from "../services/workspaceRules.js";
+import { challengeFor, checkCode, deviceHash, isKnownDevice, issueCode, maskEmail, readChallenge, rememberDevice } from "../services/loginSecurity.js";
 
 const hashToken = (raw) => crypto.createHash("sha256").update(raw).digest("hex");
 
@@ -99,10 +100,43 @@ export async function login(req, res) {
   if (user.status === "suspended")
     return res.status(403).json({ error: "Sua conta está suspensa. Fale com a equipe match.IA." });
 
+  // Aparelho: id aleatório guardado no navegador (sem ele, o navegador em si).
+  const full = await User.findById(user._id).select("+security");
+  const deviceId = typeof req.body.deviceId === "string" ? req.body.deviceId.slice(0, 80) : "";
+  const hash = deviceHash(deviceId, req.get("user-agent"));
+  const known = isKnownDevice(full, hash);
+  if (full.security?.twoFactor && !known) {
+    const sent = await issueCode(full, "login");
+    if (sent.error && !full.security.code) return res.status(429).json({ error: sent.error });
+    return res.json({ twoFactor: true, challenge: challengeFor(full, hash), email: maskEmail(full.email) });
+  }
+  await rememberDevice(full, hash, req, { alert: !known });
   res.json({
     token: tokenFor(user),
     user: { id: user.id, name: user.name, role: user.role },
   });
+}
+
+/** Segunda etapa do login: o código que chegou por e-mail. */
+export async function verifyLogin(req, res) {
+  const ch = readChallenge(req.body?.challenge);
+  if (!ch) return res.status(401).json({ error: "O tempo para digitar o código acabou. Entre de novo." });
+  const user = await User.findById(ch.sub).select("+security");
+  if (!user || user.status === "suspended") return res.status(401).json({ error: "Entre de novo." });
+  const r = await checkCode(user, "login", req.body?.code);
+  if (r.error) return res.status(400).json({ error: r.error });
+  await rememberDevice(user, ch.dh, req);
+  res.json({ token: tokenFor(user), user: { id: user.id, name: user.name, role: user.role } });
+}
+
+export async function resendLoginCode(req, res) {
+  const ch = readChallenge(req.body?.challenge);
+  if (!ch) return res.status(401).json({ error: "O tempo para digitar o código acabou. Entre de novo." });
+  const user = await User.findById(ch.sub).select("+security");
+  if (!user) return res.status(401).json({ error: "Entre de novo." });
+  const r = await issueCode(user, "login");
+  if (r.error) return res.status(429).json({ error: r.error });
+  res.json({ sent: true, email: maskEmail(user.email) });
 }
 
 /**

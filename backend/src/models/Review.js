@@ -6,6 +6,9 @@ const reviewSchema = new mongoose.Schema(
     architect: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, trim: true, maxlength: 1000 },
+    // Cliente que contratou o arquiteto pela plataforma ("avaliação verificada").
+    verified: { type: Boolean, default: false },
+    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
   },
   { timestamps: true },
 );

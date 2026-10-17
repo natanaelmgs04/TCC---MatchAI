@@ -5,7 +5,8 @@
 // navegador loga como erro não tratado se ninguém escuta. Silencia só esse
 // caso específico, sem mexer em nenhum outro erro real da página.
 window.addEventListener('unhandledrejection', (e) => {
-  if (e.reason?.name === 'AbortError' && /transition was skipped/i.test(e.reason?.message || '')) {
+  // mesma família: "Transition was aborted because of invalid state" (InvalidStateError), ao redirecionar no meio da animação
+  if (['AbortError', 'InvalidStateError'].includes(e.reason?.name) && /transition was (skipped|aborted)/i.test(e.reason?.message || '')) {
     e.preventDefault();
   }
 });

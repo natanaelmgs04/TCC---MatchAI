@@ -13,7 +13,9 @@
     "approve:cau": "node src/scripts/approveCau.js",
     "clean:matches": "node src/scripts/cleanMatchHistory.js",
     "delete:accounts": "node src/scripts/deleteAccounts.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:ui": "node --test tests/ui/flows.ui.js",
+    "test:demo": "node tests/ui/demo-server.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
@@ -26,9 +28,13 @@
     "mongodb": "^7.6.0",
     "mongodb-memory-server-core": "^10.4.3",
     "mongoose": "^8.24.4",
-    "nodemailer": "^9.1.1"
+    "nodemailer": "^9.1.1",
+    "qrcode": "^1.5.4"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1"
   }
 }

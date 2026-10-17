@@ -5,6 +5,7 @@ import Project from "../models/Project.js";
 import User from "../models/User.js";
 import Validation from "../models/Validation.js";
 import Commission from "../models/Commission.js";
+import Briefing from "../models/Briefing.js";
 import Proposal from "../models/Proposal.js";
 import { canRequestHire, canDecideHire, publicProjectTitle } from "../services/hireRules.js";
 import { notify } from "../services/notificationService.js";
@@ -88,11 +89,13 @@ export async function listHires(req, res) {
   const hires = await populateAll(Hire.find(filter).sort("-createdAt").limit(200));
   // proposta mais recente de cada pedido (para "Ver proposta" / "Assinar contrato")
   const proposals = await Proposal.find({ hire: { $in: hires.map((h) => h._id) } }).sort("-createdAt").select("hire status validUntil").lean();
+  const briefings = new Map((await Briefing.find({ hire: { $in: hires.map((h) => h._id) } }).select("hire status").lean()).map((b) => [String(b.hire), b]));
   const latest = new Map();
   proposals.forEach((p) => { if (!latest.has(String(p.hire))) latest.set(String(p.hire), p); });
   res.json(hires.map((h) => {
     const p = latest.get(String(h._id));
-    return { ...shape(h), proposal: p ? { id: String(p._id), status: p.status, validUntil: p.validUntil } : null };
+    const b = briefings.get(String(h._id));
+    return { ...shape(h), proposal: p ? { id: String(p._id), status: p.status, validUntil: p.validUntil } : null, briefing: b ? { id: String(b._id), status: b.status } : null };
   }));
 }
 

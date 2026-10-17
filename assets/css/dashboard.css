@@ -747,3 +747,10 @@ a.dv-prod:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .crew-req li { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); font-size: .88rem; }
 .crew-req li span { color: var(--ink-soft); }
 .crew-req-status { margin-left: auto; font-weight: 600; }
+
+/* Conta → Segurança: código do login em duas etapas */
+.dv-code-form { display: grid; gap: 6px; margin: 4px 0 8px; }
+.dv-code-form[hidden] { display: none; }
+.dv-code-form label { font-size: .84rem; font-weight: 600; }
+.dv-code-form input { letter-spacing: .3em; font-weight: 700; max-width: 180px; }
+#billingCard[hidden] { display: none; }

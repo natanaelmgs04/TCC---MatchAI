@@ -86,7 +86,16 @@
   .ct-close { justify-content: flex-start; }
 }
 @media print {
+  body.ct-page * { visibility: visible; } /* style.css esconde tudo fora do #printableResumo do painel */
   .site-header, .skip-link, .ct-toolbar, .ct-banner, .ct-actions-card { display: none !important; }
   .ct-shell { padding: 0; max-width: none; }
   .ct-card { box-shadow: none; border: 0; background: #fff; padding: 0; }
+  body.ct-page { background: #fff !important; }
+  .ct-card, .ct-card * { color: #222 !important; } /* papel branco também no tema escuro */
 }
+
+/* Briefing respondido, ao lado da proposta */
+.ct-briefing { margin-bottom: 16px; }
+.ct-briefing summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+.ct-briefing summary a { font-size: .84rem; color: var(--terracotta-dark); font-weight: 600; }
+.ct-briefing p { margin: 10px 0 0; font-size: .9rem; line-height: 1.6; }

@@ -39,6 +39,7 @@ import siteRoutes from "./routes/site.js";
 import model3dRoutes from "./routes/models3d.js";
 import workspaceRoutes from "./routes/workspace.js";
 import proposalRoutes from "./routes/proposals.js";
+import briefingRoutes from "./routes/briefings.js";
 
 const app = express(),
   root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
@@ -97,6 +98,7 @@ app.use("/api/site", siteRoutes);
 app.use("/api/models3d", model3dRoutes);
 app.use("/api/workspace", workspaceRoutes);
 app.use("/api/proposals", proposalRoutes);
+app.use("/api/briefings", briefingRoutes);
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Site (front-end) servido pelo mesmo processo/porta que a API.

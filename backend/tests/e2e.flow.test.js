@@ -52,7 +52,10 @@ test("fluxo completo: contratação, Espaço do projeto, relatório, LGPD e lemb
   assert.equal(approved.data.stages[1].status, "in_progress");
   assert.equal((await api(`/workspace/${pid}/stages/briefing`, { method: "PATCH", as: "arquiteta", body: { fee: 9 } })).status, 409);
   assert.equal((await api(`/workspace/${pid}/stages/briefing/pay`, { method: "POST", as: "arquiteta" })).status, 403);
-  const paid = await api(`/workspace/${pid}/stages/briefing/pay`, { method: "POST", as: "cliente" });
+  const reported = await api(`/workspace/${pid}/stages/briefing/pay`, { method: "POST", as: "cliente" });
+  assert.equal(reported.data.stages[0].feeStatus, "reported"); // o cliente avisou o Pix; falta o arquiteto conferir
+  assert.equal((await api(`/workspace/${pid}/stages/briefing/confirm-payment`, { method: "POST", as: "cliente" })).status, 403);
+  const paid = await api(`/workspace/${pid}/stages/briefing/confirm-payment`, { method: "POST", as: "arquiteta" });
   assert.equal(paid.data.stages[0].feeStatus, "paid");
   assert.deepEqual([paid.data.fees.paid, paid.data.fees.due], [1500, 0]);
 

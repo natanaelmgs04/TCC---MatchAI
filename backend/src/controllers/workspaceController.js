@@ -4,6 +4,9 @@ import ProjectFile from "../models/ProjectFile.js";
 import StoreProduct from "../models/StoreProduct.js";
 import Hire from "../models/Hire.js";
 import User from "../models/User.js";
+import Review from "../models/Review.js";
+import Briefing from "../models/Briefing.js";
+import QRCode from "qrcode";
 import { avatarPath } from "../services/avatar.js";
 import { notify } from "../services/notificationService.js";
 import { workspaceEmail } from "../services/emailService.js";
@@ -22,7 +25,8 @@ import {
   canEditFee,
   feeTotals,
   normalizeFee,
-  payFee,
+  reportFee,
+  confirmFee,
   defaultStages,
   deriveSignature,
   normalizeCustomItem,
@@ -32,6 +36,7 @@ import {
   summarizeStages,
   targetDate,
 } from "../services/workspaceRules.js";
+import { MEETING_KINDS, PIX_KEY_TYPES, buildPixPayload, legalDocsOf, meetingStatus, rrtOf } from "../services/officeRules.js";
 
 /**
  * Espaço do projeto (projeto.html): o lugar de trabalho do cliente e do
@@ -121,6 +126,7 @@ const shapeItem = (it) => ({
   quantity: it.quantity || 1,
   unit: it.unit || "",
   purchased: !!it.purchased,
+  warrantyMonths: it.warrantyMonths || null,
   quotes: (it.quotes || []).map((q) => ({
     id: String(q._id), storeName: q.storeName, price: q.price ?? null, purchaseUrl: q.purchaseUrl || "", note: q.note || "",
     chosen: !!q.chosen, fromCatalog: !!q.product,
@@ -140,15 +146,34 @@ const shapeFile = (f) => ({
   createdAt: f.createdAt,
 });
 
+/** Pix copia e cola + QR Code de cada cobrança aberta (vai direto para a chave do arquiteto). */
+async function pixFor(project, architect, stage, index) {
+  const pix = architect?.architectProfile?.pix;
+  if (!pix?.key || !stage.fee || !["due", "reported"].includes(stage.feeStatus)) return null;
+  const payload = buildPixPayload({ key: pix.key, name: pix.name, city: pix.city, amount: stage.fee, txid: `MIA${String(project._id).slice(-8)}E${index + 1}`, description: `Honorarios ${stage.name}` });
+  const svg = await QRCode.toString(payload, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#222222", light: "#ffffff" } });
+  return { payload, qr: `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`, receiver: pix.name, keyType: PIX_KEY_TYPES[pix.type] || "Chave" };
+}
+
+const shapeMeeting = (m, byId, userId) => ({
+  id: String(m._id), kind: m.kind, kindLabel: MEETING_KINDS[m.kind] || "Reunião", title: m.title, startsAt: m.startsAt, durationMin: m.durationMin,
+  place: m.place || "", note: m.note || "", status: meetingStatus(m), clientAnswer: m.clientAnswer, architectAnswer: m.architectAnswer, answerNote: m.answerNote || "",
+  minutes: m.minutes || "", minutesAt: m.minutesAt || null, minutesBy: person(byId.get(String(m.minutesBy))), createdBy: person(byId.get(String(m.createdBy))), mine: String(m.createdBy) === String(userId),
+});
+
 async function shape(ctx, userId) {
   const { project, role } = ctx;
-  const [parties, files] = await Promise.all([
-    User.find({ _id: { $in: [project.client, project.architect, ...(project.team || []).map((t) => t.user)] } }).select("name avatarVersion architectProfile.signature architectProfile.portfolio.styles architectProfile.portfolio.materials"),
+  const [parties, files, review, briefing] = await Promise.all([
+    User.find({ _id: { $in: [project.client, project.architect, ...(project.team || []).map((t) => t.user)] } }).select("name avatarVersion architectProfile.signature architectProfile.portfolio.styles architectProfile.portfolio.materials architectProfile.pix"),
     ProjectFile.find({ project: project._id }).sort("-createdAt"),
+    role === "client" ? Review.findOne({ client: project.client, architect: project.architect }).select("rating comment verified").lean() : null,
+    Briefing.findOne({ project: project._id, architect: project.architect, status: "answered" }).select("_id").lean(),
   ]);
   const byId = new Map(parties.map((u) => [String(u._id), u]));
   const architect = byId.get(String(project.architect));
   const items = project.library.map(shapeItem);
+  const pixes = await Promise.all(project.stages.map((s, i) => pixFor(project, architect, s, i)));
+  const docs = legalDocsOf(project.legalDocs || []);
   return {
     id: String(project._id),
     name: project.name,
@@ -161,11 +186,13 @@ async function shape(ctx, userId) {
     startedAt: project.workspaceStartedAt || project.createdAt,
     city: project.city || "",
     state: project.state || "",
-    stages: project.stages.map((s) => ({
+    stages: project.stages.map((s, i) => ({
       key: s.key, name: s.name, dueDate: s.dueDate || null, status: s.status, closesDesign: !!s.closesDesign,
       submittedAt: s.submittedAt || null, approvedAt: s.approvedAt || null, revisionRounds: s.revisionRounds || 0,
-      fee: s.fee || 0, feeStatus: s.feeStatus || "none", feeDueAt: s.feeDueAt || null, feePaidAt: s.feePaidAt || null,
+      fee: s.fee || 0, feeStatus: s.feeStatus || "none", feeDueAt: s.feeDueAt || null, feeReportedAt: s.feeReportedAt || null, feePaidAt: s.feePaidAt || null,
+      pix: pixes[i],
     })),
+    pixConfigured: !!architect?.architectProfile?.pix?.key,
     fees: feeTotals(project.stages),
     summary: summarizeStages(project.stages),
     canChangeTemplate: canReplaceStages(project.stages),
@@ -182,6 +209,13 @@ async function shape(ctx, userId) {
     diary: [...(project.diary || [])].sort((a, b) => new Date(b.date) - new Date(a.date)).map((d) => ({
       id: String(d._id), date: d.date, text: d.text, files: (d.files || []).map(String), author: person(byId.get(String(d.author))), mine: String(d.author) === String(userId),
     })),
+    legalDocs: docs.map((d) => ({ key: d.key, name: d.name, hint: d.hint || "", status: d.status, number: d.number || "", date: d.date || null, note: d.note || "", fileId: d.file ? String(d.file) : null })),
+    rrt: rrtOf(docs),
+    meetings: [...(project.meetings || [])].sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt)).map((m) => shapeMeeting(m, byId, userId)),
+    handoverAt: project.handoverAt || null,
+    maintenance: (project.maintenance || []).map((t) => ({ id: String(t._id), task: t.task, everyMonths: t.everyMonths, because: t.because || "", nextAt: t.nextAt, lastDoneAt: t.lastDoneAt || null })),
+    review: review ? { rating: review.rating, comment: review.comment || "", verified: !!review.verified } : null,
+    briefingId: briefing ? String(briefing._id) : null,
     storage: { used: files.reduce((s, f) => s + (f.size || 0), 0), quota: ctx.limits.workspaceStorage, fileMax: FILE_MAX },
     plan: { tier: ctx.tier, locked: ctx.locked, limits: publicLimits(ctx.limits) },
     signature: architect?.architectProfile?.signature || null,
@@ -191,6 +225,19 @@ async function shape(ctx, userId) {
       .reverse()
       .map((a) => ({ at: a.at, kind: a.kind, text: a.text, by: person(byId.get(String(a.by))) })),
   };
+}
+
+/** Projeto concluído: pede ao cliente a avaliação (verificada) do arquiteto. */
+async function askForReview(ctx, client) {
+  if (await Review.exists({ client: client._id, architect: ctx.project.architect })) return;
+  const architect = await User.findById(ctx.project.architect).select("name");
+  notify(client._id, "review", `Projeto concluído! Como foi trabalhar com ${architect?.name || "o arquiteto"}? Deixe sua avaliação`, `${link(ctx.project)}#etapas`);
+  workspaceEmail(client, {
+    subject: `Como foi o projeto "${ctx.project.name}"? — match.IA`,
+    lines: [`Todas as etapas do projeto "${ctx.project.name}" foram aprovadas. Parabéns!`, `Conte como foi trabalhar com ${architect?.name || "o arquiteto"}: sua avaliação aparece no perfil com o selo "contratou pela match.IA" e ajuda outros clientes a escolher.`],
+    projectId: ctx.project._id,
+    cta: "Avaliar agora",
+  }).catch(() => {});
 }
 
 export const respond = async (res, ctx, req) => res.json(await shape(ctx, req.user.id));
@@ -284,7 +331,10 @@ export async function stageAction(req, res) {
       subject: `Etapa aprovada: ${stage.name} — match.IA`,
       lines: [`${who} aprovou a etapa "${stage.name}" do projeto "${ctx.project.name}".`, ...(text ? [`Comentário: ${text}`] : []), next ? `A próxima etapa, "${next.name}", já começou.` : "Todas as etapas foram aprovadas: projeto concluído."],
     });
-    if (done) ctx.project.status = "completed";
+    if (done) {
+      ctx.project.status = "completed";
+      if (ctx.role === "client") askForReview(ctx, req.user); // o cliente aprovou a última etapa
+    }
   } else {
     log(ctx.project, req.user.id, "changes", `pediu ajustes em "${stage.name}": ${text}`);
     await alertOther(ctx, `${who} pediu ajustes na etapa "${stage.name}"`, {
@@ -296,20 +346,39 @@ export async function stageAction(req, res) {
   await respond(res, ctx, req);
 }
 
-/** Pagamento simulado dos honorários de uma etapa aprovada (nenhum dinheiro de verdade). */
+const brl = (n) => `R$ ${Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+/** O cliente avisa que pagou o Pix da etapa; o arquiteto confere no banco e confirma. */
 export async function payStageFee(req, res) {
   const ctx = await load(req, res);
   if (!ctx) return;
   const stage = ctx.project.stages.find((s) => s.key === req.params.key);
   if (!stage) return res.status(404).json({ error: "Etapa não encontrada." });
-  const r = payFee(stage, ctx.role);
+  const r = reportFee(stage, ctx.role);
   if (r.error) return res.status(r.status).json({ error: r.error });
-  const value = `R$ ${stage.fee.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-  log(ctx.project, req.user.id, "fee", `registrou o pagamento de ${value} dos honorários de "${stage.name}" (simulado)`);
+  const value = brl(stage.fee);
+  log(ctx.project, req.user.id, "fee", `avisou que pagou ${value} dos honorários de "${stage.name}"`);
   await ctx.project.save();
-  await alertOther(ctx, `${req.user.name} pagou ${value} dos honorários de "${stage.name}"`, {
-    subject: `Honorários pagos: ${stage.name} — match.IA`,
-    lines: [`${req.user.name} registrou o pagamento de ${value} dos honorários da etapa "${stage.name}" do projeto "${ctx.project.name}".`, "Pagamento simulado (projeto acadêmico): nenhum valor foi cobrado de verdade."],
+  await alertOther(ctx, `${req.user.name} avisou que pagou ${value} dos honorários de "${stage.name}" — confira e confirme o recebimento`, {
+    subject: `Pagamento avisado: ${stage.name} — match.IA`,
+    lines: [`${req.user.name} avisou que pagou ${value} dos honorários da etapa "${stage.name}" do projeto "${ctx.project.name}".`, "Confira no seu banco e confirme o recebimento no Espaço do projeto — o recibo sai na hora para o cliente."],
+  });
+  await respond(res, ctx, req);
+}
+
+export async function confirmStageFee(req, res) {
+  const ctx = await load(req, res);
+  if (!ctx) return;
+  const stage = ctx.project.stages.find((s) => s.key === req.params.key);
+  if (!stage) return res.status(404).json({ error: "Etapa não encontrada." });
+  const r = confirmFee(stage, ctx.isOwner);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  const value = brl(stage.fee);
+  log(ctx.project, req.user.id, "fee", `confirmou o recebimento de ${value} dos honorários de "${stage.name}"`);
+  await ctx.project.save();
+  await alertOther(ctx, `${req.user.name} confirmou o recebimento de ${value} — o recibo de "${stage.name}" está disponível`, {
+    subject: `Recibo disponível: ${stage.name} — match.IA`,
+    lines: [`${req.user.name} confirmou o recebimento de ${value} dos honorários da etapa "${stage.name}" do projeto "${ctx.project.name}".`, "O recibo está no Espaço do projeto, na aba Etapas."],
   });
   await respond(res, ctx, req);
 }

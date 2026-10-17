@@ -50,6 +50,18 @@ const userSchema = new mongoose.Schema(
     passwordResetTokenHash: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },
     role: { type: String, required: true, enum: ["client", "architect", "store"] },
+    // Login em duas etapas (código por e-mail em aparelho novo) e aparelhos já usados (aviso de acesso novo).
+    security: {
+      type: new mongoose.Schema(
+        {
+          twoFactor: { type: Boolean, default: false },
+          devices: [{ hash: String, label: String, lastAt: Date, _id: false }],
+          code: { hash: String, purpose: String, expires: Date, attempts: Number, sentAt: Date },
+        },
+        { _id: false },
+      ),
+      select: false,
+    },
     city: String,
     state: String,
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -108,6 +120,12 @@ const userSchema = new mongoose.Schema(
         avoid: [String],
         updatedAt: Date,
       },
+      // Recebimento dos honorários por Pix (o QR Code de cada cobrança vai direto para esta chave)
+      // e documento para o recibo — ambos opcionais, só aparecem para os clientes dele.
+      pix: { type: { type: String }, key: String, name: String, city: String },
+      taxId: String,
+      // Perguntas do briefing que o arquiteto manda ao cliente (vazio = briefing padrão, officeRules.js).
+      briefingQuestions: [{ type: mongoose.Schema.Types.Mixed }],
       referenceImage: {
         imageUrl: String,
         description: String,
@@ -168,6 +186,7 @@ userSchema.set("toJSON", {
     delete ret.passwordHash;
     delete ret.passwordResetTokenHash;
     delete ret.passwordResetExpires;
+    delete ret.security;
     delete ret.__v;
     return ret;
   },

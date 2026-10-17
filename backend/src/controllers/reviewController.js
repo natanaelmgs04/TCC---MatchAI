@@ -1,5 +1,6 @@
 import Review from "../models/Review.js";
 import User from "../models/User.js";
+import Hire from "../models/Hire.js";
 import { newReviewEmail } from "../services/emailService.js";
 import { notify } from "../services/notificationService.js";
 import { DEMO_BLOCK_MESSAGE } from "../services/demoArchitects.js";
@@ -12,9 +13,11 @@ export async function createReview(req, res) {
   // upsert: reenvio (clique duplo, ou o cliente mudando de ideia) atualiza a
   // mesma avaliação em vez de criar outra — um cliente só avalia uma vez
   // cada arquiteto (reforçado pelo índice único client+architect no model).
+  // "Avaliação verificada": o cliente contratou este arquiteto pela plataforma.
+  const hire = await Hire.findOne({ client: req.user.id, architect, status: "accepted" }).select("project").catch(() => null);
   const review = await Review.findOneAndUpdate(
     { client: req.user.id, architect },
-    { rating: Number(rating), comment },
+    { rating: Number(rating), comment, verified: !!hire, ...(hire ? { project: hire.project } : {}) },
     { new: true, upsert: true, setDefaultsOnInsert: true },
   );
   res.status(201).json(review);

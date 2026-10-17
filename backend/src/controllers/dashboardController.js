@@ -1,3 +1,5 @@
+import Briefing from "../models/Briefing.js";
+import User from "../models/User.js";
 import Project from "../models/Project.js";
 import Message from "../models/Message.js";
 import Review from "../models/Review.js";
@@ -68,6 +70,11 @@ export async function exportMyData(req, res) {
       role === "store" ? Project.find({ "crew.provider": me }).select("crew architect city state") : [],
     ]);
 
+  const [briefings, me2] = await Promise.all([
+    Briefing.find({ $or: [{ client: userId }, { architect: userId }] }).sort("createdAt"),
+    User.findById(me).select("+security"),
+  ]);
+
   res.setHeader("Content-Disposition", "attachment; filename=matchia-meus-dados.json");
   res.json({
     exportedAt: new Date().toISOString(),
@@ -76,6 +83,11 @@ export async function exportMyData(req, res) {
     projetosComoArquiteto: architectProjects,
     contratacoes: hires,
     propostasEContratos: proposals,
+    briefings,
+    seguranca: {
+      loginEmDuasEtapas: !!me2?.security?.twoFactor,
+      aparelhosConhecidos: (me2?.security?.devices || []).map((d) => ({ aparelho: d.label, ultimoAcesso: d.lastAt })),
+    },
     arquivosEnviados: filesSent,
     comentariosEmArquivos: annotations,
     mensagens: messages,

@@ -80,6 +80,17 @@
         <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Entrar</button>
         <p class="form-note">Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a></p>
       </form>
+
+      <!-- Login em duas etapas: aparelho novo pede o código que chega por e-mail -->
+      <form id="codeForm" novalidate hidden>
+        <p id="codeLead" style="margin:0 0 16px;">Enviamos um código de 6 dígitos para o seu e-mail.</p>
+        <div class="form-field full">
+          <label for="loginCode">Código de acesso</label>
+          <input type="text" id="loginCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="codeBtn">Confirmar e entrar</button>
+        <p class="form-note"><button type="button" class="link-button" id="resendCode">Mandar outro código</button> · <button type="button" class="link-button" id="backToLogin">Voltar</button></p>
+      </form>
     </div>
   </div>
 </main>

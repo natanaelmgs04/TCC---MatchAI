@@ -23,6 +23,9 @@
   const quoteHints = new Map(); // sugestões do catálogo por item
   let providers = null; // prestadores parceiros encontrados (arquiteto)
   const thumbs = new Map(); // fotos do diário já baixadas (id → URL local)
+  let editingReview = false;
+  let offlineSince = null; // aberto sem internet a partir da cópia salva neste aparelho
+  let pendingDiary = []; // registros do diário feitos sem internet, esperando para subir
   const TRADES = ['Marcenaria', 'Elétrica', 'Hidráulica', 'Pintura', 'Gesso e drywall', 'Marmoraria', 'Vidraçaria', 'Serralheria', 'Paisagismo', 'Ar-condicionado', 'Iluminação técnica', 'Pedreiro e acabamento'];
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -34,6 +37,13 @@
   const daysFrom = (iso) => Math.ceil((new Date(iso).getTime() - Date.now()) / 864e5);
   const isArchitect = () => W?.role === 'architect';
   const PREVIEW = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp']);
+  const MEETING_STATUS = { pending: 'Aguardando confirmação', confirmed: 'Confirmado', declined: 'Recusado — remarcar', cancelled: 'Cancelado' };
+  const MEETING_KINDS = { reuniao: 'Reunião', visita: 'Visita de obra', apresentacao: 'Apresentação do projeto', medicao: 'Visita técnica / medição' };
+  const LEGAL_STATUS = { pendente: 'Pendente', andamento: 'Em andamento', concluido: 'Concluído', nao_aplica: 'Não se aplica' };
+  const fmtWhen = (iso) => new Date(iso).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const stars = (n) => `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
+  const slug = (s) => String(s || '').normalize('NFD').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'projeto';
+
   const STATUS = {
     pending: 'A começar',
     in_progress: 'Em andamento',
@@ -60,7 +70,7 @@
       return res;
     } catch (err) {
       if (err?.status === 401) { location.replace('login.html'); return null; }
-      flash(err?.message || 'Não deu certo agora. Tente de novo.', true);
+      flash(err?.offline ? 'Sem internet agora. Só o diário de obra funciona offline — o resto, quando a conexão voltar.' : err?.message || 'Não deu certo agora. Tente de novo.', true);
       if (btn) btn.disabled = false;
       return null;
     }
@@ -71,7 +81,10 @@
     $('#pjTitle').textContent = W.name;
     document.title = `${W.name} · Espaço do projeto — match.IA`;
     const other = isArchitect() ? W.client : W.architect;
-    $('#pjPeople').innerHTML = `${isArchitect() ? 'Cliente' : 'Arquiteto(a)'}: <strong>${esc(other?.name || '—')}</strong> · <a href="dashboard.html#mensagens">Conversar</a>${W.contractId ? ` · <a href="contrato.html?id=${esc(W.contractId)}">Contrato assinado</a>` : ''}`;
+    $('#pjPeople').innerHTML = `${isArchitect() ? 'Cliente' : 'Arquiteto(a)'}: <strong>${esc(other?.name || '—')}</strong> · <a href="dashboard.html#mensagens">Conversar</a>${W.contractId ? ` · <a href="contrato.html?id=${esc(W.contractId)}">Contrato assinado</a>` : ''}${W.briefingId ? ` · <a href="briefing.html?id=${esc(W.briefingId)}">Briefing</a>` : ''}`;
+    const off = $('#pjOffline');
+    off.hidden = !offlineSince;
+    off.innerHTML = offlineSince ? `<strong>Sem internet.</strong> Você está vendo a cópia salva neste aparelho em ${fmtDateTime(offlineSince)}. Registros do diário de obra ficam guardados e sobem sozinhos quando a conexão voltar.` : '';
     const s = W.summary;
     const current = W.stages.find((x) => x.key === s.current);
     const left = W.targetDate ? daysFrom(W.targetDate) : null;
@@ -96,17 +109,134 @@
     const v = money(st.fee);
     if (st.feeStatus === 'paid') return `<span class="pj-chip is-approved">Honorários ${v} · pagos em ${fmtDate(st.feePaidAt)}</span>`;
     if (st.feeStatus === 'due') return `<span class="pj-chip is-awaiting_approval">Honorários ${v} · a pagar</span>`;
+    if (st.feeStatus === 'reported') return `<span class="pj-chip is-awaiting_approval">Honorários ${v} · pagamento avisado, aguardando confirmação</span>`;
     return `<span>Honorários: ${v} (cobrados ao aprovar)</span>`;
   }
 
   function feeAction(st) {
-    if (st.feeStatus !== 'due') return '';
-    if (isArchitect()) return `<p class="pj-muted">Cobrança de ${money(st.fee)} aberta desde ${fmtDate(st.feeDueAt)} — aguardando o pagamento do cliente.</p>`;
+    if (st.feeStatus === 'paid') return `<div class="pj-row-actions"><button type="button" class="btn btn-tertiary btn-sm" data-act="receipt" data-key="${st.key}">Recibo dos honorários</button></div>`;
+    if (!['due', 'reported'].includes(st.feeStatus)) return '';
+    if (isArchitect()) {
+      const text = st.feeStatus === 'reported'
+        ? `<strong>${esc(W.client?.name || 'O cliente')} avisou em ${fmtDate(st.feeReportedAt)} que pagou ${money(st.fee)}.</strong> Confira no seu banco e confirme: o recibo sai na hora para o cliente.`
+        : `Cobrança de ${money(st.fee)} aberta desde ${fmtDate(st.feeDueAt)} — aguardando o pagamento do cliente.`;
+      const hint = !W.pixConfigured && W.isOwner ? '<br><span class="pj-muted">Cadastre sua chave Pix em <a href="dashboard.html#recebimentos">Painel → Conta → Recebimentos</a> para o cliente pagar pelo QR Code.</span>' : '';
+      return `
+        <div class="pj-fee-due">
+          <p>${text}${hint}</p>
+          ${W.isOwner ? `<button type="button" class="btn btn-sage btn-sm" data-act="confirm-fee" data-key="${st.key}">Confirmar recebimento</button>` : ''}
+        </div>`;
+    }
+    if (st.feeStatus === 'reported') return `<div class="pj-fee-due"><p><strong>Você avisou o pagamento de ${money(st.fee)}.</strong><br><span class="pj-muted">Quando ${esc(W.architect?.name || 'o arquiteto')} confirmar o recebimento, o recibo aparece aqui.</span></p></div>`;
+    const pix = st.pix;
     return `
-      <div class="pj-fee-due">
-        <p><strong>Honorários desta etapa: ${money(st.fee)}</strong><br><span class="pj-muted">Pagamento simulado — projeto acadêmico, nenhum valor é cobrado de verdade.</span></p>
-        <button type="button" class="btn btn-primary btn-sm" data-act="pay" data-key="${st.key}">Pagar ${money(st.fee)}</button>
+      <div class="pj-fee-due ${pix ? 'has-pix' : ''}">
+        ${pix ? `<img class="pj-pix-qr" src="${pix.qr}" width="168" height="168" alt="QR Code Pix de ${money(st.fee)} para ${esc(pix.receiver)}">` : ''}
+        <div class="pj-pix-body">
+          <p><strong>Honorários desta etapa: ${money(st.fee)}</strong><br>
+          ${pix ? `<span class="pj-muted">Pix para <strong>${esc(pix.receiver)}</strong> (${esc(pix.keyType)}). Aponte a câmera do app do banco para o QR Code ou copie o código. O valor vai direto para a conta do arquiteto — a match.IA não intermedia o pagamento.</span>`
+            : `<span class="pj-muted">${esc(W.architect?.name || 'O arquiteto')} ainda não cadastrou a chave Pix. Combine a forma de pagamento pelo chat e avise aqui quando pagar.</span>`}</p>
+          ${pix ? `<div class="pj-pix-copy"><label class="sr-only" for="pix-${st.key}">Pix copia e cola</label><input id="pix-${st.key}" readonly value="${esc(pix.payload)}"><button type="button" class="btn btn-secondary btn-sm" data-act="copy-pix" data-key="${st.key}">Copiar código</button></div>` : ''}
+          <div class="pj-row-actions"><button type="button" class="btn btn-primary btn-sm" data-act="pay" data-key="${st.key}">Já paguei</button></div>
+        </div>
       </div>`;
+  }
+
+  // ------------------------------------------------------------------ impressão (recibo, cronograma, manual)
+  function printDoc(html) {
+    const box = $('#pjPrint');
+    box.innerHTML = html;
+    document.body.classList.add('pj-print-doc');
+    const done = () => { document.body.classList.remove('pj-print-doc'); box.innerHTML = ''; };
+    window.addEventListener('afterprint', done, { once: true });
+    window.print();
+  }
+
+  async function printReceipt(key) {
+    const r = await API.workspaceReceipt(W.id, key);
+    printDoc(`
+      <article class="pj-doc">
+        <header><p class="pj-doc-kicker">Recibo de honorários nº ${esc(r.number)}</p><h1>${esc(r.valueText)}</h1></header>
+        <p class="pj-doc-text">${esc(r.text)}</p>
+        <p>${esc(r.place ? `${r.place}, ` : '')}${esc(r.dateText)}.</p>
+        <div class="pj-doc-sign"><span>${esc(r.payee)}</span><small>${[r.payeeDocument, r.payeeCau ? `CAU ${r.payeeCau}` : ''].filter(Boolean).map(esc).join(' · ') || 'Arquiteto(a)'}</small></div>
+        <footer>Código do recibo: ${esc(r.code)} · Pagamento confirmado pelo arquiteto no Espaço do projeto da match.IA em ${esc(r.dateText)}. Recibo sem valor fiscal: não substitui a nota fiscal de serviço (NFS-e).</footer>
+      </article>`);
+  }
+
+  // Cronograma (Gantt): cada etapa vai do fim da anterior até o prazo dela.
+  function ganttHtml() {
+    const start = new Date(W.startedAt).getTime();
+    let prev = start;
+    const rows = W.stages.map((st) => {
+      const to = st.dueDate ? new Date(st.dueDate).getTime() : null;
+      const row = { st, from: prev, to };
+      if (to) prev = to;
+      return row;
+    });
+    const ends = rows.filter((r) => r.to).map((r) => r.to);
+    if (!ends.length) return '';
+    const target = W.targetDate ? new Date(W.targetDate).getTime() : null;
+    const now = Date.now();
+    const max = Math.max(...ends, target || 0, Math.min(now, Math.max(...ends) + 30 * 864e5));
+    const span = Math.max(max - start, 14 * 864e5);
+    const pct = (t) => Math.max(0, Math.min(100, ((t - start) / span) * 100));
+    const ticks = [];
+    const d = new Date(start);
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    while (d.getTime() < start + span) { ticks.push(d.getTime()); d.setMonth(d.getMonth() + 1); }
+    const marks = (W.meetings || []).filter((m) => m.status !== 'cancelled' && new Date(m.startsAt).getTime() <= start + span && new Date(m.startsAt).getTime() >= start);
+    const overlay = `${now <= start + span ? `<b class="pj-gantt-today" style="left:${pct(now)}%"></b>` : ''}${target ? `<b class="pj-gantt-target" style="left:${pct(target)}%"></b>` : ''}`;
+    return `
+      <div class="pj-gantt" role="img" aria-label="Cronograma: ${W.stages.length} etapas, de ${fmtDate(new Date(start).toISOString())} a ${fmtDate(new Date(Math.max(...ends)).toISOString())}${target ? `, meta em ${fmtDate(W.targetDate)}` : ''}">
+        <div class="pj-gantt-row pj-gantt-scale"><span></span><div class="pj-gantt-track">${ticks.map((t) => `<small style="left:${pct(t)}%">${new Date(t).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').replace(/^./, (c) => c.toUpperCase())}</small>`).join('')}</div></div>
+        ${rows.map((r) => {
+          const late = r.to && r.to < now && r.st.status !== 'approved';
+          return `
+          <div class="pj-gantt-row">
+            <span class="pj-gantt-label">${esc(r.st.name)}</span>
+            <div class="pj-gantt-track">${r.to ? `<i class="pj-gantt-bar is-${r.st.status}${late ? ' is-late' : ''}" style="left:${pct(r.from)}%;width:${Math.max(1.5, pct(r.to) - pct(r.from))}%" title="${fmtDate(new Date(r.from).toISOString())} a ${fmtDate(r.st.dueDate)}"></i>` : '<em>sem prazo fixo</em>'}${overlay}</div>
+          </div>`;
+        }).join('')}
+        ${marks.length ? `<div class="pj-gantt-row"><span class="pj-gantt-label">Agenda</span><div class="pj-gantt-track">${marks.map((m) => `<i class="pj-gantt-dot" style="left:${pct(new Date(m.startsAt).getTime())}%" title="${esc(m.title)} — ${fmtWhen(m.startsAt)}"></i>`).join('')}${overlay}</div></div>` : ''}
+      </div>
+      <p class="pj-gantt-legend"><span class="is-in_progress">em andamento</span><span class="is-approved">aprovada</span><span class="is-late">atrasada</span><span class="is-today">hoje</span>${target ? '<span class="is-target">meta</span>' : ''}${marks.length ? '<span class="is-dot">reunião/visita</span>' : ''}</p>`;
+  }
+
+  function ganttCard() {
+    const g = ganttHtml();
+    if (!g) return '';
+    return `
+      <div class="pj-card pj-gantt-card">
+        <div class="pj-card-head"><h2>Cronograma</h2><button type="button" class="btn btn-tertiary btn-sm" data-act="print-gantt">Imprimir</button></div>
+        ${g}
+      </div>`;
+  }
+
+  function reviewCard() {
+    if (W.role !== 'client') return '';
+    const r = W.review;
+    if (!r && W.status !== 'completed') return '';
+    const name = esc(W.architect?.name || 'o arquiteto');
+    if (r && !editingReview) return `
+      <div class="pj-card pj-review">
+        <h2>Sua avaliação de ${name}</h2>
+        <p class="pj-stars" aria-label="${r.rating} de 5 estrelas">${stars(r.rating)}</p>
+        ${r.comment ? `<p>“${esc(r.comment)}”</p>` : ''}
+        <p class="pj-muted">${r.verified ? 'Aparece no perfil público com o selo "Contratou pela match.IA". ' : ''}<button type="button" class="pj-link" data-act="review-edit">Editar</button></p>
+      </div>`;
+    return `
+      <form class="pj-card pj-review" data-form="review">
+        <h2>Projeto concluído! Como foi trabalhar com ${name}?</h2>
+        <p class="pj-muted">Sua avaliação aparece no perfil com o selo "Contratou pela match.IA" — ajuda outros clientes a escolher.</p>
+        <fieldset class="pj-star-pick"><legend class="sr-only">Nota</legend>
+          ${[5, 4, 3, 2, 1].map((n) => `<input type="radio" name="rating" id="rv${n}" value="${n}" ${(r?.rating || 5) === n ? 'checked' : ''}><label for="rv${n}" title="${n} de 5">★<span class="sr-only">${n} de 5</span></label>`).join('')}
+        </fieldset>
+        <label class="sr-only" for="pjReviewText">Comentário</label>
+        <textarea id="pjReviewText" rows="3" maxlength="1000" placeholder="O que você destacaria? Prazo, escuta, soluções, acompanhamento da obra…">${esc(r?.comment || '')}</textarea>
+        <div class="pj-row-actions"><button type="submit" class="btn btn-primary btn-sm">Enviar avaliação</button>${r ? '<button type="button" class="btn btn-tertiary btn-sm" data-act="review-cancel">Cancelar</button>' : ''}</div>
+      </form>`;
   }
 
   function stageActions(st) {
@@ -183,6 +313,12 @@
       </div>`;
   }
 
+  function rrtCallout() {
+    const rrt = W.legalDocs?.find((d) => d.key === 'rrt');
+    if (!isArchitect() || !rrt || ['concluido', 'nao_aplica'].includes(rrt.status)) return '';
+    return `<p class="pj-callout pj-rrt">Emita o <strong>RRT do projeto</strong> no SICCAU antes de começar e registre o número em <button type="button" class="pj-link" data-act="goto-tab" data-tab="documentos">Documentos</button> — ele aparece no contrato e nos recibos.</p>`;
+  }
+
   function renderStages() {
     const filesBy = (key) => W.files.filter((f) => f.stage === key).length;
     $('#pjPanelEtapas').innerHTML = `
@@ -200,6 +336,9 @@
           <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
         </form>` : ''}
       </div>
+      ${rrtCallout()}
+      ${reviewCard()}
+      ${ganttCard()}
       ${isArchitect() && W.isOwner ? templatesCard() : ''}
       ${isArchitect() ? teamCard() : ''}
       <ol class="pj-stages">
@@ -355,10 +494,11 @@
             <label>Qtd.<input data-field="quantity" type="number" min="0.01" step="0.01" value="${it.quantity}"></label>
             <label>Unid.<input data-field="unit" maxlength="20" value="${esc(it.unit)}" placeholder="un, m²"></label>
             ${it.kind === 'custom' ? `<label>Preço (R$)<input data-field="price" type="number" min="0" step="0.01" value="${it.price ?? ''}"></label>` : ''}
+            <label>Garantia (meses)<input data-field="warrantyMonths" type="number" min="1" max="600" step="1" value="${it.warrantyMonths ?? ''}"></label>
             <label class="is-wide">Observação<input data-field="note" maxlength="300" value="${esc(it.note)}" placeholder="Acabamento, cor, onde usar…"></label>
           </div>
           <button type="button" class="pj-link pj-danger" data-act="remove-item" data-id="${it.id}">Tirar da biblioteca</button>`
-          : `${it.note ? `<p class="pj-muted">${esc(it.note)}</p>` : ''}<span class="pj-muted">${it.quantity} ${esc(it.unit || 'un')}</span>`}
+          : `${it.note ? `<p class="pj-muted">${esc(it.note)}</p>` : ''}<span class="pj-muted">${it.quantity} ${esc(it.unit || 'un')}${it.warrantyMonths ? ` · garantia de ${it.warrantyMonths} meses` : ''}</span>`}
         </div>
       </li>`;
   }
@@ -566,6 +706,7 @@
             <button type="submit" class="btn btn-primary btn-sm">Registrar</button>
           </div>
         </form>
+        ${pendingDiary.length ? `<div class="pj-pending"><strong>${pendingDiary.length} ${pendingDiary.length === 1 ? 'registro aguardando' : 'registros aguardando'} internet</strong><span class="pj-muted">Ficaram guardados neste aparelho e sobem sozinhos quando a conexão voltar.</span><ul>${pendingDiary.map((e) => `<li><time>${fmtDate(e.date)}</time> ${esc(e.text.slice(0, 90))}${e.files?.length ? ` · ${e.files.length} foto${e.files.length > 1 ? 's' : ''}` : ''}</li>`).join('')}</ul></div>` : ''}
         ${W.diary.length ? `<ol class="pj-diary">${W.diary.map((d) => `
           <li>
             <time>${fmtDate(d.date)}</time>
@@ -579,8 +720,209 @@
       </section>`;
   }
 
+
+  // ------------------------------------------------------------------ agenda
+  function meetingItem(m) {
+    const start = new Date(m.startsAt).getTime();
+    const past = start + m.durationMin * 60000 < Date.now();
+    const myAnswer = W.role === 'client' ? m.clientAnswer : m.architectAnswer;
+    const open = !['cancelled'].includes(m.status);
+    const chip = m.status === 'confirmed' ? 'is-approved' : m.status === 'pending' ? 'is-awaiting_approval' : 'is-late';
+    const canMinutes = isArchitect() && open && start <= Date.now() + 30 * 60000;
+    return `
+      <li class="pj-card pj-meeting is-${m.status}${past ? ' is-past' : ''}">
+        <div class="pj-meeting-when"><strong>${new Date(m.startsAt).getDate()}</strong><span>${new Date(m.startsAt).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')} · ${new Date(m.startsAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <div class="pj-meeting-main">
+          <h3>${esc(m.title)} <span class="pj-chip ${chip}">${MEETING_STATUS[m.status]}</span></h3>
+          <p class="pj-stage-meta"><span>${esc(m.kindLabel)}</span><span>${m.durationMin} min</span>${m.place ? `<span>${esc(m.place)}</span>` : ''}<span>marcado por ${esc(m.createdBy?.name || '—')}</span></p>
+          ${m.note ? `<p class="pj-muted">${esc(m.note)}</p>` : ''}
+          ${m.answerNote ? `<p class="pj-muted">Recado: “${esc(m.answerNote)}”</p>` : ''}
+          ${m.minutes ? `<div class="pj-minutes"><small>Ata · ${esc(m.minutesBy?.name || '')} · ${fmtDate(m.minutesAt)}</small><p>${esc(m.minutes)}</p></div>` : ''}
+          ${open && !past && myAnswer === 'pending' ? `
+            <label class="sr-only" for="mn-${m.id}">Recado</label>
+            <textarea id="mn-${m.id}" data-note rows="2" maxlength="300" placeholder="Não pode? Sugira outro dia ou horário."></textarea>
+            <div class="pj-row-actions">
+              <button type="button" class="btn btn-sage btn-sm" data-act="meeting-answer" data-answer="yes" data-id="${m.id}">Confirmar presença</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-act="meeting-answer" data-answer="no" data-id="${m.id}">Não posso</button>
+            </div>` : ''}
+          ${canMinutes ? `
+            <details class="pj-edit" ${!m.minutes && past ? 'open' : ''}>
+              <summary>${m.minutes ? 'Editar a ata' : 'Registrar a ata (o que foi decidido)'}</summary>
+              <form data-form="minutes" data-id="${m.id}">
+                <label class="sr-only" for="mm-${m.id}">Ata</label>
+                <textarea id="mm-${m.id}" rows="4" maxlength="3000" placeholder="Decisões, medidas conferidas, próximos passos e responsáveis." required>${esc(m.minutes)}</textarea>
+                <div class="pj-row-actions"><button type="submit" class="btn btn-primary btn-sm">Salvar ata</button></div>
+              </form>
+            </details>` : ''}
+          <div class="pj-row-actions">
+            ${open && !past ? `<button type="button" class="btn btn-tertiary btn-sm" data-act="meeting-ics" data-id="${m.id}">Adicionar à minha agenda (.ics)</button>` : ''}
+            ${open && !past && (m.mine || W.isOwner) ? `<button type="button" class="pj-link pj-danger" data-act="meeting-cancel" data-id="${m.id}">Cancelar</button>` : ''}
+          </div>
+        </div>
+      </li>`;
+  }
+
+  function renderAgenda() {
+    const now = Date.now();
+    const upcoming = W.meetings.filter((m) => new Date(m.startsAt).getTime() + m.durationMin * 60000 >= now && m.status !== 'cancelled');
+    const past = W.meetings.filter((m) => !upcoming.includes(m)).reverse();
+    const today = new Date();
+    const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    $('#pjPanelAgenda').innerHTML = `
+      <form class="pj-card" data-form="meeting">
+        <h2>Marcar reunião ou visita</h2>
+        <p class="pj-muted">${isArchitect() ? 'O cliente' : 'O arquiteto'} recebe o convite no sininho e por e-mail e confirma por aqui. Um dia antes, os dois recebem um lembrete.</p>
+        <div class="pj-grid-form">
+          <label>Tipo<select name="kind">${Object.entries(MEETING_KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+          <label>Assunto<input name="title" maxlength="100" placeholder="Ex.: Apresentação do anteprojeto"></label>
+          <label>Dia*<input name="day" type="date" min="${day}" required></label>
+          <label>Horário*<input name="time" type="time" required></label>
+          <label>Duração<select name="durationMin">${[30, 60, 90, 120, 180, 240].map((n) => `<option value="${n}" ${n === 60 ? 'selected' : ''}>${n < 60 ? `${n} min` : `${n / 60} h`.replace('.5', ',5')}</option>`).join('')}</select></label>
+          <label class="is-wide">Local ou link<input name="place" maxlength="200" placeholder="Endereço da obra ou link da chamada"></label>
+          <label class="is-wide">Recado<input name="note" maxlength="600" placeholder="O que levar, o que vamos decidir…"></label>
+          <div class="is-wide"><button type="submit" class="btn btn-primary btn-sm">Marcar</button></div>
+        </div>
+      </form>
+      <section class="pj-room">
+        <h3>Próximos <span class="pj-muted">${upcoming.length}</span></h3>
+        ${upcoming.length ? `<ol class="pj-meetings">${upcoming.map(meetingItem).join('')}</ol>` : '<p class="pj-empty">Nada marcado. Reuniões, apresentações e visitas de obra aparecem aqui, com confirmação dos dois lados.</p>'}
+      </section>
+      ${past.length ? `<section class="pj-room"><h3>Anteriores e cancelados <span class="pj-muted">${past.length}</span></h3><ol class="pj-meetings">${past.map(meetingItem).join('')}</ol></section>` : ''}`;
+  }
+
+  // ------------------------------------------------------------------ documentos legais
+  function renderDocs() {
+    const docs = W.legalDocs || [];
+    const latest = new Map();
+    W.files.forEach((f) => { const k = `${f.stage}|${f.name}`; if (!latest.has(k) || latest.get(k).version < f.version) latest.set(k, f); });
+    const fileOpts = [...latest.values()];
+    const fileName = (fid) => W.files.find((f) => f.id === fid)?.name || 'arquivo';
+    const done = docs.filter((d) => d.status === 'concluido').length;
+    const relevant = docs.filter((d) => d.status !== 'nao_aplica').length;
+    const chip = { pendente: '', andamento: 'is-awaiting_approval', concluido: 'is-approved', nao_aplica: '' };
+    const row = (d) => `
+      <li class="pj-legal is-${d.status}">
+        <div class="pj-legal-main">
+          <strong>${esc(d.name)}</strong> <span class="pj-chip ${chip[d.status]}">${LEGAL_STATUS[d.status]}</span>
+          ${d.hint ? `<p class="pj-muted">${esc(d.hint)}</p>` : ''}
+          <p class="pj-stage-meta">${d.number ? `<span>Nº ${esc(d.number)}</span>` : ''}${d.date ? `<span>${fmtDate(d.date)}</span>` : ''}${d.note ? `<span>${esc(d.note)}</span>` : ''}${d.fileId ? `<button type="button" class="pj-link" data-act="download" data-id="${esc(d.fileId)}">${esc(fileName(d.fileId))}</button>` : ''}</p>
+        </div>
+        ${isArchitect() ? `
+        <details class="pj-edit">
+          <summary>Atualizar</summary>
+          <form class="pj-grid-form" data-form="legal" data-key="${esc(d.key)}">
+            <label>Situação<select name="status">${Object.entries(LEGAL_STATUS).map(([k, v]) => `<option value="${k}" ${d.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+            <label>Número / protocolo<input name="number" maxlength="60" value="${esc(d.number)}"></label>
+            <label>Data<input name="date" type="date" value="${inputDate(d.date)}"></label>
+            <label>Arquivo do projeto<select name="fileId"><option value="">Nenhum</option>${fileOpts.map((f) => `<option value="${f.id}" ${d.fileId === f.id ? 'selected' : ''}>${esc(f.name)} (v${f.version})</option>`).join('')}</select></label>
+            <label class="is-wide">Observação<input name="note" maxlength="300" value="${esc(d.note)}"></label>
+            <div class="is-wide pj-row-actions" style="margin:0"><button type="submit" class="btn btn-secondary btn-sm">Salvar</button>${d.key.startsWith('custom-') ? `<button type="button" class="pj-link pj-danger" data-act="legal-remove" data-key="${esc(d.key)}">tirar da lista</button>` : ''}</div>
+          </form>
+        </details>` : ''}
+      </li>`;
+    $('#pjPanelDocumentos').innerHTML = `
+      <div class="pj-card">
+        <h2>Documentos da obra <span class="pj-muted">${done} de ${relevant} concluídos</span></h2>
+        <p class="pj-muted">${isArchitect() ? 'RRT, aprovações e licenças em um lugar só. Anexe o comprovante enviando o PDF na aba Arquivos e escolhendo-o aqui. Marque "Não se aplica" no que esta obra não precisa.' : 'Os registros e licenças que o arquiteto cuida para a sua obra estar regular. Você acompanha a situação de cada um por aqui.'}</p>
+        <ul class="pj-legal-list">${docs.map(row).join('')}</ul>
+        ${isArchitect() ? `
+        <form class="pj-inline" data-form="legal-add">
+          <label for="pjLegalName">Outro documento</label>
+          <input id="pjLegalName" maxlength="80" placeholder="Ex.: Laudo de vistoria do vizinho" required>
+          <button type="submit" class="btn btn-secondary btn-sm">Incluir</button>
+        </form>` : ''}
+      </div>
+      ${W.briefingId || W.contractId ? `
+      <div class="pj-card">
+        <h2>Combinado com o cliente</h2>
+        <p class="pj-row-actions" style="margin-top:6px">
+          ${W.briefingId ? `<a class="btn btn-secondary btn-sm" href="briefing.html?id=${esc(W.briefingId)}">Briefing respondido</a>` : ''}
+          ${W.contractId ? `<a class="btn btn-secondary btn-sm" href="contrato.html?id=${esc(W.contractId)}">Contrato assinado${W.rrt ? ` · RRT ${esc(W.rrt)}` : ''}</a>` : ''}
+        </p>
+      </div>` : ''}`;
+  }
+
+  // ------------------------------------------------------------------ manual da casa
+  function manualHtml() {
+    if (!W.handoverAt) {
+      if (isArchitect() && W.isOwner) return `
+        <form class="pj-card" data-form="handover">
+          <h2>Entrega da obra e manual da casa</h2>
+          <p class="pj-muted">Ao registrar a entrega, o cliente recebe o manual da casa: materiais usados (com loja e garantia), quem executou cada serviço, os documentos da obra e um plano de manutenção montado a partir do que foi usado — com lembretes por e-mail.</p>
+          <div class="pj-inline">
+            <label for="pjHandover">Data da entrega</label>
+            <input id="pjHandover" type="date" value="${new Date().toISOString().slice(0, 10)}" max="${new Date().toISOString().slice(0, 10)}" required style="max-width:180px">
+            <button type="submit" class="btn btn-primary btn-sm">Registrar entrega</button>
+          </div>
+        </form>`;
+      return `<div class="pj-card"><h2>Manual da casa</h2><p class="pj-muted">Quando a obra terminar, ${esc(W.architect?.name || 'o arquiteto')} registra a entrega e o manual da sua casa aparece aqui: materiais, garantias, quem fez cada serviço e quando fazer cada manutenção.</p></div>`;
+    }
+    const now = Date.now();
+    return `
+      <section class="pj-card pj-manual">
+        <div class="pj-card-head">
+          <h2>Manual da casa <span class="pj-muted">obra entregue em ${fmtDate(W.handoverAt)}</span></h2>
+          <button type="button" class="btn btn-secondary btn-sm" data-act="print-manual">Imprimir / PDF</button>
+        </div>
+        <p class="pj-muted">Plano de manutenção montado com os materiais e serviços desta obra. ${W.role === 'client' ? 'Vamos te lembrar por e-mail quando chegar a hora; marque "Feito" para o próximo lembrete contar a partir de hoje.' : 'O cliente recebe um lembrete por e-mail quando cada item vence.'}</p>
+        ${W.maintenance.length ? `<ul class="pj-maint">${W.maintenance.map((t) => {
+          const late = new Date(t.nextAt).getTime() < now;
+          return `
+          <li>
+            <div><strong>${esc(t.task)}</strong><span class="pj-muted">a cada ${t.everyMonths} ${t.everyMonths === 1 ? 'mês' : 'meses'}${t.because ? ` · por causa de: ${esc(t.because)}` : ''}${t.lastDoneAt ? ` · feita em ${fmtDate(t.lastDoneAt)}` : ''}</span></div>
+            <div class="pj-maint-actions">
+              <span class="pj-chip ${late ? 'is-late' : ''}">${late ? 'Venceu em' : 'Próxima'} ${fmtDate(t.nextAt)}</span>
+              <button type="button" class="btn btn-tertiary btn-sm" data-act="maint-done" data-id="${t.id}">Feito</button>
+              ${isArchitect() ? `<button type="button" class="pj-link pj-danger" data-act="maint-remove" data-id="${t.id}" aria-label="Tirar ${esc(t.task)} do plano">tirar</button>` : ''}
+            </div>
+          </li>`;
+        }).join('')}</ul>` : '<p class="pj-empty">Nenhum item de manutenção.</p>'}
+        ${isArchitect() ? `
+        <form class="pj-inline" data-form="maint-add">
+          <label class="sr-only" for="pjMaintTask">Manutenção</label>
+          <input id="pjMaintTask" maxlength="160" placeholder="Outra manutenção (ex.: revisar o motor do portão)" required>
+          <label class="sr-only" for="pjMaintEvery">A cada (meses)</label>
+          <input id="pjMaintEvery" type="number" min="1" max="120" value="12" style="max-width:110px" aria-describedby="pjMaintEveryHint">
+          <span id="pjMaintEveryHint" class="pj-muted">meses</span>
+          <button type="submit" class="btn btn-secondary btn-sm">Incluir</button>
+        </form>` : ''}
+      </section>`;
+  }
+
+  function printManual() {
+    const rooms = new Map();
+    W.library.forEach((it) => { const r = it.room || 'Geral'; if (!rooms.has(r)) rooms.set(r, []); rooms.get(r).push(it); });
+    const until = (m) => {
+      const d = new Date(W.handoverAt);
+      d.setMonth(d.getMonth() + m);
+      return d.toISOString();
+    };
+    const docs = (W.legalDocs || []).filter((d) => d.status === 'concluido');
+    printDoc(`
+      <article class="pj-doc pj-doc-manual">
+        <header><p class="pj-doc-kicker">Manual da casa · obra entregue em ${fmtDate(W.handoverAt)}</p><h1>${esc(W.name)}</h1>
+          <p>Projeto de ${esc(W.architect?.name || '')} para ${esc(W.client?.name || '')}${W.city ? ` · ${esc(W.city)}${W.state ? `/${esc(W.state)}` : ''}` : ''}</p></header>
+        <h2>Plano de manutenção</h2>
+        <table><thead><tr><th>O quê</th><th>Frequência</th><th>Próxima</th></tr></thead><tbody>
+          ${W.maintenance.map((t) => `<tr><td>${esc(t.task)}${t.because ? `<small>${esc(t.because)}</small>` : ''}</td><td>a cada ${t.everyMonths} ${t.everyMonths === 1 ? 'mês' : 'meses'}</td><td>${fmtDate(t.nextAt)}</td></tr>`).join('')}
+        </tbody></table>
+        ${W.library.length ? `<h2>Materiais e produtos</h2>${[...rooms.entries()].map(([room, items]) => `
+          <h3>${esc(room)}</h3>
+          <table><thead><tr><th>Item</th><th>Onde comprar</th><th>Garantia</th></tr></thead><tbody>
+            ${items.map((it) => `<tr><td>${esc(it.name)}${it.category || it.note ? `<small>${[it.category, it.note].filter(Boolean).map(esc).join(' · ')}</small>` : ''}</td><td>${esc(it.storeName || '—')}${it.purchaseUrl ? `<small>${esc(it.purchaseUrl)}</small>` : ''}</td><td>${it.warrantyMonths ? `${it.warrantyMonths} meses (até ${fmtDate(until(it.warrantyMonths))})` : '—'}</td></tr>`).join('')}
+          </tbody></table>`).join('')}` : ''}
+        ${W.crew.length ? `<h2>Quem executou</h2><table><thead><tr><th>Serviço</th><th>Prestador</th><th>Contato</th></tr></thead><tbody>
+          ${W.crew.map((c) => `<tr><td>${esc(c.trade)}</td><td>${esc(c.name)}${c.providerId ? '<small>parceiro match.IA</small>' : ''}</td><td>${esc(c.contact || (c.providerId ? 'pelo painel da match.IA' : '—'))}</td></tr>`).join('')}
+        </tbody></table>` : ''}
+        ${docs.length ? `<h2>Documentos da obra</h2><table><thead><tr><th>Documento</th><th>Número</th><th>Data</th></tr></thead><tbody>
+          ${docs.map((d) => `<tr><td>${esc(d.name)}</td><td>${esc(d.number || '—')}</td><td>${d.date ? fmtDate(d.date) : '—'}</td></tr>`).join('')}
+        </tbody></table>` : ''}
+        <footer>Gerado pelo Espaço do projeto da match.IA em ${new Date().toLocaleDateString('pt-BR')}. Guarde junto com as notas fiscais e os manuais dos fabricantes.</footer>
+      </article>`);
+  }
+
   function renderObra() {
-    $('#pjPanelObra').innerHTML = crewHtml() + diaryHtml();
+    $('#pjPanelObra').innerHTML = crewHtml() + diaryHtml() + manualHtml();
     // fotos do diário: baixadas com o login (protegidas) e guardadas para não baixar de novo
     $('#pjPanelObra').querySelectorAll('img[data-thumb]').forEach(async (img) => {
       const id = img.dataset.thumb;
@@ -615,11 +957,91 @@
       </ol>` : '<p class="pj-empty">Tudo o que mudar no projeto (etapas, arquivos, biblioteca e compras) fica registrado aqui, com quem fez e quando.</p>';
   }
 
+
+  // ------------------------------------------------------------------ sem internet (canteiro de obra)
+  // Cópia do espaço e fila do diário de obra no IndexedDB deste aparelho; apagadas ao sair da conta (api.js).
+  const Offline = (() => {
+    let dbp = null;
+    const db = () => dbp || (dbp = new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) { reject(new Error('sem IndexedDB')); return; }
+      const r = indexedDB.open('matchia-offline', 1);
+      r.onupgradeneeded = () => {
+        r.result.createObjectStore('snapshots');
+        r.result.createObjectStore('diary', { keyPath: 'qid', autoIncrement: true });
+      };
+      r.onsuccess = () => {
+        // sair da conta (outra aba) apaga o banco: esta conexão fecha para não travar a exclusão
+        r.result.onversionchange = () => { r.result.close(); dbp = null; };
+        resolve(r.result);
+      };
+      r.onerror = () => reject(r.error);
+      r.onblocked = () => reject(new Error('banco offline ocupado'));
+    })).catch((err) => { dbp = null; throw err; });
+    // nunca deixa a página esperando o armazenamento local
+    const ready = () => Promise.race([db(), new Promise((_, reject) => setTimeout(() => reject(new Error('armazenamento local lento')), 3000))]);
+    const tx = async (store, mode, fn) => {
+      const d = await ready();
+      return new Promise((resolve, reject) => {
+        const t = d.transaction(store, mode);
+        const req = fn(t.objectStore(store));
+        t.oncomplete = () => resolve(req?.result);
+        t.onerror = () => reject(t.error);
+        t.onabort = () => reject(t.error);
+      });
+    };
+    return {
+      save: (key, value) => tx('snapshots', 'readwrite', (s) => s.put(value, key)).catch(() => {}),
+      load: (key) => tx('snapshots', 'readonly', (s) => s.get(key)).catch(() => null),
+      queue: (entry) => tx('diary', 'readwrite', (s) => s.add(entry)),
+      pending: (owner) => tx('diary', 'readonly', (s) => s.getAll()).then((list) => (list || []).filter((e) => e.owner === owner)).catch(() => []),
+      drop: (qid) => tx('diary', 'readwrite', (s) => s.delete(qid)),
+    };
+  })();
+  const ownerKey = () => `${API.currentUser()?.id || ''}:${id}`;
+
+  async function queueDiary(entry) {
+    await Offline.queue({ ...entry, owner: ownerKey(), at: Date.now() });
+    pendingDiary = await Offline.pending(ownerKey());
+    renderObra();
+    flash('Sem internet: o registro ficou guardado neste aparelho e sobe sozinho quando a conexão voltar.');
+  }
+
+  let flushing = false;
+  async function flushDiary() {
+    if (flushing || !navigator.onLine || !W || offlineSince) return;
+    flushing = true;
+    let sent = 0;
+    try {
+      for (const e of await Offline.pending(ownerKey())) {
+        const ids = [];
+        for (const f of e.files || []) ids.push((await API.workspaceUpload(W.id, f, '', 'diary')).uploaded);
+        W = await API.workspaceAddDiary(W.id, { date: e.date, text: e.text, files: ids });
+        await Offline.drop(e.qid);
+        sent += 1;
+      }
+    } catch { /* sem conexão de novo: tenta na próxima vez */ }
+    pendingDiary = await Offline.pending(ownerKey());
+    flushing = false;
+    if (sent) {
+      render();
+      flash(`${sent} ${sent === 1 ? 'registro do diário enviado' : 'registros do diário enviados'} — a conexão voltou.`);
+    } else if (pendingDiary.length) renderObra();
+  }
+
+  window.addEventListener('online', async () => {
+    if (offlineSince) {
+      try { W = await API.workspace(id); offlineSince = null; Offline.save(ownerKey(), { W, at: Date.now() }); render(); } catch { return; }
+    }
+    flushDiary();
+  });
+
   // ------------------------------------------------------------------ geral
   function render() {
     renderHero();
     renderStages();
+    renderAgenda();
     renderFiles();
+    renderDocs();
     renderLibrary();
     renderShopping();
     renderObra();
@@ -671,7 +1093,52 @@
     const card = btn.closest('li, form, section');
     const note = card?.querySelector('[data-note]')?.value.trim() || '';
 
-    if (act === 'stage') {
+    if (act === 'goto-tab') {
+      showTab(btn.dataset.tab);
+    } else if (act === 'copy-pix') {
+      const input = $(`#pix-${btn.dataset.key}`);
+      try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand('copy'); }
+      flash('Código Pix copiado. Cole no app do seu banco, em "Pix copia e cola".');
+    } else if (act === 'confirm-fee') {
+      const st = W.stages.find((x) => x.key === btn.dataset.key);
+      if (!confirm(`Confirmar que você recebeu ${money(st.fee)} dos honorários de "${st.name}"? O cliente recebe o recibo na hora.`)) return;
+      await run(btn, () => API.workspaceConfirmFee(W.id, btn.dataset.key), 'Recebimento confirmado — o recibo já está disponível.');
+    } else if (act === 'receipt') {
+      btn.disabled = true;
+      try { await printReceipt(btn.dataset.key); } catch (err) { flash(err.message, true); }
+      btn.disabled = false;
+    } else if (act === 'print-gantt') {
+      printDoc(`<article class="pj-doc"><header><p class="pj-doc-kicker">Cronograma do projeto</p><h1>${esc(W.name)}</h1><p>Meta de entrega: ${fmtDate(W.targetDate)} · ${W.summary.approved} de ${W.summary.total} etapas aprovadas</p></header>${ganttHtml()}<ol class="pj-doc-list">${W.stages.map((s) => `<li><strong>${esc(s.name)}</strong> — ${s.dueDate ? `prazo ${fmtDate(s.dueDate)}` : 'sem prazo fixo'} · ${STATUS[s.status]}</li>`).join('')}</ol></article>`);
+    } else if (act === 'print-manual') {
+      printManual();
+    } else if (act === 'review-edit') {
+      editingReview = true;
+      renderStages();
+    } else if (act === 'review-cancel') {
+      editingReview = false;
+      renderStages();
+    } else if (act === 'meeting-answer') {
+      await run(btn, () => API.workspaceAnswerMeeting(W.id, btn.dataset.id, btn.dataset.answer, note), btn.dataset.answer === 'yes' ? 'Presença confirmada.' : 'Resposta enviada — combinem outro horário.');
+    } else if (act === 'meeting-cancel') {
+      if (!confirm('Cancelar este compromisso? A outra pessoa recebe um aviso.')) return;
+      await run(btn, () => API.workspaceCancelMeeting(W.id, btn.dataset.id), 'Compromisso cancelado.');
+    } else if (act === 'meeting-ics') {
+      try {
+        const blob = await API.workspaceMeetingIcs(W.id, btn.dataset.id);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${slug(W.meetings.find((m) => m.id === btn.dataset.id)?.title)}.ics`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      } catch (err) { flash(err.message, true); }
+    } else if (act === 'legal-remove') {
+      await run(btn, () => API.workspaceRemoveLegalDoc(W.id, btn.dataset.key), 'Documento retirado da lista.');
+    } else if (act === 'maint-done') {
+      await run(btn, () => API.workspaceMaintenanceDone(W.id, btn.dataset.id), 'Anotado. O próximo lembrete conta a partir de hoje.');
+    } else if (act === 'maint-remove') {
+      if (!confirm('Tirar este item do plano de manutenção?')) return;
+      await run(btn, () => API.workspaceRemoveMaintenance(W.id, btn.dataset.id), 'Item retirado.');
+    } else if (act === 'stage') {
       const labels = { submit: 'Etapa enviada para o cliente aprovar.', approve: 'Etapa aprovada. A próxima já começou.', 'request-changes': 'Pedido de ajustes enviado ao arquiteto.' };
       await run(btn, () => API.workspaceStageAction(W.id, btn.dataset.key, btn.dataset.action, note), labels[btn.dataset.action]);
     } else if (act === 'quotes') {
@@ -709,8 +1176,8 @@
       try { templates = await API.deleteWorkspaceTemplate(btn.dataset.id); renderStages(); } catch (err) { flash(err.message, true); }
     } else if (act === 'pay') {
       const st = W.stages.find((x) => x.key === btn.dataset.key);
-      if (!confirm(`Registrar o pagamento de ${money(st.fee)} dos honorários de "${st.name}"? (simulação — nada é cobrado)`)) return;
-      await run(btn, () => API.workspacePayFee(W.id, btn.dataset.key), 'Pagamento registrado.');
+      if (!confirm(`Avisar ${W.architect?.name || 'o arquiteto'} que você pagou ${money(st.fee)} dos honorários de "${st.name}"? Ele confere no banco e confirma o recebimento.`)) return;
+      await run(btn, () => API.workspacePayFee(W.id, btn.dataset.key), 'Pagamento avisado. O recibo sai quando o arquiteto confirmar.');
     } else if (act === 'goto-files') {
       showTab('arquivos');
       document.getElementById(`files-${btn.dataset.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -774,7 +1241,28 @@
     e.preventDefault();
     const btn = form.querySelector('[type="submit"]');
     const kind = form.dataset.form;
-    if (kind === 'target') {
+    if (kind === 'meeting') {
+      const f = form.elements;
+      const when = new Date(`${f.day.value}T${f.time.value}`);
+      if (Number.isNaN(when.getTime())) { flash('Escolha o dia e o horário.', true); return; }
+      await run(btn, () => API.workspaceAddMeeting(W.id, { kind: f.kind.value, title: f.title.value, startsAt: when.toISOString(), durationMin: f.durationMin.value, place: f.place.value, note: f.note.value }), 'Marcado — a outra pessoa recebe o convite para confirmar.');
+    } else if (kind === 'minutes') {
+      await run(btn, () => API.workspaceMeetingMinutes(W.id, form.dataset.id, form.querySelector('textarea').value), 'Ata registrada no histórico do projeto.');
+    } else if (kind === 'legal') {
+      const f = form.elements;
+      await run(btn, () => API.workspaceUpdateLegalDoc(W.id, form.dataset.key, { status: f.status.value, number: f.number.value, date: f.date.value ? `${f.date.value}T12:00:00Z` : null, fileId: f.fileId.value, note: f.note.value }), 'Documento atualizado.');
+    } else if (kind === 'legal-add') {
+      await run(btn, () => API.workspaceAddLegalDoc(W.id, { name: $('#pjLegalName').value }), 'Documento incluído na lista.');
+    } else if (kind === 'handover') {
+      if (!confirm('Registrar a entrega da obra? O cliente recebe o manual da casa e o plano de manutenção começa a contar.')) return;
+      await run(btn, () => API.workspaceHandover(W.id, `${$('#pjHandover').value}T12:00:00Z`), 'Entrega registrada — o manual da casa está pronto.');
+    } else if (kind === 'maint-add') {
+      await run(btn, () => API.workspaceAddMaintenance(W.id, { task: $('#pjMaintTask').value, everyMonths: $('#pjMaintEvery').value }), 'Incluído no plano de manutenção.');
+    } else if (kind === 'review') {
+      const rating = Number(form.querySelector('input[name="rating"]:checked')?.value || 0);
+      const res = await run(btn, () => API.workspaceReview(W.id, rating, $('#pjReviewText').value), 'Obrigado! Sua avaliação já aparece no perfil do arquiteto.');
+      if (res) { editingReview = false; renderStages(); }
+    } else if (kind === 'target') {
       await run(btn, () => API.workspaceTarget(W.id, `${$('#pjTarget').value}T12:00:00Z`), 'Meta atualizada.');
     } else if (kind === 'team') {
       await run(btn, () => API.workspaceAddTeam(W.id, $('#pjTeamEmail').value.trim()), 'Colega adicionado à equipe — ele recebe um aviso.');
@@ -789,6 +1277,9 @@
       await run(btn, () => API.workspaceAddCrew(W.id, data), `${data.name} adicionado à equipe de obra.`);
     } else if (kind === 'diary') {
       const files = [...($('#pjDiaryPhotos').files || [])].slice(0, 6);
+      const entry = { date: `${$('#pjDiaryDate').value}T12:00:00Z`, text: $('#pjDiaryText').value, files };
+      if (files.some((f) => f.size > W.storage.fileMax)) { flash('Foto grande demais (máximo 15 MB).', true); return; }
+      if (!navigator.onLine || offlineSince) { await queueDiary(entry).catch(() => flash('Este navegador não deixa guardar o registro sem internet.', true)); return; }
       btn.disabled = true;
       btn.textContent = files.length ? 'Enviando fotos…' : 'Registrando…';
       try {
@@ -797,10 +1288,11 @@
           if (f.size > W.storage.fileMax) throw new Error(`${f.name}: foto grande demais (máximo 15 MB).`);
           ids.push((await API.workspaceUpload(W.id, f, '', 'diary')).uploaded);
         }
-        W = await API.workspaceAddDiary(W.id, { date: `${$('#pjDiaryDate').value}T12:00:00Z`, text: $('#pjDiaryText').value, files: ids });
+        W = await API.workspaceAddDiary(W.id, { date: entry.date, text: entry.text, files: ids });
         render();
         flash('Registro adicionado ao diário de obra.');
       } catch (err) {
+        if (err?.offline) { await queueDiary(entry).catch(() => {}); return; }
         flash(err.message || 'Não deu certo agora.', true);
         btn.disabled = false;
         btn.textContent = 'Registrar';
@@ -851,17 +1343,29 @@
     if (!/^[a-f\d]{24}$/i.test(id)) { state.innerHTML = 'Projeto não encontrado. <a href="dashboard.html">Voltar ao painel</a>'; return; }
     try {
       W = await API.workspace(id);
+      Offline.save(ownerKey(), { W, at: Date.now() });
     } catch (err) {
       if (err?.status === 401) { location.replace('login.html'); return; }
-      state.innerHTML = `${esc(err?.message || 'Não foi possível abrir o projeto.')} <a href="dashboard.html">Voltar ao painel</a>`;
-      return;
+      const copy = err?.offline ? await Offline.load(ownerKey()) : null;
+      if (!copy?.W) {
+        state.innerHTML = `${esc(err?.offline ? 'Sem internet e sem uma cópia deste projeto salva neste aparelho.' : err?.message || 'Não foi possível abrir o projeto.')} <a href="dashboard.html">Voltar ao painel</a>`;
+        return;
+      }
+      W = copy.W;
+      offlineSince = new Date(copy.at).toISOString();
     }
     const hash = location.hash.replace('#', '');
-    if (['etapas', 'arquivos', 'biblioteca', 'compras', 'obra', 'historico'].includes(hash)) tab = hash;
+    if (['etapas', 'agenda', 'arquivos', 'documentos', 'biblioteca', 'compras', 'obra', 'historico'].includes(hash)) tab = hash;
     state.hidden = true;
     app.hidden = false;
     render();
-    if (isArchitect()) {
+    // registros do diário feitos sem internet: mostra e envia sem segurar a abertura da página
+    Offline.pending(ownerKey()).then((list) => {
+      pendingDiary = list;
+      if (list.length) renderObra();
+      flushDiary();
+    });
+    if (isArchitect() && !offlineSince) {
       API.workspaceTemplates().then((t) => { templates = t; renderStages(); }).catch(() => {});
       API.architectProjects().then((list) => { otherProjects = list.filter((p) => String(p._id) !== W.id); renderLibrary(); }).catch(() => {});
     }

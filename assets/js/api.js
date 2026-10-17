@@ -27,6 +27,19 @@ const MatchAPI = (() => {
   function clearSession() {
     localStorage.removeItem('matchia_token');
     localStorage.removeItem('matchia_user');
+    // cópia offline do Espaço do projeto e diário pendente ficam só enquanto a pessoa está logada
+    try { indexedDB.deleteDatabase('matchia-offline'); } catch { /* sem IndexedDB */ }
+  }
+  /** Id aleatório deste navegador: o login em duas etapas só pede código em aparelho novo. */
+  function deviceId() {
+    try {
+      let id = localStorage.getItem('matchia_device');
+      if (!id) {
+        id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
+        localStorage.setItem('matchia_device', id);
+      }
+      return id;
+    } catch { return ''; }
   }
   function currentUser() {
     try { return JSON.parse(localStorage.getItem('matchia_user') || 'null'); }
@@ -149,11 +162,40 @@ const MatchAPI = (() => {
   const ws = (id, rest = '') => `/workspace/${encodeURIComponent(id)}${rest}`;
 
   return {
-    avatarSrc, prepareAvatar, prepareImage, authBlob,
+    avatarSrc, prepareAvatar, prepareImage, authBlob, deviceId,
     workspace: (id) => request(ws(id), { auth: true }),
     workspaceStageAction: (id, key, action, text) => request(ws(id, `/stages/${encodeURIComponent(key)}/${action}`), { method: 'POST', auth: true, body: { text } }),
     workspaceUpdateStage: (id, key, payload) => request(ws(id, `/stages/${encodeURIComponent(key)}`), { method: 'PATCH', auth: true, body: payload }),
     workspacePayFee: (id, key) => request(ws(id, `/stages/${encodeURIComponent(key)}/pay`), { method: 'POST', auth: true }),
+    workspaceConfirmFee: (id, key) => request(ws(id, `/stages/${encodeURIComponent(key)}/confirm-payment`), { method: 'POST', auth: true }),
+    workspaceReceipt: (id, key) => request(ws(id, `/stages/${encodeURIComponent(key)}/receipt`), { auth: true }),
+    workspaceAddMeeting: (id, payload) => request(ws(id, '/meetings'), { method: 'POST', auth: true, body: payload }),
+    workspaceAnswerMeeting: (id, mid, answer, note) => request(ws(id, `/meetings/${encodeURIComponent(mid)}/answer`), { method: 'POST', auth: true, body: { answer, note } }),
+    workspaceMeetingMinutes: (id, mid, minutes) => request(ws(id, `/meetings/${encodeURIComponent(mid)}/minutes`), { method: 'POST', auth: true, body: { minutes } }),
+    workspaceCancelMeeting: (id, mid) => request(ws(id, `/meetings/${encodeURIComponent(mid)}/cancel`), { method: 'POST', auth: true }),
+    workspaceMeetingIcs: (id, mid) => authBlob(ws(id, `/meetings/${encodeURIComponent(mid)}/ics`)),
+    workspaceAddLegalDoc: (id, payload) => request(ws(id, '/legal-docs'), { method: 'POST', auth: true, body: payload }),
+    workspaceUpdateLegalDoc: (id, key, payload) => request(ws(id, `/legal-docs/${encodeURIComponent(key)}`), { method: 'PATCH', auth: true, body: payload }),
+    workspaceRemoveLegalDoc: (id, key) => request(ws(id, `/legal-docs/${encodeURIComponent(key)}`), { method: 'DELETE', auth: true }),
+    workspaceHandover: (id, date) => request(ws(id, '/handover'), { method: 'POST', auth: true, body: { date } }),
+    workspaceAddMaintenance: (id, payload) => request(ws(id, '/maintenance'), { method: 'POST', auth: true, body: payload }),
+    workspaceRemoveMaintenance: (id, tid) => request(ws(id, `/maintenance/${encodeURIComponent(tid)}`), { method: 'DELETE', auth: true }),
+    workspaceMaintenanceDone: (id, tid) => request(ws(id, `/maintenance/${encodeURIComponent(tid)}/done`), { method: 'POST', auth: true }),
+    workspaceReview: (id, rating, comment) => request(ws(id, '/review'), { method: 'POST', auth: true, body: { rating, comment } }),
+    myBilling: () => request('/architects/me/billing', { auth: true }),
+    saveBilling: (payload) => request('/architects/me/billing', { method: 'PUT', auth: true, body: payload }),
+    mySecurity: () => request('/dashboard/me/security', { auth: true }),
+    securityCode: () => request('/dashboard/me/security/code', { method: 'POST', auth: true }),
+    setTwoFactor: (enable, code) => request('/dashboard/me/security', { method: 'POST', auth: true, body: { enable, code, deviceId: deviceId() } }),
+    forgetDevices: () => request('/dashboard/me/security/forget-devices', { method: 'POST', auth: true }),
+    loginVerify: (challenge, code) => request('/auth/login/verify', { method: 'POST', body: { challenge, code } }),
+    loginResend: (challenge) => request('/auth/login/resend', { method: 'POST', body: { challenge } }),
+    briefingTemplate: () => request('/briefings/template', { auth: true }),
+    saveBriefingTemplate: (questions) => request('/briefings/template', { method: 'PUT', auth: true, body: { questions } }),
+    resetBriefingTemplate: () => request('/briefings/template', { method: 'DELETE', auth: true }),
+    sendBriefing: (hireId, message) => request('/briefings', { method: 'POST', auth: true, body: { hireId, message } }),
+    briefing: (bid) => request(`/briefings/${encodeURIComponent(bid)}`, { auth: true }),
+    answerBriefing: (bid, answers) => request(`/briefings/${encodeURIComponent(bid)}/answers`, { method: 'POST', auth: true, body: { answers } }),
     workspaceReport: () => request('/workspace/report/me', { auth: true }),
     workspaceTarget: (id, targetDate) => request(ws(id, '/target'), { method: 'PATCH', auth: true, body: { targetDate } }),
     workspaceUpload: (id, file, stage, kind = 'doc') => uploadRaw(ws(id, `/files?stage=${encodeURIComponent(stage || '')}&kind=${encodeURIComponent(kind)}`), file),
@@ -210,7 +252,7 @@ const MatchAPI = (() => {
     registerClient: (payload) => request('/auth/register/client', { method: 'POST', body: payload }),
     registerArchitect: (payload) => request('/auth/register/architect', { method: 'POST', body: payload }),
     registerStore: (payload) => request('/auth/register/store', { method: 'POST', body: payload }),
-    login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
+    login: (payload) => request('/auth/login', { method: 'POST', body: { ...payload, deviceId: deviceId() } }),
     forgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: { email } }),
     resetPassword: (token, password, confirmPassword) => request('/auth/reset-password', { method: 'POST', body: { token, password, confirmPassword } }),
     me: () => request('/dashboard/me', { auth: true }),

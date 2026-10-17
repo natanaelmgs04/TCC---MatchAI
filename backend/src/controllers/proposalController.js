@@ -3,11 +3,13 @@ import Proposal from "../models/Proposal.js";
 import Hire from "../models/Hire.js";
 import Project from "../models/Project.js";
 import User from "../models/User.js";
+import Briefing from "../models/Briefing.js";
 import { notify } from "../services/notificationService.js";
 import { proposalEmail } from "../services/emailService.js";
 import { acceptHireFromContract } from "./hireController.js";
 import { STAGE_TEMPLATES, normalizeStageList, stagesFromTemplate, targetDate } from "../services/workspaceRules.js";
 import { buildContractDocument, documentHash, normalizeProposalInput, signatureMatches } from "../services/contractRules.js";
+import { briefingToText, rrtOf } from "../services/officeRules.js";
 
 /**
  * Proposta e contrato (contrato.html). O arquiteto envia a proposta a partir
@@ -59,11 +61,13 @@ export async function draft(req, res) {
   const hire = await Hire.findOne({ _id: req.params.hireId, architect: req.user.id }).populate("project", "name propertyType areaM2 city state budget projectGoals").populate("client", "name");
   if (!hire) return res.status(404).json({ error: "Pedido não encontrado." });
   const last = await Proposal.findOne({ hire: hire._id }).sort("-createdAt").lean();
+  const briefing = await Briefing.findOne({ hire: hire._id }).lean();
   res.json({
     hire: { id: String(hire._id), status: hire.status, message: hire.message || "" },
     project: hire.project,
     client: { name: hire.client?.name },
     architectName: req.user.name,
+    briefing: briefing ? { id: String(briefing._id), status: briefing.status, summary: briefing.status === "answered" ? briefingToText(briefing.questions, briefing.answers) : "" } : null,
     last: last ? { status: last.status, scope: last.scope, stages: last.stages, paymentTerms: last.paymentTerms, version: last.version } : null,
     templates: [
       ...Object.entries(STAGE_TEMPLATES).map(([id, t]) => ({ id, name: t.label, stages: t.stages.map(({ key, ...st }) => st) })),
@@ -109,7 +113,10 @@ export async function create(req, res) {
 
 export async function get(req, res) {
   const p = await loadVisible(req, res);
-  if (p) res.json(shape(p, req.user.id));
+  if (!p) return;
+  // RRT emitido depois da assinatura: aparece junto do contrato, sem mudar o documento assinado
+  const project = p.status === "signed" ? await Project.findById(p.project).select("legalDocs").lean() : null;
+  res.json({ ...shape(p, req.user.id), rrt: project ? rrtOf(project.legalDocs || []) : "" });
 }
 
 export async function sign(req, res) {

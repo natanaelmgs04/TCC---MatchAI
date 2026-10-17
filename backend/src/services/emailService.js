@@ -168,6 +168,26 @@ export function passwordResetEmail(user, resetUrl) {
   });
 }
 
+// ---- Segurança da conta (ver services/loginSecurity.js) ----
+export function loginCodeEmail(user, code, purpose) {
+  const why = purpose === "toggle" ? "confirmar a mudança no login em duas etapas" : "entrar na sua conta em um aparelho novo";
+  return sendEmail({
+    to: user.email,
+    subject: `${code} é o seu código de acesso — match.IA`,
+    html: `<p>Olá, ${escapeHtml(user.name)}!</p><p>Use o código abaixo para ${why}. Ele vale por 10 minutos.</p><p style="font-size:28px;letter-spacing:6px;font-weight:700;margin:18px 0">${code}</p><p>Se não foi você, ignore este e-mail e troque sua senha — ninguém entra sem este código.</p>`,
+  });
+}
+
+export function newLoginEmail(user, { label, at }) {
+  const when = new Date(at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  return sendEmail({
+    to: user.email,
+    subject: "Novo acesso à sua conta — match.IA",
+    html: `<p>Olá, ${escapeHtml(user.name)}!</p><p>Sua conta match.IA foi acessada de um aparelho novo: <strong>${escapeHtml(label)}</strong>, em ${when} (horário de Brasília).</p><p>Se foi você, está tudo certo. Se não foi, troque sua senha agora e ligue o login em duas etapas no painel (Conta → Segurança).</p>`,
+    cta: { label: "Abrir meu painel", path: "dashboard.html#conta" },
+  });
+}
+
 export function newMessageEmail(recipient, senderName, text) {
   // O texto é digitado pelo remetente (ou gerado por IA a partir do que ele
   // escreveu): escapa antes de entrar no HTML do e-mail.

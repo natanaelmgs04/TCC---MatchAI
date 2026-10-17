@@ -45,8 +45,10 @@ const projectSchema = new mongoose.Schema(
         // Honorários da etapa (cobrança simulada — TCC): o arquiteto define o
         // valor; aprovar a etapa abre a cobrança e o cliente marca como paga.
         fee: Number,
-        feeStatus: { type: String, enum: ["none", "due", "paid"], default: "none" },
+        // due = cobrança aberta; reported = o cliente avisou que pagou (Pix); paid = o arquiteto confirmou o recebimento
+        feeStatus: { type: String, enum: ["none", "due", "reported", "paid"], default: "none" },
         feeDueAt: Date,
+        feeReportedAt: Date,
         feePaidAt: Date,
         // lembretes de prazo já enviados (zeram quando o prazo muda)
         remindedSoonAt: Date,
@@ -72,6 +74,7 @@ const projectSchema = new mongoose.Schema(
         quantity: { type: Number, default: 1 },
         unit: String,
         purchased: { type: Boolean, default: false },
+        warrantyMonths: Number, // garantia do fabricante/fornecedor (manual da casa)
         addedAt: { type: Date, default: Date.now },
         // Cotações do item em lojas diferentes; a escolhida vira o preço/loja da lista de compras.
         quotes: [
@@ -113,6 +116,55 @@ const projectSchema = new mongoose.Schema(
         rating: Number,
         ratedAt: Date,
         addedAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Documentos legais da obra (RRT do CAU, condomínio, prefeitura, alvará…). Vazio = lista padrão (officeRules.js).
+    legalDocs: [
+      {
+        key: String,
+        name: String,
+        hint: String,
+        status: { type: String, enum: ["pendente", "andamento", "concluido", "nao_aplica"], default: "pendente" },
+        number: String,
+        date: Date,
+        note: String,
+        file: { type: mongoose.Schema.Types.ObjectId, ref: "ProjectFile" },
+        updatedAt: Date,
+        _id: false,
+      },
+    ],
+    // Agenda: reuniões e visitas de obra; cada lado confirma, e o lembrete sai 24 h antes.
+    meetings: [
+      {
+        kind: String,
+        title: String,
+        startsAt: Date,
+        durationMin: Number,
+        place: String,
+        note: String,
+        createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        clientAnswer: { type: String, enum: ["pending", "yes", "no"], default: "pending" },
+        architectAnswer: { type: String, enum: ["pending", "yes", "no"], default: "pending" },
+        answerNote: String,
+        minutes: { type: String, maxlength: 3000 }, // ata
+        minutesBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        minutesAt: Date,
+        cancelledAt: Date,
+        remindedAt: Date,
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Entrega da obra e manual da casa: plano de manutenção com lembretes para o cliente.
+    handoverAt: Date,
+    maintenance: [
+      {
+        ruleId: String,
+        task: String,
+        everyMonths: Number,
+        because: String,
+        nextAt: Date,
+        lastDoneAt: Date,
+        remindedAt: Date,
       },
     ],
     // Histórico de alterações (etapas, arquivos, biblioteca) — quem fez o quê e quando.

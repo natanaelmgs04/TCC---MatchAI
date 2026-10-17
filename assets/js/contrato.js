@@ -39,6 +39,9 @@
         <h1>${esc(p.name || 'Projeto')}</h1>
         <p class="ct-muted">Para ${esc(d.client.name)}. Quando o cliente assinar, a contratação fecha e o Espaço do projeto começa com estas etapas, prazos e honorários.</p>
       </header>
+      ${d.briefing?.summary ? `<details class="ct-card ct-briefing" open><summary><strong>Briefing respondido por ${esc(d.client.name)}</strong> <a href="briefing.html?id=${esc(d.briefing.id)}">abrir</a></summary><p class="ct-pre">${esc(d.briefing.summary)}</p></details>`
+        : d.briefing ? '<p class="ct-banner">O briefing foi enviado e o cliente ainda não respondeu. Dá para mandar a proposta assim mesmo.</p>'
+        : '<p class="ct-banner">Dica: mande antes o seu briefing (no painel, em Contratações) — com o programa de necessidades em mãos, a proposta acerta o escopo de primeira.</p>'}
       <form class="ct-card ct-form" id="ctForm" novalidate>
         <div class="ct-row">
           <label for="ctTemplate">Modelo de etapas</label>
@@ -182,6 +185,7 @@
         <p class="ct-muted">Proposta válida até ${new Date(`${d.validUntil}T12:00:00Z`).toLocaleDateString('pt-BR')}.</p>
         <section class="ct-sigs">${sig('Contratado(a)', p.architectSignature, p.names.architect)}${sig('Contratante', p.clientSignature, p.names.client)}</section>
         <p class="ct-hash">Código de verificação do documento (SHA-256): <code>${esc(p.documentHash)}</code></p>
+        ${p.rrt ? `<p class="ct-hash">RRT do projeto (CAU), emitido depois da assinatura: <strong>${esc(p.rrt)}</strong></p>` : ''}
       </article>`;
   }
 

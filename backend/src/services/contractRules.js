@@ -20,6 +20,7 @@ const brl = (n) => `R$ ${Number(n || 0).toLocaleString("pt-BR", { minimumFractio
 export const CONTRACT_CLAUSES = [
   "Cada etapa é entregue no Espaço do projeto da match.IA e só avança com a aprovação do CONTRATANTE. Pedidos de ajuste ficam registrados no histórico do projeto.",
   "Os honorários de cada etapa passam a ser devidos quando o CONTRATANTE aprova a etapa.",
+  "O CONTRATADO emite o RRT (Registro de Responsabilidade Técnica) do projeto no CAU antes de iniciar os serviços e informa o número no Espaço do projeto.",
   "Os prazos contam a partir da assinatura deste contrato. Mudanças de escopo depois da assinatura são combinadas por uma nova proposta.",
   "Os dados pessoais das partes são tratados conforme a Lei Geral de Proteção de Dados (Lei nº 13.709/2018) e usados somente para executar este contrato.",
   "Assinatura eletrônica simples: cada parte assina digitando o nome completo; a plataforma registra data, hora, endereço IP e o código de verificação deste documento.",

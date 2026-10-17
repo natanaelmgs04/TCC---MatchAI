@@ -187,7 +187,7 @@ export function dueReminders(stages, now = new Date()) {
 }
 
 // ---------------------------------------------------------------------------
-// Honorários por etapa (cobrança simulada)
+// Honorários por etapa (cobrança por Pix direto ao arquiteto; a plataforma não toca no dinheiro)
 // ---------------------------------------------------------------------------
 export const MAX_FEE = 10_000_000;
 
@@ -204,10 +204,22 @@ export function canEditFee(stage) {
   return stage.status !== "approved" && stage.feeStatus !== "paid";
 }
 
-/** Cliente marca a cobrança aberta como paga. */
-export function payFee(stage, role, now = new Date()) {
-  if (role !== "client") return { status: 403, error: "Só o cliente registra o pagamento." };
+/**
+ * O cliente avisa que pagou (Pix direto para a conta do arquiteto): a cobrança
+ * fica "aguardando confirmação" até o arquiteto conferir no banco.
+ */
+export function reportFee(stage, role, now = new Date()) {
+  if (role !== "client") return { status: 403, error: "Só o cliente avisa o pagamento." };
   if (stage.feeStatus !== "due") return { status: 409, error: "Não há cobrança aberta nesta etapa." };
+  stage.feeStatus = "reported";
+  stage.feeReportedAt = now;
+  return { stage };
+}
+
+/** O arquiteto responsável confirma que recebeu (também vale para pagamento combinado fora do Pix). */
+export function confirmFee(stage, isOwner, now = new Date()) {
+  if (!isOwner) return { status: 403, error: "Só o arquiteto responsável confirma o recebimento." };
+  if (!["due", "reported"].includes(stage.feeStatus)) return { status: 409, error: "Não há cobrança aberta nesta etapa." };
   stage.feeStatus = "paid";
   stage.feePaidAt = now;
   return { stage };
@@ -218,7 +230,8 @@ export function feeTotals(stages = []) {
   return {
     total: sum(() => true),
     paid: sum((s) => s.feeStatus === "paid"),
-    due: sum((s) => s.feeStatus === "due"),
+    due: sum((s) => s.feeStatus === "due" || s.feeStatus === "reported"),
+    reported: sum((s) => s.feeStatus === "reported"),
     upcoming: sum((s) => (s.fee || 0) > 0 && (!s.feeStatus || s.feeStatus === "none")),
   };
 }
@@ -330,6 +343,7 @@ export function normalizeItemDetails(body = {}) {
   if (body.note !== undefined) out.note = str(body.note, 300) || "";
   if (body.unit !== undefined) out.unit = str(body.unit, 20) || "";
   if (body.quantity !== undefined) out.quantity = num(body.quantity, 0.01, 100000) ?? 1;
+  if (body.warrantyMonths !== undefined) out.warrantyMonths = body.warrantyMonths === "" || body.warrantyMonths === null ? undefined : num(body.warrantyMonths, 1, 600) ?? undefined;
   return out;
 }
 

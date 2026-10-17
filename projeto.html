@@ -63,10 +63,13 @@
       <div class="pj-kpis" id="pjKpis" aria-live="polite"></div>
     </header>
     <p class="pj-plan-banner" id="pjPlanBanner" role="status" hidden></p>
+    <p class="pj-plan-banner pj-offline" id="pjOffline" role="status" hidden></p>
 
     <nav class="pj-tabs" role="tablist" aria-label="Seções do projeto">
       <button type="button" class="pj-tab is-active" role="tab" aria-selected="true" aria-controls="pjPanelEtapas" data-pj-tab="etapas">Etapas</button>
+      <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelAgenda" data-pj-tab="agenda">Agenda</button>
       <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelArquivos" data-pj-tab="arquivos">Arquivos</button>
+      <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelDocumentos" data-pj-tab="documentos">Documentos</button>
       <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelBiblioteca" data-pj-tab="biblioteca">Biblioteca</button>
       <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelCompras" data-pj-tab="compras">Lista de compras</button>
       <button type="button" class="pj-tab" role="tab" aria-selected="false" aria-controls="pjPanelObra" data-pj-tab="obra">Obra</button>
@@ -76,13 +79,17 @@
     <p class="pj-flash" id="pjFlash" role="status" aria-live="polite"></p>
 
     <section class="pj-panel" id="pjPanelEtapas" role="tabpanel" data-pj-panel="etapas"></section>
+    <section class="pj-panel" id="pjPanelAgenda" role="tabpanel" data-pj-panel="agenda" hidden></section>
     <section class="pj-panel" id="pjPanelArquivos" role="tabpanel" data-pj-panel="arquivos" hidden></section>
+    <section class="pj-panel" id="pjPanelDocumentos" role="tabpanel" data-pj-panel="documentos" hidden></section>
     <section class="pj-panel" id="pjPanelBiblioteca" role="tabpanel" data-pj-panel="biblioteca" hidden></section>
     <section class="pj-panel" id="pjPanelCompras" role="tabpanel" data-pj-panel="compras" hidden></section>
     <section class="pj-panel" id="pjPanelObra" role="tabpanel" data-pj-panel="obra" hidden></section>
     <section class="pj-panel" id="pjPanelHistorico" role="tabpanel" data-pj-panel="historico" hidden></section>
   </div>
 </main>
+<!-- recibo, cronograma e manual da casa: montados aqui só na hora de imprimir -->
+<div id="pjPrint" aria-hidden="true"></div>
 
 <script src="assets/js/api.js"></script>
 <script src="assets/js/theme.js"></script>

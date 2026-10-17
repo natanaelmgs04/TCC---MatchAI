@@ -2954,3 +2954,8 @@ body::before {
 /* os campos do formulário (.form-field input) esticavam o rádio/caixa e quebravam os chips */
 .partner-kind input, .trade-chip input { width: auto !important; min-width: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; border: 0 !important; box-shadow: none !important; flex: 0 0 auto; accent-color: var(--terracotta); }
 .partner-kind label, .trade-chip { width: auto !important; margin: 0 !important; white-space: nowrap; flex: 0 0 auto; }
+
+/* Botão com cara de link (login em duas etapas: "Mandar outro código") */
+.link-button { background: none; border: 0; padding: 0; font: inherit; color: var(--terracotta-dark); text-decoration: underline; cursor: pointer; }
+#codeForm[hidden], #loginForm[hidden] { display: none; }
+.review-verified { margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: .7rem; font-weight: 600; background: color-mix(in srgb, var(--sage) 20%, transparent); color: var(--sage-dark); white-space: nowrap; }

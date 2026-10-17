@@ -49,6 +49,7 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request))
+      // sem internet: a cópia guardada; páginas com ?id= (Espaço do projeto) usam a versão salva da mesma página
+      .catch(() => caches.match(request).then((hit) => hit || (request.mode === 'navigate' ? caches.match(request, { ignoreSearch: true }) : undefined)))
   );
 });

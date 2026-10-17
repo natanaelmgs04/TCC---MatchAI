@@ -5,7 +5,8 @@ export async function requireAuth(req, res, next) {
     const token = req.headers.authorization?.replace("Bearer ", "");
     if (!token)
       return res.status(401).json({ error: "Authentication required" });
-    const { sub } = jwt.verify(token, process.env.JWT_SECRET);
+    const { sub, purpose } = jwt.verify(token, process.env.JWT_SECRET);
+    if (purpose) return res.status(401).json({ error: "Invalid or expired token" }); // desafio do login em duas etapas não é login
     req.user = await User.findById(sub);
     if (!req.user) return res.status(401).json({ error: "User not found" });
     if (req.user.status === "suspended")
