@@ -2,6 +2,16 @@ import crypto from "node:crypto";
 import User from "../models/User.js";
 import { deleteUserCascade } from "./accountDeletion.js";
 
+const photo = (id) => `/assets/img/photos/photo-${id}.webp`; // fotos do próprio site (não dependem de rede externa)
+const PORTFOLIO = [
+  { title: "Apartamento Pinheiros", description: "Sala integrada com luz natural o dia todo, sofá em couro e parede de galeria. Reforma completa de 85 m².", imageUrl: photo("1600210492486-724fe5c67fb0"), styles: ["Contemporâneo", "Escandinavo"], materials: ["Madeira natural", "Linho"], areaM2: 85, status: "completed" },
+  { title: "Cobertura Vila Madalena", description: "Living com painel de madeira, cozinha aberta e esquadrias do piso ao teto para a varanda.", imageUrl: photo("1600607687939-ce8a6c25118c"), styles: ["Contemporâneo", "Minimalista"], materials: ["Madeira natural", "Porcelanato", "Vidro"], areaM2: 140, status: "completed" },
+  { title: "Casa Alto de Pinheiros", description: "Pé-direito duplo, escada vazada em madeira e sala aberta para o jardim — pensada para a família e o cachorro.", imageUrl: photo("1600566753086-00f18fb6b3ea"), styles: ["Contemporâneo"], materials: ["Madeira natural", "Concreto aparente"], areaM2: 260, status: "completed" },
+  { title: "Loft Itaim", description: "Jantar integrado à cozinha, marcenaria ripada e iluminação em trilho para um casal que recebe amigos.", imageUrl: photo("1600607687920-4e2a09cf159d"), styles: ["Minimalista", "Industrial"], materials: ["Madeira natural", "Aço", "Vidro"], areaM2: 72, status: "completed" },
+  { title: "Studio Perdizes", description: "Canto de leitura e home office em 38 m²: paleta neutra, poltrona amarela como ponto de cor.", imageUrl: photo("1586023492125-27b2c045efd7"), styles: ["Minimalista", "Escandinavo"], materials: ["Madeira natural", "Linho"], areaM2: 38, status: "completed" },
+  { title: "Residência Granja Viana", description: "Interiores de uma casa térrea com grandes aberturas para o gramado (em andamento).", imageUrl: photo("1600585154340-be6161a56a0c"), styles: ["Contemporâneo"], materials: ["Madeira natural", "Vidro", "Concreto aparente"], areaM2: 310, status: "ongoing" },
+];
+
 export const SHOWCASE = {
   arquiteta: { name: "Helena Duarte", email: "arquiteta.vitrine@match.arquitetos.demo" },
   cliente: { name: "Marina Costa", email: "cliente.vitrine@match.arquitetos.demo" },
@@ -53,6 +63,20 @@ export async function buildShowcaseAccounts(app, { password } = {}) {
         "architectProfile.yearsExperience": 12,
         "architectProfile.subscriptionTier": "pro", // mostra tudo, sem os limites do Gratuito
         "architectProfile.proSince": new Date(),
+        "architectProfile.specialties": ["Interiores residenciais", "Reformas de apartamento"],
+        "architectProfile.workingAreas": ["São Paulo", "Grande São Paulo"],
+        "architectProfile.favoriteMaterials": ["Madeira natural", "Porcelanato", "Granito", "Linho"],
+        "architectProfile.availability": "available",
+        "architectProfile.priceRange": { min: 8000, max: 40000 },
+        "architectProfile.portfolio": PORTFOLIO,
+        "architectProfile.signature": {
+          statement: "Casas calmas, com luz natural, madeira de verdade e marcenaria que organiza a rotina — nada que precise de manutenção difícil.",
+          principles: ["Luz natural antes de qualquer luminária", "Ambientes integrados, mas com cantos de recolhimento", "Marcenaria sob medida no lugar de móveis soltos"],
+          palette: ["Off-white", "Areia", "Madeira clara", "Verde-oliva"],
+          signatureMaterials: ["Madeira natural", "Porcelanato", "Linho"],
+          avoid: ["Gesso decorativo", "Espelhos em excesso"],
+          updatedAt: new Date(),
+        },
       },
     });
     await User.updateOne({ _id: people.cliente.id }, { $set: { city: "São Paulo", state: "SP" } });

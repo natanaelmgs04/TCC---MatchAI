@@ -287,7 +287,8 @@ const DashUI = (() => {
     const tabsBar = scope.querySelector('.profile-tabs');
     scope.querySelectorAll('[data-profile-panel-content]').forEach((panel) => {
       const key = panel.dataset.profilePanelContent;
-      if (key === 'home' || panel.querySelector(':scope > .dv-head')) return;
+      // o Assistente é um palco de tela cheia com título próprio (igual ao do cliente)
+      if (key === 'home' || key === 'assistente' || panel.querySelector(':scope > .dv-head')) return;
       const tab = tabsBar?.querySelector(`[data-profile-panel="${key}"] .dv-tab-label`);
       if (!tab) return;
       const lead = panel.querySelector(':scope > .card-lead');

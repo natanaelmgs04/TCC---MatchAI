@@ -871,5 +871,9 @@ const MatchAssistant = (() => {
     ['restricoes', 'Restrições'], ['perguntasEmAberto', 'Pontos a alinhar'], ['proximosPassos', 'Próximo passo sugerido'],
   ];
 
-  return { mount };
+  return {
+    mount,
+    // O mesmo palco (gradiente, robô 3D e brilho) para o assistente do arquiteto (architect-assistente.js)
+    decorate(stage) { initGradient(stage); initSpline(stage); initGlow(stage); },
+  };
 })();

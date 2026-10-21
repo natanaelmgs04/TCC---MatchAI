@@ -34,6 +34,9 @@ test("conta de vitrine: só a equipe cria; login com a senha sorteada; projeto c
   assert.equal(ws.data.meetings.length, 1);
   assert.ok(ws.data.briefingId);
   assert.equal(ws.data.plan.tier, "pro");
+  const profile = await api(`/architects/${login.data.user.id}`);
+  assert.equal(profile.data.profile.portfolio.length, 6);
+  assert.match(profile.data.profile.portfolio[0].imageUrl, /^\/assets\/img\/photos\//);
 
   // perfil ilustrativo: cliente de verdade não contrata a vitrine
   const proj = await api("/projects", { method: "POST", as: "curioso", body: { name: "Meu projeto" } });

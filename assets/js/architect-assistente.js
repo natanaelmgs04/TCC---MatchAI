@@ -4,9 +4,9 @@
  * um projeto que fechou com um cliente pela plataforma (MatchAPI.architectProjects)
  * e conversa com a IA pra receber sugestões de como desenvolvê-lo — sem
  * fotos, sem briefing, sem passo de "enviar para arquitetos" (isso é só do
- * lado do cliente). Reaproveita as mesmas classes .ai-* do card de chat do
- * cliente (definidas em assistente.css, sem depender do palco decorativo
- * com shader/robô 3D, que é exclusivo da aba do cliente).
+ * lado do cliente). Mesmo visual do cliente: palco com gradiente, robô 3D
+ * que acompanha o mouse e card de vidro (MatchAssistant.decorate + classes
+ * .ai-* de assistente.css).
  */
 const ArchitectAssistant = (() => {
   const el = (tag, cls, text) => {
@@ -24,6 +24,26 @@ const ArchitectAssistant = (() => {
   };
   const plain = (t) => String(t || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/^\s*\*\s+/gm, '- ').replace(/^#+\s*/gm, '');
   const STATUS_LABEL = { draft: 'Rascunho', matching: 'Buscando arquiteto', in_progress: 'Em andamento', completed: 'Concluído' };
+
+  const STAGE_OPEN = `
+    <div class="ai-stage">
+      <div class="ai-gradient" aria-hidden="true"><canvas></canvas></div>
+      <div class="ai-spline-wrap" aria-hidden="true">
+        <canvas class="ai-spline"></canvas>
+      </div>
+      <div class="ai-veil" aria-hidden="true"></div>
+      <div class="ai-glow" aria-hidden="true"></div>
+      <div class="ai-shell">
+        <div class="ai-column">
+          <span class="eyebrow ai-eyebrow">Assistente do arquiteto</span>
+          <h2 class="ai-title"></h2>
+          <p class="ai-lead"></p>`;
+  const STAGE_CLOSE = `
+          <p class="ai-note">Conversa só sua: o cliente não vê. A IA usa os dados do projeto, o briefing do cliente, a sua assinatura e a biblioteca do projeto.</p>
+        </div>
+      </div>
+      <div class="ai-cursor-hint" aria-hidden="true"><span></span> Mova o mouse — ele acompanha você</div>
+    </div>`;
 
   const CARD_HTML = `
     <div class="ai-card">
@@ -64,8 +84,12 @@ const ArchitectAssistant = (() => {
     </div>`;
 
   function mount(host) {
-    host.innerHTML = CARD_HTML;
+    host.innerHTML = STAGE_OPEN + CARD_HTML + STAGE_CLOSE;
+    const stage = host.querySelector('.ai-stage');
     const card = host.querySelector('.ai-card');
+    const title = stage.querySelector('.ai-title');
+    const lead = stage.querySelector('.ai-lead');
+    if (typeof MatchAssistant !== 'undefined' && MatchAssistant.decorate) MatchAssistant.decorate(stage);
     const $ = (ref) => card.querySelector(`[data-ref="${ref}"]`);
     const refs = Object.fromEntries(
       ['pickerList', 'back', 'resetBtn', 'thread', 'input', 'error', 'send', 'pill'].map((r) => [r, $(r)]),
@@ -81,6 +105,15 @@ const ArchitectAssistant = (() => {
 
     function setView(name) {
       Object.entries(views).forEach(([k, v]) => { v.hidden = k !== name; });
+      stage.dataset.view = name; // o CSS do desktop muda o layout conforme a vista
+      if (name === 'picker') {
+        title.innerHTML = 'Qual projeto<br><em>vamos desenvolver?</em>';
+        lead.textContent = 'Escolha um projeto fechado com um cliente pela plataforma. Eu ajudo com próximos passos, layout, materiais da biblioteca e cronograma — seguindo a sua assinatura.';
+      } else if (project) {
+        title.textContent = '';
+        title.append(document.createTextNode('Desenvolvendo '), el('em', '', project.name));
+        lead.textContent = 'Pergunte sobre próximos passos, materiais, layout ou cronograma.';
+      }
     }
 
     function renderPicker() {
