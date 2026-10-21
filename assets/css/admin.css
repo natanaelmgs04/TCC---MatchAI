@@ -222,3 +222,10 @@
 .adm-demo-text h3 { margin: 0 0 4px; font-size: 1.02rem; }
 .adm-demo-text p { margin: 0; font-size: .84rem; color: var(--ink-soft); line-height: 1.5; max-width: 72ch; }
 .adm-demo-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* Conta de vitrine: login e senha gerados */
+.adm-showcase { margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--sage) 50%, var(--line)); background: color-mix(in srgb, var(--sage) 10%, transparent); display: grid; gap: 6px; }
+.adm-showcase[hidden] { display: none; }
+.adm-showcase p { margin: 0; font-size: .88rem; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.adm-showcase code { font-size: .86rem; padding: 2px 8px; border-radius: 6px; background: var(--bg); user-select: all; }
+.adm-showcase a { color: var(--terracotta-dark); font-weight: 600; }

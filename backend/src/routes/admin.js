@@ -28,5 +28,6 @@ router.get("/system", admin.system);
 router.get("/demo-architects", asyncHandler(admin.demoStatus));
 router.post("/demo-architects", asyncHandler(admin.createDemo));
 router.delete("/demo-architects", asyncHandler(admin.removeDemo));
+router.post("/showcase", asyncHandler(admin.createShowcase));
 
 export default router;

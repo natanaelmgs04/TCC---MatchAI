@@ -15,7 +15,8 @@
     "delete:accounts": "node src/scripts/deleteAccounts.js",
     "test": "node --test",
     "test:ui": "node --test tests/ui/flows.ui.js",
-    "test:demo": "node tests/ui/demo-server.js"
+    "test:demo": "node tests/ui/demo-server.js",
+    "seed:vitrine": "node src/scripts/showcase.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

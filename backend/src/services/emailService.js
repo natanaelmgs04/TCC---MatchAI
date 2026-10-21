@@ -99,7 +99,8 @@ function layout(body, cta) {
  * falha de envio só vai para o log.
  */
 export async function sendEmail({ to, subject, html, cta }) {
-  const mode = emailMode();
+  // contas de demonstração (domínios .demo/.test não existem): nunca tenta entregar de verdade
+  const mode = /\.(demo|test)$/i.test(String(to || "").trim()) ? null : emailMode();
   const fullHtml = layout(html, cta);
   const text = htmlToText(html) + (cta && publicBaseUrl() ? ` ${cta.label}: ${publicBaseUrl()}/${cta.path}` : "");
   if (!mode) {

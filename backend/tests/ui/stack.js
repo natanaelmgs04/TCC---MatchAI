@@ -7,6 +7,7 @@
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { seedShowcase } from "../../src/services/showcase.js";
 
 // o mesmo MongoDB já baixado para os testes (backend/node_modules/.cache), qualquer que seja a pasta de onde se rode
 process.env.MONGOMS_DOWNLOAD_DIR ||= path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "node_modules", ".cache", "mongodb-memory-server");
@@ -53,37 +54,7 @@ export async function startStack({ port = 0, dbName = "matchia_ui" } = {}) {
   }
 
   /** Projeto contratado com contrato assinado, briefing respondido, 1ª etapa aprovada com Pix em aberto e uma visita amanhã. */
-  async function seedWorkspace() {
-    const proj = await api("/projects", { method: "POST", as: "cliente", body: { name: "Apartamento Vila Mariana", city: "São Paulo", state: "SP", preferredStyles: ["Contemporâneo"] } });
-    const hire = await api("/hires", { method: "POST", as: "cliente", body: { projectId: proj._id, architectId: people.arquiteta.id, message: "Queremos integrar a cozinha." } });
-    const b = await api("/briefings", { method: "POST", as: "arquiteta", body: { hireId: hire.id } });
-    await api(`/briefings/${b.id}/answers`, { method: "POST", as: "cliente", body: { answers: { q1: "Casal e um gato", q3: ["Cozinha integrada", "Home office"], q4: ["Luz natural"], q6: "De R$ 50 a 150 mil" } } });
-    const prop = await api("/proposals", { method: "POST", as: "arquiteta", body: { hireId: hire.id, scope: "Projeto de interiores do apartamento, com executivo e acompanhamento da obra.", signatureName: PEOPLE.arquiteta.name, stages: [
-      { name: "Briefing e levantamento", weeks: 2, fee: 1800 },
-      { name: "Anteprojeto", weeks: 4, fee: 3200 },
-      { name: "Projeto executivo", weeks: 5, fee: 4500, closesDesign: true },
-      { name: "Acompanhamento da obra", weeks: 10, fee: 2500 },
-    ] } });
-    await api(`/proposals/${prop.id}/sign`, { method: "POST", as: "cliente", body: { agree: true, signatureName: PEOPLE.cliente.name } });
-    await api("/architects/me/billing", { method: "PUT", as: "arquiteta", body: { pix: { type: "email", key: "pix@ui.test", name: "Teresa Teste", city: "São Paulo" }, taxId: "529.982.247-25" } });
-    let ws = await api(`/workspace/${proj._id}`, { as: "arquiteta" });
-    const k0 = ws.stages[0].key;
-    await api(`/workspace/${proj._id}/stages/${k0}/submit`, { method: "POST", as: "arquiteta", body: { text: "Levantamento e programa fechados." } });
-    await api(`/workspace/${proj._id}/stages/${k0}/approve`, { method: "POST", as: "cliente", body: {} });
-    await api(`/workspace/${proj._id}/legal-docs/rrt`, { method: "PATCH", as: "arquiteta", body: { status: "concluido", number: "12345678" } });
-    await api(`/workspace/${proj._id}/legal-docs/condominio`, { method: "PATCH", as: "arquiteta", body: { status: "andamento" } });
-    const tomorrow = new Date(Date.now() + 26 * 3600e3);
-    tomorrow.setMinutes(0, 0, 0);
-    await api(`/workspace/${proj._id}/meetings`, { method: "POST", as: "arquiteta", body: { kind: "visita", title: "Visita técnica e medição", startsAt: tomorrow.toISOString(), durationMin: 90, place: "Rua Domingos de Morais, 1000" } });
-    for (const it of [
-      { name: "Porcelanato 90x90 cinza", category: "Revestimento", storeName: "Casa & Piso", price: 129.9, quantity: 48, unit: "m²", room: "Sala", warrantyMonths: 60 },
-      { name: "Bancada em granito São Gabriel", category: "Pedras", storeName: "Marmoraria Sul", price: 2800, room: "Cozinha", warrantyMonths: 12 },
-      { name: "Pendente de latão", category: "Iluminação", storeName: "Luz & Cia", price: 890, quantity: 2, room: "Cozinha" },
-    ]) await api(`/workspace/${proj._id}/library`, { method: "POST", as: "arquiteta", body: it });
-    await api(`/workspace/${proj._id}/crew`, { method: "POST", as: "arquiteta", body: { name: "Marcenaria Bom Corte", trade: "Marcenaria", contact: "(11) 4000-0000" } });
-    ws = await api(`/workspace/${proj._id}/diary`, { method: "POST", as: "arquiteta", body: { date: new Date().toISOString(), text: "Demolição da parede da cozinha concluída." } });
-    return { projectId: proj._id, hireId: hire.id, proposalId: prop.id, briefingId: b.id };
-  }
+  const seedWorkspace = () => seedShowcase(api, { cliente: PEOPLE.cliente.name, arquiteta: PEOPLE.arquiteta.name }, { architectId: people.arquiteta.id, pixKey: "pix@ui.test" });
 
   async function close() {
     console.log = log;

@@ -195,8 +195,17 @@
         </div>
         <div class="adm-demo-actions"><span class="adm-muted" id="uDemoCount">…</span><button type="button" class="btn btn-sm" id="uDemoBtn" disabled>…</button></div>
       </section>
+      <section class="dv-card adm-card adm-demo" aria-labelledby="uShowTitle">
+        <div class="adm-demo-text">
+          <h3 id="uShowTitle">Conta de vitrine (apresentações)</h3>
+          <p>Cria uma arquiteta e uma cliente fictícias com um projeto completo — briefing, contrato assinado, cronograma, Pix, documentos, agenda, biblioteca e obra — para mostrar o site. A senha aparece só aqui e muda a cada vez; criar de novo apaga as duas contas e recomeça do zero.</p>
+          <div id="uShowOut" class="adm-showcase" hidden></div>
+        </div>
+        <div class="adm-demo-actions"><button type="button" class="btn btn-primary btn-sm" id="uShowBtn">Criar conta de vitrine</button></div>
+      </section>
       <div id="uList"><div class="adm-loading"><span class="spinner"></span></div></div>`;
     setupDemoCard();
+    setupShowcaseCard();
     $('uRole').value = userFilters.role; $('uStatus').value = userFilters.status; $('uSort').value = userFilters.sort;
     let t;
     $('uQ').addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { userFilters.q = $('uQ').value.trim(); userFilters.page = 1; loadUsers(); }, 280); });
@@ -213,6 +222,28 @@
       } catch (err) { fail(err); }
     });
     await loadUsers();
+  }
+  function setupShowcaseCard() {
+    const btn = $('uShowBtn'), out = $('uShowOut');
+    btn?.addEventListener('click', async () => {
+      if (!confirm('Criar a conta de vitrine? Se ela já existir, é apagada e recriada do zero (com uma senha nova).')) return;
+      btn.disabled = true;
+      btn.textContent = 'Criando… (uns 10 segundos)';
+      try {
+        const r = await api('/showcase', { method: 'POST' });
+        out.hidden = false;
+        out.innerHTML = `
+          <p><strong>Arquiteta:</strong> <code>${esc(r.architect.email)}</code></p>
+          <p><strong>Cliente:</strong> <code>${esc(r.client.email)}</code></p>
+          <p><strong>Senha das duas:</strong> <code>${esc(r.password)}</code> <button type="button" class="btn btn-secondary btn-sm" id="uShowCopy">Copiar senha</button></p>
+          <p><a href="projeto.html?id=${esc(r.projectId)}">Abrir o projeto</a> · o QR Code do Pix usa uma chave fictícia: não pague.</p>`;
+        $('uShowCopy').addEventListener('click', () => navigator.clipboard?.writeText(r.password).then(() => toast('Senha copiada')).catch(() => {}));
+        toast('Conta de vitrine pronta');
+        loadUsers();
+      } catch (err) { fail(err); }
+      btn.disabled = false;
+      btn.textContent = 'Criar de novo';
+    });
   }
   async function setupDemoCard() {
     const btn = $('uDemoBtn'), count = $('uDemoCount');

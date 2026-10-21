@@ -1,3 +1,4 @@
+import { buildShowcaseAccounts } from "../services/showcase.js";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Project from "../models/Project.js";
@@ -96,6 +97,13 @@ export async function removeDemo(req, res) {
   const result = await removeDemoArchitects();
   log(req, "demo.remove", { type: "system", label: "Arquitetos de demonstração" }, `${result.removed} removidos`);
   res.json(result);
+}
+
+// ---------- conta de vitrine (apresentações) ----------
+export async function createShowcase(req, res) {
+  const r = await buildShowcaseAccounts(req.app);
+  log(req, "showcase.create", { type: "system", label: "Conta de vitrine" }, `${r.architect.email} e ${r.client.email}`);
+  res.json(r); // a senha só aparece nesta resposta (e é sorteada de novo a cada vez)
 }
 
 export function me(req, res) {
