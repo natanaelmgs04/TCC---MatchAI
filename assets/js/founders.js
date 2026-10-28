@@ -7,10 +7,10 @@
 const FOUNDERS = {
   natanael: {
     name: 'Natanael Martins Gomes Santos',
-    role: 'Front-end',
+    role: 'Front-end e Design',
     initials: 'NM',
     photo: 'assets/img/team/natanael.png',
-    eyebrow: 'Fundador · Front-end',
+    eyebrow: 'Fundador · Front-end e Design',
     tagline: 'Cuida de tudo o que aparece na tela do match.IA — a experiência, a IA e cada detalhe da interface.',
     bio: [
       'Responsável pelo front-end do match.IA, a interface que clientes e arquitetos usam: desenhou o fluxo de match, integrou a IA generativa (Gemini) que explica cada compatibilidade em linguagem natural, e adaptou o back-end — construído pelo Roberto — para sustentar essas funcionalidades.',
@@ -18,7 +18,7 @@ const FOUNDERS = {
       'Gosta de levar um projeto até o detalhe que ninguém pediu: o foco de teclado certo, a transição que não atrasa, o estado vazio que não parece um erro.'
     ],
     factsLeft: [
-      { label: 'Frente', value: 'Front-end' },
+      { label: 'Frente', value: 'Front-end e Design' },
       { label: 'IA aplicada', value: 'Gemini · integração & explicações' },
       { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
     ],
