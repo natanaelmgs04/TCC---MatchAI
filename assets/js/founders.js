@@ -7,23 +7,23 @@
 const FOUNDERS = {
   natanael: {
     name: 'Natanael Martins Gomes Santos',
-    role: 'Produto & Tecnologia',
+    role: 'Front-end',
     initials: 'NM',
     photo: 'assets/img/team/natanael.png',
-    eyebrow: 'Fundador · Produto & Tecnologia',
-    tagline: 'Levou o match.IA da ideia ao produto — moldando a experiência, a IA e cada detalhe da interface.',
+    eyebrow: 'Fundador · Front-end',
+    tagline: 'Cuida de tudo o que aparece na tela do match.IA — a experiência, a IA e cada detalhe da interface.',
     bio: [
-      'Responsável pelo produto e pela experiência do match.IA: desenhou o fluxo de match, integrou a IA generativa (Gemini) que explica cada compatibilidade em linguagem natural, e adaptou o back-end — construído pelo Roberto — para sustentar essas funcionalidades.',
+      'Responsável pelo front-end do match.IA, a interface que clientes e arquitetos usam: desenhou o fluxo de match, integrou a IA generativa (Gemini) que explica cada compatibilidade em linguagem natural, e adaptou o back-end — construído pelo Roberto — para sustentar essas funcionalidades.',
       'Também desenhou o design system da plataforma — tipografia, cores, componentes e o modo escuro — com atenção a acessibilidade (contraste WCAG, navegação por teclado) e conformidade com a LGPD.',
       'Gosta de levar um projeto até o detalhe que ninguém pediu: o foco de teclado certo, a transição que não atrasa, o estado vazio que não parece um erro.'
     ],
     factsLeft: [
-      { label: 'Frente', value: 'Produto & front-end' },
+      { label: 'Frente', value: 'Front-end' },
       { label: 'IA aplicada', value: 'Gemini · integração & explicações' },
       { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
     ],
     factsRight: [
-      { label: 'No projeto', value: 'Produto, IA & design system' },
+      { label: 'No projeto', value: 'Interface, IA & design system' },
       { label: 'Também cuida de', value: 'Acessibilidade & LGPD' },
       { label: 'Turma', value: '3EMIB — FIAP School' }
     ],
@@ -57,33 +57,56 @@ const FOUNDERS = {
   },
   cinthia: {
     name: 'Cinthia Yamamoto Gushiken',
-    role: 'Identidade & produto',
+    role: 'Identidade e Design',
     initials: 'CY',
     photo: 'assets/img/team/cinthia.png',
-    eyebrow: 'Fundadora · Identidade & produto',
+    eyebrow: 'Fundadora · Identidade e Design',
     tagline: 'Cuida de como o match.IA se apresenta — e de como ele faz sentido para quem usa.',
     bio: [
-      'Atua na identidade e no produto do match.IA: a forma como a marca se mostra e como a experiência se organiza para clientes e arquitetos, da primeira tela ao resultado do match.',
+      'Atua na identidade e no design do match.IA: a forma como a marca se mostra e como a experiência se organiza visualmente para clientes e arquitetos, da primeira tela ao resultado do match.',
       'Olha o projeto pelos dois lados da plataforma — quem procura um arquiteto e quem quer ser encontrado — para que a proposta de valor apareça de forma clara, sem jargão.',
       'Ajuda a manter coerência entre o que a marca promete e o que o produto entrega: estilo, personalização e autoria do arquiteto no centro.'
     ],
     factsLeft: [
-      { label: 'Frente', value: 'Identidade & produto' },
+      { label: 'Frente', value: 'Identidade e Design' },
       { label: 'Foco', value: 'Experiência de clientes e arquitetos' },
       { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
     ],
     factsRight: [
-      { label: 'No projeto', value: 'Marca, narrativa e produto' },
+      { label: 'No projeto', value: 'Marca, identidade visual e design' },
       { label: 'Também cuida de', value: 'Coerência entre marca e produto' },
       { label: 'Turma', value: '3EMIB — FIAP School' }
     ]
   },
   italo: {
     name: 'Ítalo Santos de Morais',
-    role: 'Marketing',
+    role: 'Finanças',
     initials: 'IS',
     photo: 'assets/img/team/italo.png',
-    eyebrow: 'Fundador · Marketing',
+    eyebrow: 'Fundador · Finanças',
+    tagline: 'Faz as contas para o match.IA se sustentar.',
+    bio: [
+      'Responsável pelas finanças do match.IA: o modelo de negócio, os custos e as receitas que mantêm a plataforma de pé.',
+      'Acompanha como o projeto se paga sem cobrar de quem procura arquiteto — o match é grátis para o cliente, e o arquiteto pode assinar o plano Pro.',
+      'Transforma esses números no argumento que o time apresenta para a banca: um projeto que se sustenta além do TCC.'
+    ],
+    factsLeft: [
+      { label: 'Frente', value: 'Finanças' },
+      { label: 'Foco', value: 'Modelo de negócio e custos' },
+      { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
+    ],
+    factsRight: [
+      { label: 'No projeto', value: 'Receitas, custos e planos' },
+      { label: 'Também cuida de', value: 'Números do pitch' },
+      { label: 'Turma', value: '3EMIB — FIAP School' }
+    ]
+  },
+  julya: {
+    name: 'Julya Vitoria Souza Vieira',
+    role: 'Marketing',
+    initials: 'JV',
+    photo: 'assets/img/team/julya.png',
+    eyebrow: 'Fundadora · Marketing',
     tagline: 'Faz a proposta do match.IA chegar a quem precisa dela.',
     bio: [
       'Responsável pelo marketing do match.IA: como a proposta — encontrar o arquiteto certo por compatibilidade, e não por tentativa e erro — é comunicada a clientes e arquitetos.',
@@ -101,48 +124,25 @@ const FOUNDERS = {
       { label: 'Turma', value: '3EMIB — FIAP School' }
     ]
   },
-  julya: {
-    name: 'Julya Vitoria Souza Vieira',
-    role: 'Gestão',
-    initials: 'JV',
-    photo: 'assets/img/team/julya.png',
-    eyebrow: 'Fundadora · Gestão',
-    tagline: 'Mantém as frentes do time andando no mesmo ritmo, do início à entrega.',
-    bio: [
-      'Responsável pela gestão do projeto match.IA: organiza prazos, entregas e prioridades para que produto, tecnologia, identidade e marketing avancem de forma alinhada.',
-      'Faz a ponte entre as frentes do time e a orientação do TCC, acompanhando o que já está pronto, o que depende de quem e o que precisa ser decidido em seguida.',
-      'Cuida também do lado de negócio do projeto: como a plataforma se sustenta e como o time apresenta isso para a banca.'
-    ],
-    factsLeft: [
-      { label: 'Frente', value: 'Gestão do projeto' },
-      { label: 'Foco', value: 'Prazos, entregas e alinhamento' },
-      { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
-    ],
-    factsRight: [
-      { label: 'No projeto', value: 'Planejamento e coordenação' },
-      { label: 'Também cuida de', value: 'Modelo de negócio' },
-      { label: 'Turma', value: '3EMIB — FIAP School' }
-    ]
-  },
   roberto: {
     name: 'Roberto de Andrade Paiva Filho',
-    role: 'Identidade visual & back-end',
+    role: 'Back-end',
     initials: 'RP',
     photo: 'assets/img/team/roberto.png',
-    eyebrow: 'Fundador · Identidade visual & back-end',
+    eyebrow: 'Fundador · Back-end',
     tagline: 'Construiu a base técnica sobre a qual o match.IA foi montado.',
     bio: [
       'Construiu o back-end original da plataforma — a API em Node.js, Express e MongoDB, que nasceu no repositório Arkitetum.AI — e o banco de materiais arquitetônicos usado no cálculo de compatibilidade.',
-      'É também responsável pela identidade visual do projeto, dando à marca a linguagem que aparece em toda a plataforma.',
+      'Divide a frente de back-end com o Alex: a API, os dados e as regras que sustentam o match.',
       'As funcionalidades novas do match.IA foram acrescentadas sobre essa base, e mudanças no back-end passam pela revisão dele antes de irem para o repositório principal.'
     ],
     factsLeft: [
-      { label: 'Frente', value: 'Back-end & identidade visual' },
+      { label: 'Frente', value: 'Back-end' },
       { label: 'Tecnologias', value: 'Node.js · Express · MongoDB' },
       { label: 'Formação', value: 'Técnico em Informática, FIAP School' }
     ],
     factsRight: [
-      { label: 'No projeto', value: 'API original e identidade da marca' },
+      { label: 'No projeto', value: 'API original e banco de materiais' },
       { label: 'Repositório', value: 'Arkitetum.AI' },
       { label: 'Turma', value: '3EMIB — FIAP School' }
     ],
