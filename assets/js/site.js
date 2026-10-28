@@ -110,11 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- Scrollytelling horizontal: .hscroll-pin ----
   // Por padrão (sem isto rodar) já é um carrossel com scroll-snap, então
-  // funciona em qualquer navegador. Em telas grandes, com ponteiro fino e
-  // sem prefers-reduced-motion, promove a section a "pinada": ela ganha
-  // altura extra e o próprio scroll vertical desloca a trilha lateralmente
-  // via transform, gerando o efeito de scroll-jacking horizontal.
-  const canPinHorizontal = !reduceMotion && matchMedia('(min-width: 860px)').matches && matchMedia('(pointer: fine)').matches;
+  // funciona em qualquer navegador. Sem prefers-reduced-motion (em qualquer
+  // tela — no celular o carrossel de arrastar passava despercebido), promove
+  // a section a "pinada": ela ganha altura extra e o próprio scroll vertical
+  // desloca a trilha lateralmente via transform.
+  const canPinHorizontal = !reduceMotion;
   document.querySelectorAll('.hscroll-pin').forEach((section) => {
     const sticky = section.querySelector('.hscroll-pin-sticky');
     const track = section.querySelector('.hscroll-pin-track');

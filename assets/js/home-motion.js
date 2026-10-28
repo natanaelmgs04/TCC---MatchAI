@@ -35,6 +35,15 @@
     const fill = steps.querySelector('.steps-fill');
     const track = steps.querySelector('.steps-track');
     const list = [...steps.querySelectorAll('.step')];
+    // celular: a linha vertical vai do centro da 1ª bolinha ao centro da última
+    // (a última etapa tem texto e prévia abaixo da bolinha)
+    const lastStep = list[list.length - 1], lastNum = lastStep.querySelector('.step-num');
+    const sizeTrack = () => {
+      const end = steps.offsetHeight - lastStep.offsetTop - lastNum.offsetTop - lastNum.offsetHeight / 2;
+      steps.style.setProperty('--track-end', `${Math.max(0, end)}px`);
+    };
+    sizeTrack();
+    new ResizeObserver(sizeTrack).observe(steps);
     scenes.push(() => {
       if (vertical.matches) {
         // celular: linha vertical; cada etapa acende quando passa da linha de leitura

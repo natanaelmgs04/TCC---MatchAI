@@ -756,6 +756,14 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .hscroll-pin.is-pinned .hscroll-panel {
   width: min(70vw, 620px); height: 72vh; min-height: 420px; margin-right: 26px; scroll-snap-align: none;
 }
+/* Celular/tablet: mesmo efeito, mais curto (cada painel pede ~meia tela de
+   rolagem) e de ponta a ponta da tela, sem cortar nas margens do container. */
+@media (max-width: 859px) {
+  .hscroll-pin.is-pinned { height: calc(var(--panel-count, 5) * 55svh); }
+  .hscroll-pin.is-pinned .hscroll-pin-sticky { height: 100svh; margin: 0 calc(var(--container-pad, 24px) * -1); }
+  .hscroll-pin.is-pinned .hscroll-pin-track { padding: 0 10vw; }
+  .hscroll-pin.is-pinned .hscroll-panel { width: 80vw; height: 60svh; min-height: 0; margin-right: 14px; }
+}
 
 /* ---------- Scrollytelling: galeria com coluna fixa ---------- */
 /* Enquanto o bloco de texto (mais alto) rola, a foto fica grudada (sticky)
@@ -780,8 +788,10 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .narrative-step p { color: var(--ink-soft); margin: 0; max-width: 42ch; }
 @media (max-width: 860px) {
   .narrative-sticky { grid-template-columns: 1fr; gap: 20px; }
-  .narrative-sticky-visual { position: static; aspect-ratio: 16/10; }
-  .narrative-sticky-steps { gap: 28px; padding: 0; }
+  /* Continua sticky (abaixo do menu) e relative para as 3 fotos absolutas
+     ficarem dentro da moldura; o texto passa por baixo e troca a foto. */
+  .narrative-sticky-visual { top: 84px; z-index: 1; aspect-ratio: 16/10; }
+  .narrative-sticky-steps { gap: 14vh; padding: 0 0 4vh; }
   .narrative-step { opacity: 1; }
 }
 

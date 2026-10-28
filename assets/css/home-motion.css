@@ -86,7 +86,8 @@
   .steps--story .step { text-align: left; padding-left: 88px; min-height: 68px; }
   .steps--story .step-num { position: absolute; left: 0; top: 0; margin: 0; }
   .steps--story .step-peek { margin-left: 0; }
-  .steps-track { top: 34px; bottom: 34px; left: 32px; right: auto; width: 3px; height: auto; background: repeating-linear-gradient(to bottom, var(--line) 0 8px, transparent 8px 16px); }
+  /* --track-end (home-motion.js): termina no centro da última bolinha, não no fim do texto dela */
+  .steps-track { top: 34px; bottom: var(--track-end, 34px); left: 32px; right: auto; width: 3px; height: auto; background: repeating-linear-gradient(to bottom, var(--line) 0 8px, transparent 8px 16px); }
   .steps-fill { transform-origin: top; transform: scaleY(var(--fill)); background: linear-gradient(180deg, var(--sage), var(--terracotta)); }
 }
 
